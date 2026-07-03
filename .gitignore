@@ -1,0 +1,45 @@
+# Python-generated files
+__pycache__/
+*.py[cod]
+build/
+dist/
+wheels/
+*.egg-info
+.eggs/
+
+# Virtual environments
+.venv
+env/
+venv/
+
+# Secrets / environment config (Marketplace API key, etc. — see plan.md)
+.env
+.env.*
+!.env.example
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Local data & vector/db stores (bulk corpus downloads, Chroma/LanceDB, DuckDB/SQLite PUF backends)
+data/
+corpus/
+*.duckdb
+*.sqlite3
+.chroma/
+.lancedb/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
