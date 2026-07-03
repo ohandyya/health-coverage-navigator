@@ -1,0 +1,2 @@
+- Install pyright
+- Download corporus 
