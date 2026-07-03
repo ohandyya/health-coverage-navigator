@@ -14,9 +14,9 @@ This repository is at the scaffolding stage: a `uv`-managed Python project (src 
 - `uv add --dev <package>` — add a dev-only dependency (e.g. pytest, ruff).
 - `uv run pytest` — run the test suite (once a `tests/` dir and pytest are added).
 - `uv run pytest path/to/test_file.py::test_name` — run a single test.
-- `uv run ruff check .` / `uv run ruff format .` — lint/format (once ruff is added as a dev dependency).
+- `uv run ruff check .` / `uv run ruff format .` — lint/format (ruff is configured in `pyproject.toml`).
 
-No lint/test tooling is configured yet — add it as `--dev` dependencies when Phase 0 work begins, and update this section accordingly.
+Ruff is configured as a dev dependency (see `[tool.ruff]` in `pyproject.toml`); no test tooling is configured yet — add it as a `--dev` dependency when Phase 0 work begins, and update this section accordingly.
 
 ## What this project is
 
