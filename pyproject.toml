@@ -15,8 +15,16 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.411",
     "ruff>=0.15.20",
 ]
+
+[tool.pyright]
+include = ["src"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
 
 [tool.ruff]
 line-length = 100
