@@ -31,8 +31,6 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Local data & vector/db stores (bulk corpus downloads, Chroma/LanceDB, DuckDB/SQLite PUF backends)
-data/
-corpus/
 *.duckdb
 *.sqlite3
 .chroma/
