@@ -21,13 +21,17 @@ Design goals (Phase 0 acceptance test):
                               so you can re-parse (e.g. change cleaning) without re-fetching.
   * Polite                  - configurable delay + retry-with-backoff on 429/5xx.
 
-Usage:
-  pip install -r requirements.txt
-  python download_healthcare_gov.py                 # full download into ./data
-  python download_healthcare_gov.py --limit 20      # quick smoke test (first 20 posts)
-  python download_healthcare_gov.py --refresh       # re-fetch everything
-  python download_healthcare_gov.py --normalize-only # rebuild corpus.jsonl from raw
-  python download_healthcare_gov.py --lang en       # keep only English in corpus.jsonl
+No API key is required: the Content API is open, keyless, and CORS-enabled. The one
+courtesy is to be polite (descriptive User-Agent, request delay, backoff on 429/5xx),
+which this script does by default. See docs/health_care_data.md for the full data guide.
+
+Usage (requests + beautifulsoup4 are declared in pyproject.toml, so just `uv sync`):
+  uv sync
+  uv run python scripts/download_healthcare_gov.py                  # full download into ./data
+  uv run python scripts/download_healthcare_gov.py --limit 20       # smoke test (first 20 posts)
+  uv run python scripts/download_healthcare_gov.py --refresh        # re-fetch everything
+  uv run python scripts/download_healthcare_gov.py --normalize-only # rebuild corpus.jsonl from raw
+  uv run python scripts/download_healthcare_gov.py --lang en        # keep only English in corpus
 """
 
 from __future__ import annotations
@@ -46,7 +50,6 @@ from bs4 import BeautifulSoup
 
 BASE = "https://www.healthcare.gov"
 INDEX_URL = f"{BASE}/api/index.json"
-COLLECTION_TYPES = ["articles", "blog", "questions", "glossary", "states", "topics"]
 USER_AGENT = "health-coverage-navigator/0.1 (+open-source RAG corpus builder)"
 
 
@@ -59,7 +62,7 @@ def make_session() -> requests.Session:
     return s
 
 
-def fetch_json(session: requests.Session, url: str, retries: int, backoff: float):
+def fetch_json(session: requests.Session, url: str, retries: int, backoff: float) -> dict:  # pyright: ignore[reportReturnType]
     """GET a URL and parse JSON, retrying on 429 / 5xx with exponential backoff."""
     last_err = None
     for attempt in range(retries + 1):
@@ -68,8 +71,13 @@ def fetch_json(session: requests.Session, url: str, retries: int, backoff: float
             if resp.status_code in (429, 500, 502, 503, 504):
                 raise requests.HTTPError(f"{resp.status_code} for {url}")
             resp.raise_for_status()
-            return resp.json()
-        except (requests.RequestException, json.JSONDecodeError) as e:
+            result = resp.json()  # may raise JSONDecodeError
+
+            if not isinstance(result, dict):
+                raise RuntimeError(f"Expected JSON object at {url}, got {type(result)}")
+
+            return result
+        except (requests.RequestException, json.JSONDecodeError, RuntimeError) as e:
             last_err = e
             if attempt < retries:
                 sleep = backoff * (2**attempt)
