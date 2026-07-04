@@ -25,16 +25,35 @@ The API has **three layers**, all served over plain `HTTP GET` with no authentic
 
 | Layer | Endpoint | Returns |
 |---|---|---|
-| **Index** | `https://www.healthcare.gov/api/index.json` | One abridged metadata record per post, site-wide. The master list. |
+| **Index** | `https://www.healthcare.gov/api/index.json` | Abridged metadata records — **glossary terms only** (see the caveat below). |
 | **Collections** | `https://www.healthcare.gov/api/{type}.json` | All full post objects for one content type. |
-| **Objects** | `https://www.healthcare.gov/<post-path>.json` | The full body + metadata for a single post. |
+| **Objects** | `https://www.healthcare.gov/<post-path>.json` | The full body + richest metadata for a single post. |
 
-Content types (the `{type}` in a collection URL): `articles`, `blog`, `questions`,
-`glossary`, `states`, `topics`.
+> ### ⚠️ The index is **not** a site-wide list — it's glossary-only
+> The developer docs describe `/api/index.json` as "a site-wide index of all posts," but
+> empirically it contains **only the ~257 glossary terms**. Driving a download from it
+> silently drops every article and state page. **Enumerate from the collection endpoints
+> instead.** Verified counts (as of this writing):
+>
+> | Collection | Posts | In the index? |
+> |---|---|---|
+> | `articles` | ~436 | ❌ none |
+> | `glossary` | ~256 | ✅ yes (this *is* the index) |
+> | `states` | ~112 | ❌ none |
+> | `questions` | — | ⚠️ endpoint returns **404** |
+> | `blog`, `topics` | 0 | empty |
+>
+> So the real corpus is **~800 posts** from `articles` + `glossary` + `states`. The
+> download script enumerates all six types and skips the empty/404 ones gracefully.
+
+Collection endpoints already embed each post's **full `content`**, but the *individual*
+object endpoint (append `.json` to a post URL) carries **richer metadata** — `bite`,
+`excerpt`, `topics`, `state`, `meta-description`, etc. The script uses collections to
+discover posts and then fetches each object individually to capture that metadata.
 
 ### Fields
 
-An **index** record (summary metadata, used to discover every post):
+An **index** record (glossary-only summary metadata):
 
 | Field | Meaning |
 |---|---|
@@ -90,13 +109,14 @@ uv run python scripts/download_healthcare_gov.py
 uv run python scripts/download_healthcare_gov.py --lang en
 ```
 
-The script is **index-driven**: it fetches the index, then fetches each post's object,
-then builds a normalized corpus from what it downloaded. Key flags:
+The script is **collection-driven**: it enumerates posts from the collection endpoints,
+fetches each post's object, then builds a normalized corpus from what it downloaded. Key
+flags:
 
 | Flag | Purpose |
 |---|---|
 | `--out DIR` | Output root (default `./data`) |
-| `--limit N` | Only fetch the first N posts (smoke test) |
+| `--limit N` | Only fetch the first N discovered posts (smoke test) |
 | `--lang en,es` | Comma-separated langs to keep in the corpus, or `all` |
 | `--refresh` | Re-fetch posts already on disk |
 | `--normalize-only` | Skip download; rebuild the corpus from the raw layer |
@@ -118,17 +138,20 @@ Re-running is safe and cheap:
 ```
 data/
 ├── raw/healthcare_gov/
-│   ├── index.json            # raw site-wide index
-│   ├── posts/<slug>.json     # one raw content object per post
-│   ├── _meta.json            # fetch provenance (timestamp, counts)
-│   └── failures.json         # any posts that failed (only if there were failures)
+│   ├── collections/<type>.json  # raw per-type collection listings (articles, glossary, ...)
+│   ├── posts/<slug>.json        # one raw content object per post
+│   ├── _meta.json               # fetch provenance (timestamp, counts)
+│   └── failures.json            # any posts that failed (only if there were failures)
 └── processed/healthcare_gov/
-    └── corpus.jsonl          # normalized {id, url, title, text, ...} — the RAG input
+    └── corpus.jsonl             # normalized {id, url, title, text, ...} — the RAG input
 ```
 
 The `raw/` layer is the untouched download (kept so parsing can change without
 re-fetching). `corpus.jsonl` is the normalized, HTML-stripped text that the Phase 0
-ingestion pipeline chunks and embeds. `data/` is git-ignored.
+ingestion pipeline chunks and embeds. `data/` is **committed to the repo** — the
+HealthCare.gov content is freely reusable (see Licensing below), so the corpus is
+vendored rather than git-ignored. Only the vector/DB stores it gets loaded into
+(Chroma/LanceDB, DuckDB/SQLite) are ignored.
 
 ---
 

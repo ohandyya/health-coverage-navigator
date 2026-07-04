@@ -2,17 +2,21 @@
 """Download the HealthCare.gov Content API into a local corpus for RAG.
 
 The HealthCare.gov Content API exposes three layers:
-  - Index:       https://www.healthcare.gov/api/index.json   (metadata for every post)
-  - Collections: https://www.healthcare.gov/api/<type>.json  (posts grouped by type)
+  - Index:       https://www.healthcare.gov/api/index.json   (glossary terms ONLY)
+  - Collections: https://www.healthcare.gov/api/<type>.json  (full posts grouped by type)
   - Objects:     https://www.healthcare.gov/<post>.json       (full content per post)
 
-This script is index-driven: it discovers every post from the index, fetches each
-post's JSON object, and writes two layers to disk:
+This script is collection-driven. The index endpoint is mislabeled: despite the docs
+calling it a "site-wide index of all posts," /api/index.json lists only glossary terms,
+so driving discovery from it silently drops every article and state page. Instead we
+enumerate posts from the per-type collection endpoints (articles, glossary, states;
+blog/topics are empty and questions 404s), then fetch each post's individual object for
+its richest metadata (bite, excerpt, topics, state, ...). Layers written to disk:
 
-  <out>/raw/healthcare_gov/index.json          raw site-wide index
-  <out>/raw/healthcare_gov/posts/<slug>.json    raw content object per post
-  <out>/raw/healthcare_gov/_meta.json           fetch provenance (timestamp, counts)
-  <out>/processed/healthcare_gov/corpus.jsonl   normalized {id,url,title,text,...}
+  <out>/raw/healthcare_gov/collections/<type>.json  raw per-type collection listings
+  <out>/raw/healthcare_gov/posts/<slug>.json         raw content object per post
+  <out>/raw/healthcare_gov/_meta.json                fetch provenance (timestamp, counts)
+  <out>/processed/healthcare_gov/corpus.jsonl        normalized {id,url,title,text,...}
 
 Design goals (Phase 0 acceptance test):
   * Idempotent / resumable  - re-running skips posts already on disk (unless --refresh);
@@ -49,7 +53,10 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE = "https://www.healthcare.gov"
-INDEX_URL = f"{BASE}/api/index.json"
+# Discovery is driven from these per-type collection listings (the /api/index.json
+# endpoint is glossary-only). Empty types (blog, topics) and missing ones
+# (questions -> 404) are skipped gracefully at runtime.
+COLLECTION_TYPES = ["articles", "blog", "questions", "glossary", "states", "topics"]
 USER_AGENT = "health-coverage-navigator/0.1 (+open-source RAG corpus builder)"
 
 
@@ -127,9 +134,9 @@ def html_to_text(html: str) -> str:
     return "\n".join(ln for ln in lines if ln)
 
 
-def normalize_record(obj: dict, index_entry: dict | None) -> dict:
-    """Merge a raw content object + its index entry into one clean record."""
-    url = obj.get("url") or (index_entry or {}).get("url", "")
+def normalize_record(obj: dict) -> dict:
+    """Flatten a raw content object into one clean record for the corpus."""
+    url = obj.get("url", "")
     return {
         "id": slugify(url),
         "source": "healthcare_gov",
@@ -140,7 +147,7 @@ def normalize_record(obj: dict, index_entry: dict | None) -> dict:
         "categories": obj.get("categories", []),
         "tags": obj.get("tags", []),
         "topics": obj.get("topics", []),
-        "bite": (index_entry or {}).get("bite", ""),  # short summary, index-only
+        "bite": obj.get("bite", ""),  # short summary, present on individual objects
         "text": html_to_text(obj.get("content", "")),
     }
 
@@ -148,25 +155,55 @@ def normalize_record(obj: dict, index_entry: dict | None) -> dict:
 # --------------------------------------------------------------------------- #
 # Pipeline steps
 # --------------------------------------------------------------------------- #
+def enumerate_posts(session, raw_dir: Path, args) -> list[str]:
+    """Discover every post URL from the per-type collection endpoints.
+
+    The site-wide index only lists glossary terms, so we drive discovery from the
+    collection listings instead. Each raw collection is saved for provenance. Empty
+    collections (blog, topics) and missing ones (questions -> 404) are skipped with a
+    warning rather than aborting the run.
+    """
+    collections_dir = raw_dir / "collections"
+    collections_dir.mkdir(parents=True, exist_ok=True)
+
+    seen: dict[str, str] = {}  # normalized url -> original page url (dedupe, keep first)
+    for ctype in COLLECTION_TYPES:
+        url = f"{BASE}/api/{ctype}.json"
+        try:
+            coll = fetch_json(session, url, args.retries, args.backoff)
+        except Exception as e:  # noqa: BLE001 - a dead/empty collection shouldn't kill the run
+            print(f"  collection {ctype:9s}: skipped ({e})", file=sys.stderr)
+            continue
+        (collections_dir / f"{ctype}.json").write_text(json.dumps(coll, indent=2), encoding="utf-8")
+        entries = coll.get(ctype, [])
+        new = 0
+        for entry in entries:
+            page_url = entry.get("url")
+            if not page_url:
+                continue
+            key = "/" + page_url.strip("/")  # normalize slash variants across endpoints
+            if key not in seen:
+                seen[key] = page_url
+                new += 1
+        print(f"  collection {ctype:9s}: {len(entries):4d} posts ({new} new)")
+        time.sleep(args.delay)
+
+    return list(seen.values())
+
+
 def download(session, raw_dir: Path, args) -> dict:
     posts_dir = raw_dir / "posts"
     posts_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Fetching index: {INDEX_URL}")
-    index = fetch_json(session, INDEX_URL, args.retries, args.backoff)
-    (raw_dir / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
-
-    entries = index if isinstance(index, list) else index.get("index", [])
+    print("Discovering posts from collection endpoints:")
+    page_urls = enumerate_posts(session, raw_dir, args)
     if args.limit:
-        entries = entries[: args.limit]
-    print(f"Index lists {len(entries)} posts.")
+        page_urls = page_urls[: args.limit]
+    print(f"\nDiscovered {len(page_urls)} unique posts.\n")
 
     fetched = skipped = failed = 0
     failures = []
-    for i, entry in enumerate(entries, 1):
-        page_url = entry.get("url")
-        if not page_url:
-            continue
+    for i, page_url in enumerate(page_urls, 1):
         slug = slugify(page_url)
         target = posts_dir / f"{slug}.json"
 
@@ -179,16 +216,16 @@ def download(session, raw_dir: Path, args) -> dict:
             obj = fetch_json(session, obj_url, args.retries, args.backoff)
             target.write_text(json.dumps(obj, indent=2), encoding="utf-8")
             fetched += 1
-            print(f"  [{i}/{len(entries)}] fetched {slug}")
+            print(f"  [{i}/{len(page_urls)}] fetched {slug}")
             time.sleep(args.delay)
         except Exception as e:  # noqa: BLE001 - log & continue, re-run retries
             failed += 1
             failures.append({"url": obj_url, "error": str(e)})
-            print(f"  [{i}/{len(entries)}] FAILED {slug}: {e}", file=sys.stderr)
+            print(f"  [{i}/{len(page_urls)}] FAILED {slug}: {e}", file=sys.stderr)
 
     meta = {
         "fetched_at": datetime.now(UTC).isoformat(),
-        "index_count": len(entries),
+        "discovered_count": len(page_urls),
         "fetched": fetched,
         "skipped_existing": skipped,
         "failed": failed,
@@ -210,16 +247,6 @@ def normalize(raw_dir: Path, processed_dir: Path, langs: set[str] | None) -> int
         print("No raw posts found. Run a download first.", file=sys.stderr)
         return 0
 
-    # Build url -> index entry lookup to enrich records with the 'bite' summary.
-    index_path = raw_dir / "index.json"
-    index_by_url = {}
-    if index_path.exists():
-        idx = json.loads(index_path.read_text(encoding="utf-8"))
-        entries = idx if isinstance(idx, list) else idx.get("index", [])
-        for e in entries:
-            if e.get("url"):
-                index_by_url[e["url"]] = e
-
     processed_dir.mkdir(parents=True, exist_ok=True)
     out_path = processed_dir / "corpus.jsonl"
 
@@ -227,7 +254,7 @@ def normalize(raw_dir: Path, processed_dir: Path, langs: set[str] | None) -> int
     with out_path.open("w", encoding="utf-8") as out:
         for post_file in sorted(posts_dir.glob("*.json")):
             obj = json.loads(post_file.read_text(encoding="utf-8"))
-            rec = normalize_record(obj, index_by_url.get(obj.get("url", "")))
+            rec = normalize_record(obj)
             if langs and rec["lang"] and rec["lang"] not in langs:
                 continue
             if not rec["text"]:  # skip empty / non-article posts
@@ -249,7 +276,9 @@ def main() -> int:
     p.add_argument(
         "--normalize-only", action="store_true", help="Skip download; rebuild corpus.jsonl from raw"
     )
-    p.add_argument("--limit", type=int, default=0, help="Only fetch the first N posts (smoke test)")
+    p.add_argument(
+        "--limit", type=int, default=0, help="Only fetch the first N discovered posts (smoke test)"
+    )
     p.add_argument(
         "--lang", default="all", help="Comma-separated langs to keep in corpus.jsonl, or 'all'"
     )
