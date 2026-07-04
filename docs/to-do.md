@@ -1,2 +1,3 @@
-- Install pyright
+- [Done] Install pyright
+- [Done] Add commit hook that runs pyright and ruff
 - Download corporus 

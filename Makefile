@@ -1,4 +1,4 @@
-.PHONY: help lint format format-check fix check
+.PHONY: help lint format format-check fix check typecheck typecheck-watch check-all
 
 .DEFAULT_GOAL := help
 
@@ -18,3 +18,11 @@ format-check: ## Check code formatting without writing changes (CI-safe)
 	uv run ruff format --check .
 
 check: lint format-check ## Run lint and format-check together
+
+typecheck: ## Check code for type errors
+	uv run pyright
+
+typecheck-watch: ## Re-run pyright on file changes
+	uv run pyright --watch
+
+check-all: lint format-check typecheck ## Run lint, format-check, and typecheck together
