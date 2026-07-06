@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is at the scaffolding stage: a `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12, no dependencies yet) plus [plan.md](plan.md), the design document. No agent/RAG code, tests, or dependencies have been added yet — those come in with Phase 0.
+This repository is at the scaffolding stage: a `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12, no dependencies yet) plus [docs/plan.md](docs/plan.md), the design document. No agent/RAG code, tests, or dependencies have been added yet — those come in with Phase 0.
 
 ## Commands
 
@@ -28,7 +28,7 @@ Health Coverage Navigator: an agent that answers health-insurance questions ("is
 
 Getting the agent to classify a sub-question into the correct lane (and combine lanes for compound questions) is the central thing being built and evaluated.
 
-## Data sources (see plan.md for full details and links)
+## Data sources (see docs/plan.md for full details and links)
 
 **Bulk corpus (for RAG ingestion):**
 - HealthCare.gov consumer-education content — published as JSON (append `.json` to any post URL), explicitly licensed for reuse. Best MVP corpus.
