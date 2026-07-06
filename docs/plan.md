@@ -162,45 +162,72 @@ the part that makes it an *agent* rather than a RAG bot.
 
 ### Phase 0 — Corpus + eval scaffold (before any agent)
 
-Ingest HealthCare.gov content JSON + Medicare & You + NCDs into a vector store (start with
-something local — Chroma/LanceDB/pgvector). In parallel, build a tiny gold eval set of ~30
-questions with known answers and known correct source-type. This pays off immediately: you want
-the harness before the agent, not after.
+Download and prepare the raw corpus — HealthCare.gov content JSON + Medicare & You + NCDs — into
+a local `data/` directory (download → parse → chunk into `data/processed`). No embeddings, no
+vector store yet. In parallel, build a tiny gold eval set of ~30 questions with known answers and
+known correct source-type. This pays off immediately: you want the corpus and the harness before
+the agent, not after.
 
-**Milestone / acceptance test:** you can paste a question and see which reference chunks come
-back, plus a retrieval score against a gold set.
+**Milestone / acceptance test:** you can run the ingestion pipeline and get a clean, chunked
+corpus on disk, plus a gold eval set you can load and inspect.
 
 **User-facing capability**
-- [ ] Run a question through a CLI/notebook and get back the top-k retrieved chunks with their source document
-- [ ] Run an eval command and get a retrieval-quality number
-- *(The "user" here is you-as-developer inspecting retrieval — no synthesized answers yet.)*
+- [ ] Run the ingestion pipeline and get a clean, chunked corpus written to `data/processed`
+- [ ] Load and inspect the gold eval set (question → expected source-type → expected answer)
+- *(The "user" here is you-as-developer preparing data — no retrieval or synthesized answers yet.)*
 
 **Software capability**
-- [ ] Ingestion pipeline (download → parse → chunk → embed → store) that is idempotent and re-runnable
-- [ ] Vector database wired up (Chroma / LanceDB / pgvector)
-- [ ] Embedding model configured
+- [ ] Ingestion pipeline (download → parse → chunk → store to `data/processed`) that is idempotent and re-runnable
 - [ ] Gold eval set (~30 questions), each tagged with expected source and answer
-- [ ] Eval runner reporting retrieval metrics (recall@k, MRR)
+- [ ] Eval dataset loader / schema (so later phases can attach retrieval, answer, and routing metrics)
 
 ### Phase 1 — RAG-only MVP
 
 Single tool: `retrieve(query)` over the corpus. Agent answers coverage/terminology questions with
 citations back to chunks. No web, no APIs yet. Ship it. This alone is useful and proves your
-retrieval quality.
+retrieval quality. Split into two sub-phases so you first prove the RAG loop with the simplest
+possible retrieval, then swap in a vector database behind the same interface.
+
+#### Phase 1-a — RAG without a vector database (full-text search)
+
+Retrieve using plain full-text techniques over `data/processed` — `ls`, `grep`, keyword/BM25-style
+lexical search — **no vector database and no embeddings**. The point is to stand up the whole
+agent → retrieve → cite → abstain loop against the simplest retrieval backend, and to have a
+lexical baseline you can later compare the vector approach against.
 
 **Milestone / acceptance test:** you can ask a coverage/terminology question and get a cited
-answer, and it abstains when the question is out of corpus.
+answer sourced from full-text search over `data/processed`, and it abstains when the question is
+out of corpus.
 
 **User-facing capability**
 - [ ] Ask natural-language questions (*"what's a deductible?"*, *"does Medicare cover X?"*) and get a synthesized answer with citations to source documents
 - [ ] Get an honest *"not in my reference material"* when the question is out of corpus — no hallucinated answer
 
 **Software capability**
-- [ ] PydanticAI agent with a single `retrieve` tool
+- [ ] PydanticAI agent with a single `retrieve` tool backed by full-text search (grep / lexical / BM25) over `data/processed` — no vector DB, no embeddings
 - [ ] Structured output (answer + citation list)
 - [ ] Chunk → source provenance plumbing
 - [ ] Grounding guardrail: answer only from retrieved context
 - [ ] Eval set extended from retrieval-only to **answer correctness** and **faithfulness/groundedness**
+
+#### Phase 1-b — RAG with a vector database
+
+Swap the retrieval backend behind the same `retrieve` interface for embeddings + a local vector
+store (Chroma / LanceDB / pgvector). Reuse the Phase 1-a agent, provenance, and eval set — only
+the retrieval implementation changes — so you can measure semantic vs. lexical retrieval on the
+same gold questions.
+
+**Milestone / acceptance test:** the same questions now route through vector retrieval, and you
+can compare retrieval/answer quality against the Phase 1-a full-text baseline.
+
+**User-facing capability**
+- [ ] Same Q&A experience as Phase 1-a, now answering from semantic (vector) retrieval
+
+**Software capability**
+- [ ] Embedding model configured
+- [ ] Vector database wired up (Chroma / LanceDB / pgvector), populated from `data/processed`
+- [ ] `retrieve` tool re-backed by vector search behind the same interface
+- [ ] Eval comparison: vector vs. full-text baseline on the same gold set (recall@k, MRR, answer correctness)
 
 ### Phase 2 — Add the web-search tool
 
@@ -299,8 +326,9 @@ comparisons, cost breakdowns, and scheduled monitoring.
 ## Suggested build order recap
 
 ```
-Phase 0  →  retrieval you can inspect + measure
-Phase 1  →  cited answers, honest abstention          [SHIPPABLE MVP]
+Phase 0  →  downloaded + chunked corpus, gold eval set
+Phase 1a →  cited answers via full-text search (no vector DB)  [SHIPPABLE MVP]
+Phase 1b →  cited answers via vector retrieval
 Phase 2  →  RAG-vs-web routing
 Phase 3  →  exact lookups via typed API tools         [tri-modal core complete]
 Phase 4  →  multi-hop reasoning + full provenance
