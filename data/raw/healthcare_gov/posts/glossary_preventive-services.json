@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about preventive services by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Preventive services",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "preventive-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Routine health care that includes screenings, check-ups, and patient counseling to prevent illnesses, disease, or other health problems.</p>",
+  "meta-title": "Preventive services - Glossary",
+  "layout": null,
+  "page_name": "Preventive services",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Routine health care that includes screenings, check-ups, and patient counseling to prevent illnesses, disease, or other health problems.</p>\n\n<h2>Related content</h2>\n\n<ul><li><a href=\"/preventive-care-benefits/\">Preventive care benefits</a></li>\n</ul>",
+  "url": "/glossary/preventive-services"
+}

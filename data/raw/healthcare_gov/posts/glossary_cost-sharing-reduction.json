@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about cost sharing reductions by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Cost sharing reduction (CSR)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "cost-sharing-reduction",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A discount that lowers the amount you have to pay for deductibles, copayments, and coinsurance.</span></p>",
+  "meta-title": "Cost sharing reduction (CSR) - Glossary",
+  "layout": null,
+  "page_name": "Cost sharing reduction (CSR)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A discount that lowers the amount you have to pay for deductibles, copayments, and coinsurance. In the Health Insurance Marketplace\u00ae, cost-sharing reductions are often called \u201cextra savings.\u201d If you qualify, you must enroll in a plan in the Silver category to get the extra savings.</p><ul><li>When you fill out a Marketplace application, you\u2019ll find out if you qualify for premium tax credits and extra savings. You can use a <a href=\"/glossary/premium-tax-credit\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"d42500cd-967f-429f-81da-ee3e7bc40130\" data-entity-bundle=\"glossary\" data-entity-id=\"34736\" data-internal-href=\"/node/34736\" data-entity-substitution=\"canonical\">premium tax credit</a> for a plan in any metal category. But if you qualify for extra savings too, you\u2019ll get those savings only if you pick a Silver plan.</li><li>If you qualify for cost-sharing reductions, you also have a lower out-of-pocket maximum \u2014 the total amount you\u2019d have to pay for covered medical services per year. When you reach your out-of-pocket maximum, your insurance plan covers 100% of all covered services.</li><li>If you're a member of a federally recognized tribe or an Alaska Native Claims Settlement Act (ANCSA) Corporation shareholder, you may qualify for additional cost-sharing reductions.</li></ul><h2>Related content</h2><ul><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Find out if you\u2019ll qualify for cost-sharing reductions</a></li><li><a href=\"/lower-costs/save-on-out-of-pocket-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"893f0d1a-44c3-4a40-a4aa-d10e2e349ff0\" data-entity-id=\"38076\" data-entity-bundle=\"article\" title=\"Cost-sharing reductions\">Find out how a Silver plan can get you cost-sharing reductions</a></li><li><a href=\"/choose-a-plan/plans-categories\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"c1891a77-1418-4fe1-b8c7-bbc5b59a0821\" data-entity-id=\"37846\" data-entity-bundle=\"article\" title=\"Health plan categories: Bronze, Silver, Gold &amp; Platinum\">Compare costs and savings in each \u201cmetal\u201d category</a></li></ul>",
+  "url": "/glossary/cost-sharing-reduction"
+}

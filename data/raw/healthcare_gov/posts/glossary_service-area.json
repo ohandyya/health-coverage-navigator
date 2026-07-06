@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about service areas by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Service area",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "service-area",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A geographic area where a health insurance plan accepts members if it limits membership based on where people live. For plans that limit which doctors and hospitals you may use, it's also generally the area where you can get routine (non-emergency) services. The plan may end your coverage if you move out of the plan's service area.</p>",
+  "meta-title": "Service area - Glossary",
+  "layout": null,
+  "page_name": "Service area",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A geographic area where a health insurance plan accepts members if it limits membership based on where people live. For plans that limit which doctors and hospitals you may use, it's also generally the area where you can get routine (non-emergency) services. The plan may end your coverage if you move out of the plan's service area.</p>",
+  "url": "/glossary/service-area"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about reconciling your premium tax credit by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Reconcile",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "reconcile",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>Use IRS Form 8962 to find out if you used the right amount of premium tax credit during the year. Use the form to compare the advance amount you use to the amount you qualify for based on your final income. If you used too much, you\u2019ll repay it when you file your taxes. If you used too little, claim the difference as a credit.</span></p>",
+  "meta-title": "Reconcile - Glossary",
+  "layout": null,
+  "page_name": "Reconcile",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>How you find out if you used the right amount of premium tax credit during the year. To reconcile, you compare two amounts: the premium tax credit you used in advance during the year; and the amount of tax credit you qualify for based on your final income. You\u2019ll use IRS Form 8962 to do this. If you used more premium tax credit than you qualify for, you\u2019ll pay the difference with your federal taxes. If you used less, you\u2019ll get the difference as a credit.</p><h2>Related content</h2><ul><li><a href=\"/taxes\" data-entity-type=\"node\" data-entity-uuid=\"706de1c9-a5eb-4066-a3b5-696e23078d56\" data-entity-substitution=\"canonical\" data-entity-id=\"36161\" data-entity-bundle=\"article\" title=\" 2025 health coverage &amp; your federal taxes\">Learn more about taxes and health coverage</a></li><li><a href=\"https://www.irs.gov/pub/irs-access/f8962_accessible.pdf\">IRS Form 8962 \u2013 Premium Tax Credit (PDF)</a></li></ul>",
+  "url": "/glossary/reconcile"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about inpatient care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Inpatient care",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "inpatient-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care that you get when you're admitted as an inpatient to a health care facility, like a hospital or skilled nursing facility.</p>",
+  "meta-title": "Inpatient Care - Glossary",
+  "layout": null,
+  "page_name": "Inpatient care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care that you get when you're admitted as an inpatient to a health care facility, like a hospital or skilled nursing facility.</p>",
+  "url": "/glossary/inpatient-care"
+}

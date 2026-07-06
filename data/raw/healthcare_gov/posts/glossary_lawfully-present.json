@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Get definition of \"lawfully present\" in order to enroll in Marketplace coverage.",
+  "title": "Lawfully present",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "lawfully-present",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The term \u201clawfully present\u201d is used to describe consumers who have \u201cQualified non-citizen\u201d immigration status without a waiting period or other specific statuses.</p>",
+  "meta-title": "Lawfully Present - Glossary",
+  "layout": null,
+  "page_name": "Lawfully present",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<div data-entity-type=\"node\" data-entity-uuid=\"721e8e6c-a069-4273-9c93-0e380b2cd864\" data-embed-button=\"brief\" data-entity-embed-display=\"view_mode:node.inline\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-brief node--view-mode-inline\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n    \n            <div class=\"clearfix text-formatted field field--name-field-content-body field--type-text-long field--label-hidden field__item\"><div class=\"box-content warning-heavyweight\"><p><strong>As of August 25, 2025</strong>, Deferred Action for Childhood Arrivals (DACA) recipients are no longer eligible for Marketplace coverage. Due to a court order on December 11, 2025, certain noncitizen immigration statuses in all states are now eligible for Marketplace coverage. <a href=\"/court-decisions\" data-entity-type=\"node\" data-entity-uuid=\"b95c2a55-7d54-4a1d-b3ad-edbbae473351\" data-entity-substitution=\"canonical\" data-entity-id=\"40096\" data-entity-bundle=\"article\" title=\"Recent court decisions impacting the Marketplace\"><span>Learn more about this court order.</span></a></p></div></div>\n      \n  </div>\n\n</article>\n</div>\n<p>The term \u201clawfully present\u201d is used to describe immigrants who have:</p><ul><li>\u201cQualified non-citizen\u201d immigration status without a waiting period</li><li>Humanitarian statuses or circumstances (including Temporary Protected Status, Special Juvenile Status, asylum applicants, Convention Against Torture, victims of trafficking)</li><li>Valid non-immigrant visas</li><li>Legal status conferred by other laws (temporary resident status, LIFE Act, Family Unity individuals)</li></ul><p><a href=\"/immigrants/immigration-status\" data-entity-type=\"node\" data-entity-uuid=\"12adbd71-ec73-4648-97db-d59be50a969a\" data-entity-substitution=\"canonical\" data-entity-id=\"36496\" data-entity-bundle=\"article\" title=\"Immigration status to qualify for the Marketplace\">Get a full list of immigration statuses eligible for Marketplace coverage.</a></p>",
+  "url": "/glossary/lawfully-present"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about uncompensated care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Uncompensated care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "uncompensated-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care or services provided by hospitals or health care providers that don't get reimbursed. Often uncompensated care arises when people don't have insurance and cannot afford to pay the cost of care.</p>",
+  "meta-title": "Uncompensated care - Glossary",
+  "layout": null,
+  "page_name": "Uncompensated care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care or services provided by hospitals or health care providers that don't get reimbursed. Often uncompensated care arises when people don't have insurance and cannot afford to pay the cost of care.</p>",
+  "url": "/glossary/uncompensated-care"
+}

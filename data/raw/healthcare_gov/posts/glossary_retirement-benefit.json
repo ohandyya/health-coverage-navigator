@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about retirement benefits (pensions) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Retirement benefit (pension)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "retirement-benefit",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A payment or series of payments made to you after you retire from work. Generally, the amount of your income from a pension or retirement account distribution depends on the type of pension or retirement account, how much you contributed to the pension or retirement account, and whether you were already taxed on the amounts you contributed. A qualified distribution from a designated Roth account isn't required to be included in your income.</p>",
+  "meta-title": "Retirement benefit (pension) - Glossary",
+  "layout": null,
+  "page_name": "Retirement benefit (pension)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A payment or series of payments made to you after you retire from work. Generally, the amount of your income from a pension or retirement account distribution depends on the type of pension or retirement account, how much you contributed to the pension or retirement account, and whether you were already taxed on the amounts you contributed. A qualified distribution from a designated Roth account isn't required to be included in your income.</p>\n\n<p>For additional information, see <a href=\"https://www.irs.gov/publications/p575/\">IRS Publication 575</a>.</p>",
+  "url": "/glossary/retirement-benefit"
+}

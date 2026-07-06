@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Reporting self-employment income to the Marketplace",
+  "main-title": null,
+  "meta-title": "Reporting Self-Employment Income to the Marketplace",
+  "meta-description": "Learn how to report your income if you're self-employed and find out if you qualify for lower health coverage costs.",
+  "title-short": "Reporting your self-employment income",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Reporting self-employment income to the Marketplace",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "income",
+  "tags": [],
+  "excerpt": "<p>Learn how to report your income if you're self-employed and find out if you qualify for lower health coverage costs.</p>",
+  "content": "<p>When you fill out a Health Insurance Marketplace\u00ae application, you\u2019ll have to estimate your net self-employment income. Marketplace savings are based on your <strong>estimated net income for the year you\u2019re getting coverage, not last year\u2019s income.</strong></p>\n\n<h2>Estimating unpredictable income</h2>\n\n<p>When you\u2019re self-employed, it can be hard to estimate your income for the coming months or year.</p>\n\n<ul class=\"ds-c-list\"><li>Do your best to estimate your self-employment income and expenses for the year accurately, based on your past experience, realistic expectations, industry standards, and other information.</li>\n\t<li>During the year, if it looks like your yearly net income will be higher or lower than you estimated, update your Marketplace application as soon as possible.</li>\n</ul><div class=\"box-content information-lightweight\">\n<p><strong>IMPORTANT</strong> Update your estimated annual net income when your business circumstances change. If you wind up making more than you reported on your Marketplace application, you could have to pay back some or all of the premium tax credits you took during the year. If you wind up making less, you could qualify for more savings than you claimed during the year. <a href=\"/reporting-changes/why-report-changes/\">Learn how to update your income when it changes</a>.</p>\n</div>\n\n<h2>Filling out your Marketplace application</h2>\n\n<p>On your Marketplace application, you\u2019ll report your <strong>net</strong> income from your self-employment. (Net income is sometimes called \"profit.\")</p>\n\n<ul class=\"ds-c-list\"><li>If your self-employment income is higher than your business expenses, you report this net income.</li>\n\t<li>If your business expenses are higher than your income, you report a net loss.</li>\n</ul><p>Your net income from self-employment is what you report on Schedule C of your federal tax return. <a href=\"http://www.irs.gov/pub/irs-pdf/p334.pdf\">Learn about self-employment income from the IRS (PDF)</a>.</p>\n\n<h3>If you\u2019re asked to confirm self-employment income on your application</h3>\n\n<p>You may be asked to confirm information you put on your Marketplace application, or to provide additional information. You can usually resolve this issue by <a href=\"/tips-and-troubleshooting/uploading-documents/\">uploading documents</a>.</p>\n\n<p>If you\u2019re self-employed, you may be asked to upload a \u201c<a data-entity-bundle=\"glossary\" data-entity-id=\"35711\" data-entity-type=\"node\" data-entity-uuid=\"e80dd626-47fe-4bae-aaa8-5f2c43ad0cfa\" data-internal-href=\"/node/35711\" href=\"/glossary/self-employment-ledger\" title=\"glossary\">self-employment ledger</a>\u201d to confirm your income. There isn\u2019t a standard self-employment ledger format. It just needs to provide an accurate, detailed record of your self-employment income and expenses.</p>\n\n<h2>Other income to report</h2>\n\n<ul class=\"ds-c-list\"><li>When you apply for Marketplace coverage, you must report income from everyone in your household, including those who don\u2019t need coverage. <a href=\"/income-and-household-information/household-size/\">Learn who to count in your household and how to report other kinds of income</a>.</li>\n\t<li>You\u2019ll follow general Marketplace rules for reporting all income. Learn <a href=\"/income-and-household-information/income/\">how to report all income sources to the Marketplace</a>.</li>\n\t<li>When you fill out your application and select \u201cself-employment,\u201d you\u2019ll describe the kind of work you do. There\u2019s no special format \u2013 just describe the work. If you clean houses, enter \u201chouse cleaning.\u201d If you make jewelry, enter \u201cjewelry making.\u201d If you work on construction projects, enter \u201cconstruction.\u201d For more information, visit <a href=\"http://www.irs.gov/instructions/i1040sc\">\"Instructions for Schedule C\"</a> from the IRS or <a href=\"http://www.irs.gov/pub/irs-pdf/p334.pdf\">IRS Publication 334 (PDF)</a>.</li>\n</ul>",
+  "url": "/self-employed/income"
+}

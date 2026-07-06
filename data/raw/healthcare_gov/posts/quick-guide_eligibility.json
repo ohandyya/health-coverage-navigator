@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "A quick guide to the Health Insurance Marketplace\u00ae"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Are you eligible to use the Marketplace?",
+  "main-title": "A quick guide to the Health Insurance Marketplace\u00ae",
+  "meta-title": "Are you eligible to use the Marketplace?",
+  "meta-description": "Learn more about the eligibility criteria to enroll in health coverage through the Marketplace.",
+  "title-short": "Am I eligible for Marketplace coverage?",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "A quick guide to the Health Insurance Marketplace\u00ae",
+  "page_name": "Are you eligible to use the Marketplace?",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "A quick guide to the Health Insurance Marketplace\u00ae",
+  "date": null,
+  "slug": "eligibility",
+  "tags": [],
+  "excerpt": "<p>Learn more about the eligibility criteria to enroll in health coverage through the Marketplace.</p>",
+  "content": "<p>To be eligible to enroll in health coverage through the Marketplace, you must:</p><ul><li>Live in the United States (U.S).</li><li>Be a U.S. citizen or national, or be lawfully present non-citizen in the U.S.&nbsp;<a href=\"/immigrants/immigration-status\" data-entity-type=\"node\" data-entity-uuid=\"12adbd71-ec73-4648-97db-d59be50a969a\" data-entity-substitution=\"canonical\" data-entity-id=\"36496\" data-entity-bundle=\"article\" title=\"Immigration status to qualify for the Marketplace\">Learn about eligible immigration statuses.</a></li><li>Not be&nbsp;<a href=\"/incarcerated-people\" data-entity-type=\"node\" data-entity-uuid=\"957ee724-8ba5-42fa-9892-e47ca65e3efa\" data-entity-substitution=\"canonical\" data-entity-id=\"36021\" data-entity-bundle=\"article\" title=\"Health coverage for incarcerated people\">incarcerated</a>.</li></ul><p>If you have Medicare coverage, you can't enroll in a Marketplace health or dental plan.&nbsp;<a href=\"/medicare/medicare-and-the-marketplace\" data-entity-type=\"node\" data-entity-uuid=\"46eb367d-9187-4119-886c-45222ff72ba9\" data-entity-substitution=\"canonical\" data-entity-id=\"37976\" data-entity-bundle=\"article\" title=\"If you have Medicare\">Learn more about Medicare and the Marketplace.</a></p><h2>Get more answers to your eligibility questions</h2><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\">What does \u201clive in the U.S.\u201d mean?</dt><dd class=\"accordion-content\"><p>If you\u2019re a U.S. \u201cresident\u201d for tax purposes, you\u2019re eligible to get Marketplace coverage. <a href=\"https://www.irs.gov/individuals/international-taxpayers/determining-an-individuals-tax-residency-status\">Learn more about what the IRS considers a resident of the U.S. for tax purposes.&nbsp;</a></p><p>Marketplace insurance covers health care provided by doctors, hospitals, and other providers within the U.S. It's important to consider this if you live outside of the U.S.</p></dd></dl><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\">Who's considered a U.S. national?</dt><dd class=\"accordion-content\"><p>A U.S. national is someone who\u2019s a U.S. citizen or owes permanent allegiance to the U.S. In nearly all cases, non-citizen U.S. nationals are people born in American Samoa, or people born abroad with one or more American Samoan parent.</p></dd></dl><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\">What if I\u2019m a resident of a U.S. territory?</dt><dd class=\"accordion-content\"><p class=\"MsoNormal\"><span>If you live in a U.S. territory, you can\u2019t get health coverage through the Marketplace, unless you also qualify as a resident in any of the 50 states or Washington, DC.&nbsp;</span></p><p class=\"MsoNormal\">Check with your territory's government offices to learn about Medicaid, Children's Health Insurance Program (CHIP), and other health care options.&nbsp;</p></dd></dl>",
+  "url": "/quick-guide/eligibility"
+}

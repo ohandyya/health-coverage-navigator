@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health plan cateogories by reviewing the defnition in the HealthCare.gov Glossary.",
+  "title": "Health plan categories",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "health-plan-categories",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Levels of plans in the Health Insurance Marketplace\u00ae: Bronze, Silver, Gold, and Platinum. Categories (sometimes called \u201cmetal levels\u201d) are based on how you and your insurance plan split costs. Categories have nothing to do with quality of care. (\u201cCatastrophic\u201d plans are available to some people.)</p>",
+  "meta-title": "Health Plan Categories - Glossary",
+  "layout": null,
+  "page_name": "Health plan categories",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Levels of plans in the Health Insurance Marketplace\u00ae: Bronze, Silver, Gold, and Platinum. Categories (sometimes called \u201cmetal levels\u201d) are based on how you and your insurance plan split costs. Categories have nothing to do with quality of care. (\u201cCatastrophic\u201d plans are available to some people.)</p>\n\n<p>For each plan category, you\u2019ll pay a different percentage of total yearly costs of your care, and your insurance company will pay the rest. Total costs include <a data-entity-bundle=\"glossary\" data-entity-id=\"35151\" data-entity-type=\"node\" data-entity-uuid=\"b625d61d-da5b-4825-bb54-2bb728b7a4c0\" data-internal-href=\"/node/35151\" href=\"/glossary/premium\" title=\"glossary\">premiums</a>, <a data-entity-bundle=\"glossary\" data-entity-id=\"34906\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-internal-href=\"/node/34906\" href=\"/glossary/deductible\" title=\"glossary\">deductibles</a>, and out-of-pocket costs like <a data-entity-bundle=\"glossary\" data-entity-id=\"35611\" data-entity-type=\"node\" data-entity-uuid=\"8923e304-18ed-4cf7-bb09-9cfa370d6b5c\" data-internal-href=\"/node/35611\" href=\"/glossary/co-payment\" title=\"glossary\">copayments</a> and <a data-entity-bundle=\"glossary\" data-entity-id=\"35616\" data-entity-type=\"node\" data-entity-uuid=\"f12676c2-6d8f-4880-a942-74a098a3d582\" data-internal-href=\"/node/35616\" href=\"/glossary/co-insurance\" title=\"glossary\">coinsurance</a>.</p>\n\n<p>Each category may include several types of plans and provider networks, like health maintenance organizations (HMOs) and preferred provider organizations (PPOs).</p>\n\n<h2>Related content</h2>\n\n<ul><li><a href=\"/choose-a-plan/plans-categories/\">Marketplace insurance categories</a></li>\n\t<li><a href=\"/choose-a-plan/plan-types/\">Types of plans and provider networks</a></li>\n</ul>",
+  "url": "/glossary/health-plan-categories"
+}

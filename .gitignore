@@ -30,9 +30,8 @@ htmlcov/
 # Notebooks
 .ipynb_checkpoints/
 
-# Local data & vector/db stores (bulk corpus downloads, Chroma/LanceDB, DuckDB/SQLite PUF backends)
-data/
-corpus/
+# Vector / db stores only (Chroma/LanceDB, DuckDB/SQLite PUF backends).
+# NOTE: the downloaded corpus under data/ is intentionally committed, not ignored.
 *.duckdb
 *.sqlite3
 .chroma/

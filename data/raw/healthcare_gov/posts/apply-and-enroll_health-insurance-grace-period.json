@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Premium payments, grace periods, & losing coverage",
+  "main-title": null,
+  "meta-title": "Premium payments, grace periods, & losing coverage",
+  "meta-description": "Learn how late payments affect coverage, what happens if payments missed, how long before coverage ends and what to do if policy cancelled",
+  "title-short": "Grace periods & termination",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Premium payments, grace periods, & losing coverage",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2023-07-13 00:00:00 +0000",
+  "slug": "health-insurance-grace-period",
+  "tags": [],
+  "excerpt": "<p>Learn how late payments affect coverage, what happens if payments missed, how long before coverage ends and what to do if policy cancelled</p>",
+  "content": "<p>It\u2019s important to pay your monthly plan premium in full to your insurance company \u2014 not the Marketplace \u2014 by the due date.</p><h2>If you miss a monthly premium payment</h2><p>Your health insurance company could end your coverage if you fall behind on your monthly premiums.</p><p>Before your insurance company can end your coverage, you have a short period of time to pay called <span>a&nbsp;</span><a href=\"/glossary/grace-period\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"de5f89da-74b7-4b2d-beb8-91c0f33805cf\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"34491\" data-internal-href=\"/node/34491\"><span>grace period</span></a><span>.</span></p><p>The premium payment grace period is usually <strong>3 months</strong> if you have both:</p><ul class=\"ds-c-list\"><li>A Marketplace plan and use the&nbsp;<a href=\"/glossary/advanced-premium-tax-credit\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"7af0453c-e8c8-4a0a-9166-392bf1d01106\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"34991\" data-internal-href=\"/node/34991\">premium tax credit</a>.</li><li>Already&nbsp;paid at least one full month's premium during the <a href=\"/glossary/benefit-year\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"99b658c2-02aa-43d6-a863-75dc3efafc4f\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"35656\" data-internal-href=\"/node/35656\">benefit year</a>.</li></ul><p>If you don\u2019t use the premium tax credit, your grace period may be different. <a href=\"https://content.naic.org/state-insurance-departments\" title=\"State Insurance Department\" data-entity-id=\"34676\" data-entity-bundle=\"glossary\">Contact your state's Department of Insurance</a> for information on grace periods in your state.</p><h2>If you're in your grace period</h2><p>Pay all your owed premiums to avoid losing your coverage before your grace period ends.</p><div class=\"box-content warning-heavyweight\"><p><strong>Don\u2019t risk losing coverage</strong></p><p>If you don't pay all owed premiums, you may <strong>lose your coverage dating back to the first month you missed the premium payment</strong>. You may also have to wait to get health coverage.</p></div><p>The 3-month premium payment grace period starts the first month you didn't pay, even if you make payments for the following months.&nbsp;</p><p>Example of grace period:</p><p>You don\u2019t make your premium payment for May. You submit premium payments on time for June and July, but still haven\u2019t paid for May. Your grace period ends July 31, and you don\u2019t pay for May. The plan ends your coverage as of May 31.</p><p>Check with your insurance company if they\u2019ll pay for services during the second or third months of your grace period.</p><h2>If your plan ends your coverage due to non-payment</h2><p>You don't qualify for a <a href=\"/glossary/special-enrollment-period\" data-entity-type=\"node\" data-entity-uuid=\"8770c400-8e37-4ab5-aab0-4dae913960ea\" data-entity-substitution=\"canonical\" data-entity-id=\"35051\" data-entity-bundle=\"glossary\" title=\"Special Enrollment Period (SEP)\">Special Enrollment Period</a> to enroll in another plan if the plan ends your coverage for non-payment. You'll have to wait for the next <a href=\"/glossary/open-enrollment-period\" data-entity-type=\"node\" data-entity-uuid=\"dd95eb75-9e95-4e1d-88e8-6c70c556128a\" data-entity-substitution=\"canonical\" data-entity-id=\"35241\" data-entity-bundle=\"glossary\" title=\"Open Enrollment Period\">Open Enrollment Period</a> to enroll in Marketplace coverage unless you qualify for a Special Enrollment Period for another reason.</p><p>If you lose your coverage before mid-December, you're also not eligible to be automatically re-enrolled for the following year.</p><p>At your next opportunity to enroll in a Marketplace plan:</p><ul><li>You may be able to enroll in the same plan later if it's still available (and you're still eligible to enroll in a Marketplace plan when you reapply).</li><li>Whether you choose a new plan or the plan you had before you lost coverage, you must pay your first month's premium to the insurance company to complete your enrollment.</li></ul><p>If you think the plan made a mistake ending your coverage, you have the right to <a href=\"/appeal-insurance-company-decision\" data-entity-type=\"node\" data-entity-uuid=\"86d25f4d-7ce5-4bd6-b361-5ce1ac834113\" data-entity-substitution=\"canonical\" data-entity-id=\"37181\" data-entity-bundle=\"explainer\" title=\"Appealing a health plan decision\">appeal your health insurance company\u2019s decision</a>.</p>",
+  "url": "/apply-and-enroll/health-insurance-grace-period"
+}

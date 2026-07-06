@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about waiting periods for job-based coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Waiting period (job-based coverage)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "waiting-period-job-based-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The time that must pass before coverage can become effective for an employee or dependent who is otherwise eligible for coverage under a job-based health plan.</p>",
+  "meta-title": "Waiting period (job-based coverage) - Glossary",
+  "layout": null,
+  "page_name": "Waiting period (job-based coverage)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The time that must pass before coverage can become effective for an employee or dependent who is otherwise eligible for coverage under a job-based health plan.</p>",
+  "url": "/glossary/waiting-period-job-based-coverage"
+}

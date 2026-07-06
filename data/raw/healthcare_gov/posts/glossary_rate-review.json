@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about rate reviews by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Rate review",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "rate-review",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A process that allows state insurance departments to review rate increases before insurance companies can apply them to you.</p>",
+  "meta-title": "Rate review - Glossary",
+  "layout": null,
+  "page_name": "Rate review",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A process that allows state insurance departments to review rate increases before insurance companies can apply them to you.</p>\n\n<h2>Related content</h2>\n\n<ul><li><a href=\"https://ratereview.healthcare.gov/\">Look up your insurance plan to see its proposed and final rate increase</a></li>\n</ul>",
+  "url": "/glossary/rate-review"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about emergency medical conditions by reviewing the definition in HealthCare.gov Glossary.",
+  "title": "Emergency medical condition",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "emergency-medical-condition",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>An illness, injury, symptom or condition so serious that a reasonable person would seek care right away to avoid severe harm.</p>",
+  "meta-title": "Emergency medical condition - Glossary",
+  "layout": null,
+  "page_name": "Emergency medical condition",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>An illness, injury, symptom or condition so serious that a reasonable person would seek care right away to avoid severe harm.</p>",
+  "url": "/glossary/emergency-medical-condition"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about original Medicare by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Original Medicare",
+  "date": "2013-06-06 00:00:00 +0000",
+  "slug": "original-medicare",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Original Medicare is a fee-for-service health plan that has two parts: Part A (Hospital Insurance) and Part B (Medical Insurance). After you pay a deductible, Medicare pays its share of the Medicare-approved amount, and you pay your share (coinsurance and deductibles).</p>",
+  "meta-title": "Original Medicare - Glossary",
+  "layout": null,
+  "page_name": "Original Medicare",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Original Medicare is a fee-for-service health plan that has two parts: Part A (Hospital Insurance) and Part B (Medical Insurance). After you pay a deductible, Medicare pays its share of the Medicare-approved amount, and you pay your share (coinsurance and deductibles).</p>",
+  "url": "/glossary/original-medicare"
+}

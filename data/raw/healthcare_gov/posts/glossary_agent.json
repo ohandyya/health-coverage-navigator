@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about agents and brokers by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Agent and broker (health insurance)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "agent",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>Trained professionals certified to sell health plans in the state they\u2019re licensed. Generally paid by insurance companies when people they help enroll in a plan they sell.</span></p>",
+  "meta-title": "Agent and broker (health insurance) - Glossary",
+  "layout": null,
+  "page_name": "Agent and broker (health insurance)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A trained insurance professional who can help you enroll in a health insurance plan. Agents may work for a single health insurance company; brokers may represent several companies. You won\u2019t pay anything additional if you enroll with an agent or broker.</p><ul><li>Agents and brokers must be licensed in their states and have signed agreements to sell Marketplace health plans. In many states, brokers are required to act in a consumer\u2019s best interest.</li><li>Agents and brokers often get payments (\u201ccommissions\u201d) from insurance companies for selling plans. Some may not sell plans of companies they don\u2019t represent.</li><li>You can qualify for a premium tax credit and other savings if you enroll with an agent or broker. But to get the savings, the agent or broker <strong>must</strong> enroll you through the Health Insurance Marketplace\u00ae.</li></ul><h2>Related content</h2><ul><li>For agents &amp; brokers: <a href=\"/agents-and-brokers-register\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"94dae913-72c1-477d-8aa9-ea589867f105\" data-entity-id=\"37641\" data-entity-bundle=\"article\" title=\"Agents &amp; Brokers: Sell Marketplace health insurance\">How to work with HealthCare.gov</a></li><li>Individuals &amp; families: <a href=\"https://localhelp.healthcare.gov\">Find a health insurance agent</a>. (Click the \u201cAgents &amp; Brokers\u201d tab at the top when viewing results)</li><li>Small business employers: <a href=\"/small-businesses/provide-shop-coverage/using-insurance-agents-and-brokers/\">How to work with an agent or broker to buy SHOP health insurance</a></li></ul>",
+  "url": "/glossary/agent"
+}

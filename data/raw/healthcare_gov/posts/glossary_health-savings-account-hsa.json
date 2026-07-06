@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health savings accounts by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health Savings Account (HSA)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "health-savings-account-hsa",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A type of savings account that lets you set aside money on a pre-tax basis to pay for qualified medical expenses. By using untaxed dollars in a Health Savings Account (HSA) to pay for deductibles, copayments, coinsurance, and some other expenses, you may be able to lower your overall health care costs. HSA funds generally may not be used to pay premiums.</p>",
+  "meta-title": "Health Savings Account (HSA) - Glossary",
+  "layout": null,
+  "page_name": "Health Savings Account (HSA)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A type of savings account that lets you set aside money on a pre-tax basis to pay for qualified medical expenses. By using untaxed dollars in an HSA to pay for deductibles, copayments, coinsurance, and some other expenses, you may be able to lower your out-of-pocket health care costs. HSA funds generally may not be used to pay premiums.</p><p>While you can use the funds in an HSA at any time to pay for qualified medical expenses, you may contribute to an HSA only if you have an HSA-eligible plan (sometimes called a High Deductible Health Plan (HDHP)) \u2014 generally a health plan (including a Marketplace plan) that only covers preventive services before the deductible. <span>An HSA may earn interest or other earnings, which are not taxable. Banks, credit unions, and other financial institutions offer HSAs.</span></p><h2>Related content</h2><ul><li><a class=\"external-link\" href=\"/high-deductible-health-plan\" data-entity-type=\"node\" data-entity-uuid=\"7ad5fd33-5029-420d-b70b-1e214fb092bd\" data-entity-substitution=\"canonical\" data-entity-id=\"37176\" data-entity-bundle=\"explainer\" title=\"Understanding Health Savings Account-eligible plans\"><span class=\"s1 s2\">Learn about HSA-eligible plans, including</span><span class=\"s1 s3\"> the </span><span class=\"s1 s4\">minimum and maximum yearly deductible amounts</span></a><span class=\"s1\">.</span></li><li><a class=\"external-link\" href=\"https://www.irs.gov/publications/p969/ar02.html\">Read IRS.gov Publication 969 for details on HSAs, and <span>discover </span>if you qualify</a>.</li><li><a class=\"external-link\" href=\"https://www.irs.gov/pub/irs-pdf/p502.pdf\"><span class=\"s1 s2\">Get a list of qualifying medical and dental expenses in IRS.gov Publication 502 (PDF)</span></a><span class=\"s1\">.</span></li></ul>",
+  "url": "/glossary/health-savings-account-hsa"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Point of Service (POS) plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Point of Service (POS) Plans",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "point-of-service-plan-pos-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A type of plan in which you pay less if you use doctors, hospitals, and other health care providers that belong to the plan\u2019s network. POS plans also require you to get a referral from your primary care doctor in order to see a specialist.</p>",
+  "meta-title": "Point of Service (POS) Plans - Glossary",
+  "layout": null,
+  "page_name": "Point of Service (POS) Plans",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A type of plan in which you pay less if you use doctors, hospitals, and other health care providers that belong to the plan\u2019s network. POS plans also require you to get a referral from your primary care doctor in order to see a specialist.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/choose-a-plan/plan-types/\">Type of plan and provider network</a></li>\n\t<li><a href=\"/choose-a-plan/plans-categories/\">Marketplace insurance categories</a></li>\n</ul>",
+  "url": "/glossary/point-of-service-plan-pos-plan"
+}

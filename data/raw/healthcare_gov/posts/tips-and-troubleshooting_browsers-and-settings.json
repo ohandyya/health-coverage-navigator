@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Web browser, cookie & cache settings",
+  "main-title": null,
+  "meta-title": "Best web browsers, how to set up browsers in the Marketplace",
+  "meta-description": "Best web browsers, how to set up browsers when applying in the Marketplace online",
+  "title-short": "Browsers & settings",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Web browser, cookie & cache settings",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "browsers-and-settings",
+  "tags": [],
+  "excerpt": "<p>Best web browsers, how to set up browsers when applying in the Marketplace online</p>",
+  "content": "<p>HealthCare.gov is compatible with most popular web browsing software. This includes the most recent and commonly used versions of:</p>\n\n<ul class=\"ds-c-list\"><li>Microsoft Edge</li>\n\t<li>Mozilla Firefox</li>\n\t<li>Google Chrome</li>\n\t<li>Apple Safari</li>\n</ul><p>If you're having problems using HealthCare.gov \u2013 like getting stuck or seeing pages displayed incorrectly \u2014 you may want to try making the following adjustments to your browser.</p>\n\n<h2>Be sure you have the latest version of your browser</h2>\n\n<p>Browser software is often updated automatically, to ensure you have the latest features. Like most websites, HealthCare.gov usually performs best with an updated browser. But your browser may not be up-to-date.</p>\n\n<p>If you're having problems using HealthCare.gov, you may want to see if you have the latest version of your browser.</p>\n\n<ul class=\"ds-c-list\"><li>Visit your browser's \"settings\" (sometimes called \"options,\" \"preferences,\" or \"Internet options\"). In most cases you'll click an icon on the upper right corner of your browser, but Apple Safari's settings are on the upper left.</li>\n\t<li>Look under \"About.\"</li>\n\t<li>You should see either a message saying you have the latest version of the browser, or directions for updating it.</li>\n</ul><p>If you're having trouble with these steps, use your browser's help or search features for instructions. Or do a web search using your browser's name and \"find latest version.\"</p>\n\n<h2>Set your browser to \"accept cookies\"</h2>\n\n<p>Cookies \u2014 little bits of code that record information about your visit \u2014 can improve your HealthCare.gov experience. (You don't have to accept cookies to use HealthCare.gov, but it may result in a smoother visit.)</p>\n\n<p>If you're having problems using HealthCare.gov, you may want to set your browser to \"accept\" (or allow) cookies.</p>\n\n<ul class=\"ds-c-list\"><li>Visit your browser\u2019s \"settings\" (sometimes called \"tools,\" \"options,\" \"preferences,\" or \"Internet options\"). You'll usually click an icon on the upper right corner of your browser, but Apple Safari's settings are on the upper left.</li>\n\t<li>The controls to accept or block cookies are usually under \"privacy\" or \"security.\" You may have to look under \"advanced\" settings.</li>\n\t<li>There you'll see directions to verify and, if needed, change settings to accept cookies (adjust \"cookie handling\" or \"allow local data to be set\").</li>\n</ul><p>If you're having trouble with these steps, use your browser's help or search features for instructions. Or do a web search using your browser's name and \"accept cookies.\"</p>\n\n<h2>Clear your \"cache\" and cookies</h2>\n\n<p>Your browser has a memory called a \"cache.\" \"Cookies\" are bits of code that make it easier to navigate websites you\u2019ve visited before. Sometimes data in your browser's cache or cookies creates conflicts with a particular website.</p>\n\n<p>If you're having trouble using HealthCare.gov, you may want to \"clear\" your cache and cookies.</p>\n\n<ul class=\"ds-c-list\"><li>Visit your browser's \"settings\" (sometimes called \"options,\" \"preferences,\" or \"Internet options\"). You'll usually click an icon on the upper right corner of your browser, but Apple Safari's settings are on the upper left.</li>\n\t<li>The settings to clear your cache and cookies are usually under \"history,\" \"privacy,\" or \"safety.\"</li>\n\t<li>The screen or menu includes directions to clear (or delete) your cache and cookies. It may be called \"browsing data.\"</li>\n</ul><p>If you're having trouble with these steps, use your browser's help or search features for instructions. Or do a web search using your browser's name and \"clear cache and cookies.\"</p>",
+  "url": "/tips-and-troubleshooting/browsers-and-settings"
+}

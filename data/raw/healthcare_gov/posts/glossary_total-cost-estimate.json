@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about total cost estimates for health coverage by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Total cost estimate (for health coverage)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "total-cost-estimate",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The total amount you may have to pay for health plan coverage, which is estimated before you actually have the coverage and have health expenses under the coverage.</p>",
+  "meta-title": "Total cost estimate (for health coverage) - Glossary",
+  "layout": null,
+  "page_name": "Total cost estimate (for health coverage)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The total amount you may have to pay for health plan coverage, which is estimated before you actually have the coverage and have health expenses under the coverage.</p>\n\n<p>Generally, your total cost is your <strong>premium + deductible + out-of-pocket costs + any copayments/coinsurance</strong>. When you <a href=\"/see-plans/\">preview plans at HealthCare.gov</a>, you\u2019ll see an estimate of your total costs, but your actual expenses will likely vary.</p>\n\n<h2>Related content</h2>\n\n<ul><li><a href=\"/choose-a-plan/your-total-costs/\">Understanding your total costs</a></li>\n</ul>",
+  "url": "/glossary/total-cost-estimate"
+}

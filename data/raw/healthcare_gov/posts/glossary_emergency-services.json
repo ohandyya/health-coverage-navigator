@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about emergency services by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Emergency services",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "emergency-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Evaluation of an emergency medical condition and treatment to keep the condition from getting worse.</p>",
+  "meta-title": "Emergency services - Glossary",
+  "layout": null,
+  "page_name": "Emergency services",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Evaluation of an emergency medical condition and treatment to keep the condition from getting worse.</p>",
+  "url": "/glossary/emergency-services"
+}

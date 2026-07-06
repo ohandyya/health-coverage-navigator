@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about dividends by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Dividend",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "dividend",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A payment made by a for-profit corporation to its shareholders. This payment is a portion of the corporate earnings and may be paid a certain number of times each year (like each quarter).</p>",
+  "meta-title": "Dividend - Glossary",
+  "layout": null,
+  "page_name": "Dividend",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A payment made by a for-profit corporation to its shareholders. This payment is a portion of the corporate earnings and may be paid a certain number of times each year (like each quarter).</p>",
+  "url": "/glossary/dividend"
+}

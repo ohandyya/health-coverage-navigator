@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about grievances by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Grievance",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "grievance",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A complaint that you communicate to your health insurer or plan.</p>",
+  "meta-title": "Grievance - Glossary",
+  "layout": null,
+  "page_name": "Grievance",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A complaint that you communicate to your health insurer or plan.</p>",
+  "url": "/glossary/grievance"
+}

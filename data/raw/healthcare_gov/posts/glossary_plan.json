@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Plan",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A benefit your employer, union or other group sponsor provides to you to pay for your health care services.</p>",
+  "meta-title": "Plan - Glossary",
+  "layout": null,
+  "page_name": "Plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A benefit your employer, union or other group sponsor provides to you to pay for your health care services.</p>",
+  "url": "/glossary/plan"
+}

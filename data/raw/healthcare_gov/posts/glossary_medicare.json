@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Medicare by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Medicare",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medicare",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A federal health program for people 65 and older and certain younger people with disabilities and ESRD.</span></p>",
+  "meta-title": "Medicare - Glossary",
+  "layout": null,
+  "page_name": "Medicare",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A federal health insurance program for people 65 and older and certain younger people with disabilities. It also covers people with End-Stage Renal Disease (permanent kidney failure requiring dialysis or a transplant, sometimes called ESRD).</p><p>Medicare isn\u2019t part of the Health Insurance Marketplace\u00ae. If you have Medicare coverage you don\u2019t have to make any changes. You\u2019re considered covered under the health care law.</p><h2>Related content</h2><ul><li><a href=\"/medicare\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"ba100e6f-3001-4744-b6b4-e30e63d61c96\" data-entity-id=\"37981\" data-entity-bundle=\"explainer\" title=\"Medicare and the Marketplace\">Learn about Medicare and the Marketplace</a></li><li><a href=\"/medicare/changing-from-marketplace-to-medicare\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"16622d81-d868-4e52-8464-604040ead089\" data-entity-id=\"37971\" data-entity-bundle=\"article\" title=\"Changing from Marketplace to Medicare\">Changing from the Marketplace to Medicare</a></li><li><a href=\"http://www.medicare.gov/\">Visit Medicare.gov</a></li></ul>",
+  "url": "/glossary/medicare"
+}

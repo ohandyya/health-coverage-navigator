@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about claims by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Claim",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "claim",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A request for payment that you or your health care provider submits to your health insurer when you get items or services you think are covered.</p>",
+  "meta-title": "Claim - Glossary",
+  "layout": null,
+  "page_name": "Claim",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A request for payment that you or your health care provider submits to your health insurer when you get items or services you think are covered.</p>",
+  "url": "/glossary/claim"
+}

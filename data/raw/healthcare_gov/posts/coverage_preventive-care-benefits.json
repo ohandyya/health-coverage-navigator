@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Preventive health services",
+  "main-title": null,
+  "meta-title": "Preventive health services",
+  "meta-description": "Most health plans must cover a set of preventive services like shots and screening tests at no cost to you. This includes Marketplace private insurance plans.",
+  "title-short": "Preventive services",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Preventive health services",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "preventive-care-benefits",
+  "tags": [],
+  "excerpt": "<p>Most health plans must cover a set of preventive services like shots and screening tests at no cost to you. This includes Marketplace private insurance plans.</p>",
+  "content": "<p>Most health plans must cover a set of preventive services \u2014 like screening tests \u2014 at no cost to you. This includes plans available through the Marketplace.</p><div data-entity-type=\"node\" data-entity-uuid=\"afc2242b-bb17-4a78-8a4a-6df7e2246d8e\" data-embed-button=\"brief\" data-entity-embed-display=\"view_mode:node.inline\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-brief node--view-mode-inline\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n    \n            <div class=\"clearfix text-formatted field field--name-field-content-body field--type-text-long field--label-hidden field__item\"><div class=\"box-content information-heavyweight\"><div class=\"content\"><span>Generally, these services are covered at no cost to you when provided by an in-network medical provider. In most cases, you won't pay a copayment or coinsurance for certain preventive services like immunizations and screening tests, even if you haven't met your deductible. Coverage may vary. $0 cost isn't guaranteed in all cases.</span></div></div></div>\n      \n  </div>\n\n</article>\n</div>\n<h2>Preventive services for all adults, women, and children</h2><p>There are 3 sets of preventive services. Select the links below to see a list of covered services for each group:</p><ul class=\"ds-c-list\"><li><a href=\"/preventive-care-adults\" data-entity-type=\"node\" data-entity-uuid=\"43e5bbb3-e689-4d35-9108-a30ccb46d3cd\" data-entity-substitution=\"canonical\" data-entity-id=\"37726\" data-entity-bundle=\"article\" title=\"Preventive care benefits for adults\">For all adults</a></li><li><a href=\"/preventive-care-women\" data-entity-type=\"node\" data-entity-uuid=\"d3375e12-55d2-41df-86ba-f57196547815\" data-entity-substitution=\"canonical\" data-entity-id=\"37731\" data-entity-bundle=\"article\" title=\"Preventive care benefits for women\">For women</a></li><li><a href=\"/preventive-care-children\" data-entity-type=\"node\" data-entity-uuid=\"93c8befc-3597-40a8-8723-d5bb8015d091\" data-entity-substitution=\"canonical\" data-entity-id=\"37736\" data-entity-bundle=\"article\" title=\"Preventive care benefits for children\">For children</a></li></ul>",
+  "url": "/coverage/preventive-care-benefits"
+}

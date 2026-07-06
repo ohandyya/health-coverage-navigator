@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about brand name drugs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Brand name (drugs)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "brand-name-drugs",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A drug sold by a drug company under a specific name or trademark and that is protected by a patent. Brand name drugs may be available by prescription or over the counter.</p>",
+  "meta-title": "Brand name (drugs) - Glossary",
+  "layout": null,
+  "page_name": "Brand name (drugs)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A drug sold by a drug company under a specific name or trademark and that is protected by a patent. Brand name drugs may be available by prescription or over the counter.</p>",
+  "url": "/glossary/brand-name-drugs"
+}

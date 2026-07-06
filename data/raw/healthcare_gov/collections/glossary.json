@@ -1,0 +1,3588 @@
+{
+  "glossary": [
+    {
+      "date": "2022-04-22 00:00:00 +0000",
+      "url": "/glossary/affordability-exemption",
+      "content": "<p>An exemption that\u2019s needed when applying for Catastrophic coverage for people 30 years or older whose coverage is unaffordable. Affordability exemptions are one type of exemption that someone can claim to qualify for Catastrophic Coverage, along with hardship exemptions.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Affordability exemption",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2019-11-01 00:00:00 +0000",
+      "url": "/glossary/individual-coverage-hra",
+      "content": "<p>A type of <a data-entity-bundle=\"glossary\" data-entity-id=\"35416\" data-entity-type=\"node\" data-entity-uuid=\"000acb6c-210a-49b6-abb8-b7fc340ac21d\" data-internal-href=\"/node/35416\" href=\"/glossary/health-reimbursement-account-hra\" title=\"glossary\">Health Reimbursement Arrangement</a> that reimburses medical expenses, like monthly premiums, and requires eligible employees and dependents to have individual health insurance coverage or Medicare Parts A (Hospital Insurance) and B (Medical Insurance) or Part C (Medicare Advantage) for each month they are covered by the individual coverage HRA.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Individual Coverage Health Reimbursement Arrangement",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2019-11-01 00:00:00 +0000",
+      "url": "/glossary/cafeteria-plan",
+      "content": "<p>A cafeteria plan is a separate written plan maintained by an employer for employees that meets the specific requirements and regulations of Section 125 of the Internal Revenue Code. It provides participants an opportunity to receive certain benefits on a pretax basis. Participants in a cafeteria plan must be permitted to choose among at least one taxable benefit (such as cash) and one qualified benefit.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Cafeteria plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2019-04-23 00:00:00 +0000",
+      "url": "/glossary/urban-indian-programs",
+      "content": "<p>Health programs available to American Indians and Alaska Natives living in urban areas.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Urban Indian programs",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2018-11-14 00:00:00 +0000",
+      "url": "/glossary/qsehra",
+      "content": "<p><span>Where small employers (that don\u2019t offer health coverage) help pay for their employees\u2019 medical expenses, like plan premiums.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "QSEHRA",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2018-10-23 00:00:00 +0000",
+      "url": "/glossary/abortion-services",
+      "content": "<p>Federal law prohibits federal funds, including Marketplace premium tax credits, from being used for abortion services except in the limited cases of rape, incest, or if a woman suffers from a life-threatening physical injury or illness that would place the woman in danger of death unless an abortion is performed. Marketplace health plans may cover abortion services in different ways:</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Abortion services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2017-02-28 00:00:00 +0000",
+      "url": "/glossary/shop-small-business-health-options-program",
+      "content": "<p>The Small Business Health Options Program (SHOP) helps small business owners provide medical and/or dental insurance to their employees. Some smaller employers qualify for tax credits if they enroll in SHOP insurance.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Small Business Health Options Program (SHOP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2017-01-09 00:00:00 +0000",
+      "url": "/glossary/tax-filing-requirement-dependents",
+      "content": "<p>The minimum income requiring a dependent to file a federal tax return. <strong>2025 filing requirements for dependents under 65:</strong> Earned income of at least $15,750, or unearned income (like from investments or trusts) of at least $1,350 You must include on your Marketplace application income for any dependent required to file.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Tax filing requirement (for dependents)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2023-10-26 00:00:00 +0000",
+      "url": "/glossary/quality-ratings",
+      "content": "<p>Ratings range from 1-5 stars to help you compare Marketplace plans.&nbsp;</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Quality ratings (\"star\" ratings)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2023-07-13 00:00:00 +0000",
+      "url": "/glossary/grace-period",
+      "content": "<p>A short period after your monthly health insurance payment is due to pay all owed premiums to avoid losing coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Grace period",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-08-31 00:00:00 +0000",
+      "url": "/glossary/adjusted-gross-income-agi",
+      "content": "<p>Your total (or \u201cgross\u201d) income for the tax year, minus certain adjustments you\u2019re allowed to take. Adjustments include deductions for conventional IRA contributions, student loan interest, and more. Adjusted gross income appears on IRS Form 1040, line 11.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Adjusted Gross Income (AGI)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-08-16 00:00:00 +0000",
+      "url": "/glossary/tax-filing-requirement",
+      "content": "<p>The minimum amount (or threshold) of income requiring you to file a federal tax return. <strong>2025 filing requirements for most taxpayers:</strong> Gross income of at least $15,750 (individuals) or $31,500 (married filing jointly). Different thresholds apply for dependents, people 65 and older, and those who use other tax filing statuses (like married filing separately).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Tax filing requirement",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-07-13 00:00:00 +0000",
+      "url": "/glossary/qualifying-health-coverage",
+      "content": "<p><span>Any health insurance that meets the law\u2019s minimum requirements for comprehensive health coverage, like Marketplace plans, Medicare, Medicaid &amp; CHIP, and some job-based and individual plans.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Qualifying health coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-04-19 00:00:00 +0000",
+      "url": "/glossary/inconsistency",
+      "content": "<p>A difference between some information you put on your Marketplace application and information we have from other trusted data sources.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Inconsistency (data matching issue)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-04-19 00:00:00 +0000",
+      "url": "/glossary/data-matching-issue",
+      "content": "<p>A difference between some information you put on your Marketplace health insurance application and information we have from other trusted data sources.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Data matching issue (inconsistency)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2016-01-07 00:00:00 +0000",
+      "url": "/glossary/same-sex-marriage",
+      "content": "<p>Lawful marriage between spouses of the same sex. Same-sex marriage is legal and recognized in every U.S. state and the District of Columbia.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Same-sex marriage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2015-10-06 00:00:00 +0000",
+      "url": "/glossary/exemption",
+      "content": "<p>If you\u2019re 30 and older and want Catastrophic coverage, you must qualify for a \"hardship\" or \"affordability\" exemption.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Exemption",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2015-07-15 00:00:00 +0000",
+      "url": "/glossary/stand-alone-dental-plan",
+      "content": "<p>A type of dental plan offered through the Marketplace that\u2019s not included as part of a health plan. You may want this if the health coverage you choose doesn\u2019t include dental, or if you want different dental coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Stand-alone dental plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2015-05-28 00:00:00 +0000",
+      "url": "/glossary/spousal-abandonment",
+      "content": "<p>When an individual can\u2019t locate their spouse after making a reasonable attempt to find them. Also known as desertion. If you\u2019re a victim of spousal abandonment, you can select \u201cunmarried\u201d on your Marketplace application. This will allow you to qualify for premium tax credits and other savings based on your income.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Spousal abandonment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2015-02-16 00:00:00 +0000",
+      "url": "/glossary/exemption-certificate-number-ecn",
+      "content": "<p>A number the Marketplace provides when you qualify for a health insurance exemption. When you fill out an exemption application, the Marketplace will review it and determine if you qualify. The Marketplace will mail you a notice of the exemption eligibility result. If you qualify for an exemption, the notice will include your unique identifier, called the exemption certificate number (ECN). Each member of your household who qualifies for the exemption will get their own ECN. You\u2019ll need your ECN when you file your federal taxes for the year you don\u2019t have coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Exemption Certificate Number (ECN)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2015-01-23 00:00:00 +0000",
+      "url": "/glossary/second-lowest-cost-silver-plan-slcsp",
+      "content": "<p><span>Affects the premium tax credit if you used it to lower your premiums during the year. Find the SLCSP on Form 1095-A, sent by the Marketplace annually, or use the HealthCare.gov tax tool.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Second lowest cost Silver plan (SLCSP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2014-12-05 00:00:00 +0000",
+      "url": "/glossary/plan-id",
+      "content": "<p>Each Marketplace health plan has a unique 14-character identifier that's a combination of numbers and/or letters.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Plan ID",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2014-12-05 00:00:00 +0000",
+      "url": "/glossary/application-id",
+      "content": "<p>Each Marketplace application has a unique identification number, or Application ID. After you apply for Marketplace coverage, you\u2019ll get a notice with your eligibility results that contains your Application ID. You'll need your Application ID to continue with an existing application, compare plans, and complete enrollment. If you are doing this by phone, you can provide your Application ID to the Marketplace Call Center representative so they can find your application faster. If you're continuing your application, comparing plans, and enrolling online, you'll be asked to enter your Application ID after you log in to your account and select \"Find my existing application.\"</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Application ID",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2014-08-28 00:00:00 +0000",
+      "url": "/glossary/multi-state-plan",
+      "content": "<p>A type of plan offered in the Health Insurance Marketplace\u00ae. Despite the name, \u201cmulti-state plans\u201d don\u2019t necessarily have network providers or cover services in multiple states. If you want a plan that does, carefully read any Marketplace plan\u2019s documents and provider directory.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Multi-state plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-07-08 00:00:00 +0000",
+      "url": "/glossary/modified-adjusted-gross-income-magi",
+      "content": "<p>The figure used to determine eligibility for premium tax credits and other savings for Marketplace health insurance plans and for Medicaid and the Children's Health Insurance Program (CHIP). MAGI is adjusted gross income (AGI) plus these, if any: untaxed foreign income, non-taxable Social Security benefits, and tax-exempt interest.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Modified Adjusted Gross Income (MAGI)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-17 00:00:00 +0000",
+      "url": "/glossary/referral",
+      "content": "<p>A written order from your primary care doctor for you to see a specialist or get certain medical services. In many Health Maintenance Organizations (HMOs), you need to get a referral before you can get medical care from anyone except your primary care doctor. If you don\u2019t get a referral first, the plan may not pay for the services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Referral",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-11 00:00:00 +0000",
+      "url": "/glossary/penalty",
+      "content": "<p>A payment (\"fee,\" \"fine,\" \"individual mandate\") you made when you filed taxes if you didn't have health insurance that counted as qualifying health coverage for plan years 2018 and earlier. <strong>The fee for not having health insurance no longer applies</strong>. This means you no longer pay a tax penalty for not having health coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Penalty",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-07 00:00:00 +0000",
+      "url": "/glossary/out-of-pocket-maximum-limit",
+      "content": "<p>The most you have to pay for covered services in a plan year. After you spend this amount on deductibles, copayments, and coinsurance for in-network care and services, your health plan pays 100% of the costs of covered benefits.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Out-of-pocket maximum/limit",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/out-of-pocket-estimate",
+      "content": "<p>An estimate of the amount that you may have to pay on your own for health care or prescription drug costs. The estimate is made before your health plan has processed a claim for that service.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Out-of-pocket estimate",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/out-of-network-copayment",
+      "content": "<p>A fixed amount (for example, $30) you pay for covered health care services from providers who don't contract with your health insurance or plan. Out-of-network copayments usually are more than in-network copayments.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Out-of-network copayment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/out-of-network-coinsurance",
+      "content": "<p>The percentage (for example, 40%) you pay of the allowed amount for covered health care services to providers who don't contract with your health insurance or plan. Out-of-network coinsurance usually costs you more than in-network coinsurance.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Out-of-network coinsurance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/original-medicare",
+      "content": "<p>Original Medicare is a fee-for-service health plan that has two parts: Part A (Hospital Insurance) and Part B (Medical Insurance). After you pay a deductible, Medicare pays its share of the Medicare-approved amount, and you pay your share (coinsurance and deductibles).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Original Medicare",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/not-yet-accredited-health-plan",
+      "content": "<p>A plan that hasn't been given a \"seal of approval\" by an independent company to show it meets national quality standards for health plans. There are many reasons why a health plan may not be accredited. For example, some plans have never gone through the accreditation process or have gone through the process with a different accrediting organization. Other plans are too new to be accredited or have started but not finished the accreditation process. Not being accredited doesn't mean that a plan is lower quality than a plan that's accredited.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Not yet accredited (health plan)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/network-plan",
+      "content": "<p>A health plan that contracts with doctors, hospitals, pharmacies, and other health care providers to provide members of the plan with services and supplies at a discounted price.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Network plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-06 00:00:00 +0000",
+      "url": "/glossary/net-rental-income",
+      "content": "<p>The amount someone pays you to use your property, after you subtract the expenses you have for the property. Royalty income includes any payments you get from a patent, a copyright, or some natural resource that you own.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Net rental income",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/workers-compensation",
+      "content": "<p>An insurance plan that employers are required to have to cover employees who get sick or injured on the job.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Worker's compensation",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/vision-or-vision-coverage",
+      "content": "<p>A health benefit that at least partially covers vision care, like eye exams and glasses. All plans in the Health Insurance Marketplace\u00ae include vision coverage for children. Only some plans include vision coverage for adults.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Vision coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/tty",
+      "content": "<p>A TTY (teletypewriter) is a communication device used by people who are deaf, hard-of-hearing, or have severe speech impairment. People who don't have a TTY can communicate with a TTY user through a message relay center (MRC). An MRC has TTY operators available to send and interpret TTY messages.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "TTY",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/tricare",
+      "content": "<p>A health care program for active-duty and retired uniformed services members and their families.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "TRICARE",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/total-cost-estimate",
+      "content": "<p>The total amount you may have to pay for health plan coverage, which is estimated before you actually have the coverage and have health expenses under the coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Total cost estimate (for health coverage)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/tax-household",
+      "content": "<p>The taxpayer(s) and any individuals who are claimed as dependents on one federal income tax return. A tax household may include a spouse and/or dependents.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Tax household",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/supplemental-security-income",
+      "content": "<p>A monthly benefit paid by Social Security to people with limited income and resources who are disabled, blind, or 65 or older. SSI benefits aren't the same as Social Security retirement or disability benefits.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Supplemental Security Income (SSI)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/summary-of-benefits-and-coverage",
+      "content": "<p>An easy-to-read summary that lets you make apples-to-apples comparisons of costs and coverage between health plans. You can compare options based on price, benefits, and other features that may be important to you. You'll get the \"Summary of Benefits and Coverage\" (SBC) when you shop for coverage on your own or through your job, renew or change coverage, or request an SBC from the health insurance company.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Summary of Benefits and Coverage (SBC)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/subsidized-coverage",
+      "content": "<p>Reduced or low-cost health coverage for people with income below certain levels.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Subsidized coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/state-medical-assistance-office",
+      "content": "<p>A state agency in charge of the state's Medicaid program and can give information about programs in its state that help pay medical bills for people with limited income and resources.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "State medical assistance office",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/state-insurance-department",
+      "content": "<p>A state agency that regulates insurance and can provide information about health coverage in its state.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "State insurance department",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/state-health-insurance-assistance-program",
+      "content": "<p>A state program that gets funding from the federal government to provide free local health coverage counseling to people with Medicare.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "State Health Insurance Assistance Program (SHIP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/social-security",
+      "content": "<p>A system that distributes financial benefits to retired or disabled people, their spouses, and their dependent children based on their reported earnings. While you work, you may pay taxes into the Social Security system. When you retire or become disabled, you, your spouse, and your dependent children may get monthly benefits that are based on your reported earnings. Your survivors may be able to collect Social Security benefits if you die.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Social Security",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/social-security-survivors-benefits",
+      "content": "<p>Social Security benefits based on your record (if you should die) that are paid to your:</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Social Security survivors benefits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/social-security-benefits",
+      "content": "<p>The amount you get from Social Security Disability, Retirement (including Railroad retirement), or Survivor's Benefits each month.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Social Security benefits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/silver-health-plan",
+      "content": "<p>One of 4 categories of Health Insurance Marketplace\u00ae plans (sometimes called \u201cmetal levels\u201d). Silver plans fall about in the middle: You pay moderate monthly premiums and moderate costs when you need care. <strong>Important:</strong> If you qualify for \u201ccost sharing reductions\u201d (or \u201cextra savings\u201d) you can save a lot of money on deductibles, copayments, and coinsurance when you get care \u2014 but <strong>only if you pick a Silver plan</strong>.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Silver health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/service-area",
+      "content": "<p>A geographic area where a health insurance plan accepts members if it limits membership based on where people live. For plans that limit which doctors and hospitals you may use, it's also generally the area where you can get routine (non-emergency) services. The plan may end your coverage if you move out of the plan's service area.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Service area",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/self-employment-income",
+      "content": "<p>The net income you earn from your own trade or business. For example, any net income (profit) you earn from goods you sell or services you provide to others counts as self-employment income.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Self-employment income",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/retirement-benefit",
+      "content": "<p>A payment or series of payments made to you after you retire from work. Generally, the amount of your income from a pension or retirement account distribution depends on the type of pension or retirement account, how much you contributed to the pension or retirement account, and whether you were already taxed on the amounts you contributed. A qualified distribution from a designated Roth account isn't required to be included in your income.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Retirement benefit (pension)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/rental-or-royalty-income",
+      "content": "<p>The amount someone pays you to use your property, after you subtract the expenses you have for the property. Royalty income includes any payments you get from a patent, a copyright, or some natural resource that you own.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Rental or royalty income",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/qualifying-life-event",
+      "content": "<p><span>Like getting married, new baby or dependent, moving, or losing health coverage.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Qualifying life event (QLE)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/prior-authorization",
+      "content": "<p>Approval from a health plan that may be required before you get a service or fill a prescription in order for the service or prescription to be covered by your plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Prior authorization",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/premium-tax-credit",
+      "content": "<p><span>A tax credit you can use to lower your monthly insurance payment (your \u201cpremium\u201d).</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Premium tax credit",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/platinum-health-plan",
+      "content": "<p>One of 4 categories (or \u201cmetal levels\u201d) of Health Insurance Marketplace\u00ae plans. Platinum plans usually have the highest monthly premiums of any plan category but pay the most when you get medical care. They may work well if you expect to use a great deal of health care and would rather pay a higher premium and know nearly all other costs are covered.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Platinum health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/pension-retirement-benefit",
+      "content": "<p>A payment or series of payments made to you after you retire from work. Generally, the amount of your income from a pension or retirement account distribution depends on the type of pension or retirement account, how much you contributed to the pension or retirement account, and whether you were already taxed on the amounts you contributed.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pension (retirement benefit)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/notice",
+      "content": "<p>An official form of communication that informs individuals about the status of their applications, their eligibility for programs, or other important information. Notices may be sent by the Marketplace or by health insurers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Notice",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/net-capital-gains",
+      "content": "<p>The amount by which your total long-term capital gain for the year is more than your short-term capital loss for the year.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Net capital gains",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/navigator",
+      "content": "<p>An individual or organization that's trained and able to help consumers, small businesses, and their employees as they look for health coverage options through the Marketplace, including completing eligibility and enrollment forms. These individuals and organizations are required to be unbiased. Their services are free to consumers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Navigator",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/multi-employer-plan",
+      "content": "<p>In general, a group health plan that's sponsored jointly by 2 or more employers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Multi-employer plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/member-survey-results",
+      "content": "<p>A survey conducted by the Consumer Assessment of Healthcare Providers and Systems (CAHPS) which asks health plan members to rate the care their experiences with their health plan and its services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Member survey results",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/marketplace",
+      "content": "<p>Shorthand for the \u201cHealth Insurance Marketplace\u00ae,\u201d a shopping and enrollment service for medical insurance created by the Affordable Care Act in 2010.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Marketplace",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/large-group-health-plan",
+      "content": "<p>In general, a group health plan that covers employees of an employer that has 51 or more employees. In some states large groups are defined as 101 or more.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Large group health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/investment-income",
+      "content": "<p>The income you get from an investment, like interest you get from a bank or dividends you get from a stock you own.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Investment income",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/interest",
+      "content": "<p>The charge for the use of borrowed money.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Interest",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/inpatient-care",
+      "content": "<p>Health care that you get when you're admitted as an inpatient to a health care facility, like a hospital or skilled nursing facility.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Inpatient care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/in-person-assistance-personnel-program",
+      "content": "<p>Individuals or organizations that are trained and able to provide help to consumers, small businesses, and their employees as they look for health coverage options through the Marketplace, including helping them complete eligibility and enrollment forms. These individuals and organizations are required to be unbiased. Their services are free to consumers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "In Person Assistance Personnel Program",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/health-plan-categories",
+      "content": "<p>Levels of plans in the Health Insurance Marketplace\u00ae: Bronze, Silver, Gold, and Platinum. Categories (sometimes called \u201cmetal levels\u201d) are based on how you and your insurance plan split costs. Categories have nothing to do with quality of care. (\u201cCatastrophic\u201d plans are available to some people.)</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health plan categories",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/health-coverage",
+      "content": "<p>Legal entitlement to payment or reimbursement for your health care costs, generally under a contract with a health insurance company, a group health plan offered in connection with employment, or a government program like Medicare, Medicaid, or the Children\u2019s Health Insurance Program (CHIP).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/hardship-exemption",
+      "content": "<p>An exemption that\u2019s needed when applying for Catastrophic coverage for people 30 and older who faced a \"hardship\" that prevented them from getting insurance. Hardship exemptions are one type of exemption that someone can claim to qualify for Catastrophic coverage, along with affordability exemptions.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Hardship exemption",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/group-health-plan",
+      "content": "<p>In general, a health plan offered by an employer or employee organization that provides health coverage to employees and their families.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Group health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/gold-health-plan",
+      "content": "<p>One of 4 health plan categories (or \u201cmetal levels\u201d) in the Health Insurance Marketplace\u00ae. Gold plans usually have higher monthly premiums but lower costs when you get care. Gold may be a good choice if you use a lot of medical services or would rather pay more up front and know that you\u2019ll pay less when you get care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Gold health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/generic-drugs",
+      "content": "<p>A prescription drug that has the same active-ingredient formula as a brand-name drug. Generic drugs usually cost less than brand-name drugs. The Food and Drug Administration (FDA) rates these drugs to be as safe and effective as brand-name drugs.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Generic drugs",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/full-time-employee",
+      "content": "<p>Any employee who works an average of at least 30 hours per week for more than 120 days in a year. Part-time employees work an average of less than 30 hours per week.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Full-time employee (FTE)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/fee",
+      "content": "<p>A payment (\"penalty,\" \"fine,\" \"individual mandate\") you made when you filed federal taxes if you didn't have health insurance that counted as qualifying health coverage for plan years 2018 and earlier. <strong>The fee for not having health insurance no longer applies</strong>. This means you no longer pay a tax penalty for not having health coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Fee",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/fee-for-service",
+      "content": "<p>A method in which doctors and other health care providers are paid for each service performed. Examples of services include tests and office visits.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Fee for service",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/federally-recognized-tribe",
+      "content": "<p>Any Indian or Alaska Native tribe, Alaska Native Claims Settlement Act (ANCSA) Corporation (regional or village), band, nation, pueblo, village, rancheria, or community that the Department of the Interior acknowledges to exist as an Indian tribe.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Federally recognized tribe",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/external-review",
+      "content": "<p>A review of a plan's decision to deny coverage for or payment of a service by an independent third-party not related to the plan. If the plan denies an appeal, an external review can be requested. In urgent situations, an external review may be requested even if the internal appeals process isn't yet completed. External review is available when the plan denies treatment based on medical necessity, appropriateness, health care setting, level of care, or effectiveness of a covered benefit, when the plan determines that the care is experimental and/or investigational, or for rescissions of coverage. An external review either upholds the plan's decision or overturns all or some of the plan\u2019s decision. The plan must accept this decision.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "External review",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/employer-or-union-retiree-plans",
+      "content": "<p>Plans that provide health and/or drug coverage to former employees or members, and, in some cases, their families. These plans are offered to people through their (or a spouse's) former employer or employee organization. Many of these plans aren't legally required to meet many of the provisions of the Affordable Care Act, including providing coverage for children up to age 26.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Employer or union retiree plans",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/eligible-immigration-status",
+      "content": "<p>An immigration status that's considered eligible for getting health coverage through the Marketplace. The rules for eligible immigration status may be different in each insurance affordability program.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Eligible immigration status",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/eligibility-assessment",
+      "content": "<p>In certain states, the Marketplace doesn't provide the final decision on Medicaid eligibility. Instead, the Marketplace conducts an assessment and passes the application to the State Medicaid agency to conduct a final eligibility determination.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Eligibility assessment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/drug-list",
+      "content": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a formulary.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Drug list",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/domestic-partnership",
+      "content": "<p>Two people of the same or opposite sex who live together and share a domestic life, but aren't married or joined by a civil union. In some states, domestic partners are guaranteed some legal rights, like hospital visitation.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Domestic partnership",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/dividend",
+      "content": "<p>A payment made by a for-profit corporation to its shareholders. This payment is a portion of the corporate earnings and may be paid a certain number of times each year (like each quarter).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Dividend",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/dependent",
+      "content": "<p>A child or other individual for whom a parent, relative, or other person may claim a personal exemption tax deduction. Under the Affordable Care Act, individuals may be able to claim a premium tax credit to help cover the cost of coverage for themselves and their dependents.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Dependent",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/department-of-health-and-human-services-hhs",
+      "content": "<p>The federal agency that oversees CMS, which administers programs for protecting the health of all Americans, including Medicare, the Marketplace, Medicaid, and the Children\u2019s Health Insurance Program (CHIP). For more information, visit <a href=\"http://www.hhs.gov/\">hhs.gov</a>.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Department of Health and Human Services (HHS)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/dental-coverage",
+      "content": "<p>Benefits that help pay for the cost of visits to a dentist for basic or preventive services, like teeth cleaning, X-rays, and fillings. In the Marketplace, dental coverage is available either as part of a Marketplace health plan, or by itself through a separate dental plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Dental coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/deductible",
+      "content": "<p><span>How much you\u2019ll pay for certain covered services and items each year before your plan starts to pay (except free preventive services).</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Deductible",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/court-awards",
+      "content": "<p>Money that's due to you as the result of a lawsuit. This money may be taxable. Examples of lawsuit proceeds that aren't taxable are amounts awarded to you for personal physical injury or sickness and an amount you get as compensation for damages to your property if the payment is less than the amount you paid for the property. Payments to compensate you for lost wages or punitive damages awards are examples of taxable court awards.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Court awards",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/cost-sharing-reduction",
+      "content": "<p><span>A discount that lowers the amount you have to pay for deductibles, copayments, and coinsurance.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Cost sharing reduction (CSR)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/coordination-of-benefits",
+      "content": "<p>A way to figure out who pays first when 2 or more health insurance plans are responsible for paying the same medical claim.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Coordination of benefits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/co-op",
+      "content": "<p>A non-profit organization in which the same people who own the company are insured by the company. Cooperatives can be formed at a national, state, or local level and can include doctors, hospitals, and businesses as member-owners. Co-ops will offer insurance through the Marketplace.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Co-op",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/certified-applicant-counselor",
+      "content": "<p>An individual (affiliated with a designated organization) who is trained and able to help consumers, small businesses, and their employees as they look for health coverage options through the Marketplace, including helping them complete eligibility and enrollment forms. Their services are free to consumers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Certified application counselor",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/centers-for-medicare-and-medicaid-services",
+      "content": "<p>The federal agency that runs the Medicare, Medicaid, and Children's Health Insurance Programs, and the federally facilitated Marketplace. For more information, visit <a href=\"http://www.cms.gov/\">cms.gov</a>.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Centers for Medicare & Medicaid Services (CMS)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/capital-gains",
+      "content": "<p>A capital gain is the amount you get from selling property, like stock, a house, or a mutual fund. For example, if you buy stock for $1,000 and sell it for $1,250, you have capital gain of $250. You don't need to include a capital gain if it's from the sale of your main home you owned for at least 5 years (and the profit is less than $250,000). Report any capital gains noted in Form 1099-DIV, which you should get from some companies, like mutual funds, before the tax filing deadline.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Capital gains",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/cancelled-debts",
+      "content": "<p>If you incurred a debt from a loan or from buying something on credit and a portion of the amount you owe is discharged or forgiven (\"canceled\"), the amount of the forgiven debt is generally counted as income to you.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Canceled debts",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/bronze-health-plan",
+      "content": "<p>One of 4 plan categories (also known as \u201cmetal levels\u201d) in the Health Insurance Marketplace\u00ae. Bronze plans usually have the lowest monthly premiums but the highest costs when you get care. They can be a good choice if you usually use few medical services and mostly want protection from very high costs if you get seriously sick or injured.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Bronze health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/broker",
+      "content": "<p>An agent or broker is a person or business who can help you apply for help paying for coverage and enroll in a Qualified Health Plan (QHP) through the Marketplace. They can make specific recommendations about which plan you should enroll in. They\u2019re also licensed and regulated by states and typically get payments, or commissions, from health insurers for enrolling a consumer into an issuer's plans. Some brokers may only be able to sell plans from specific health insurers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Broker",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/brand-name-drugs",
+      "content": "<p>A drug sold by a drug company under a specific name or trademark and that is protected by a patent. Brand name drugs may be available by prescription or over the counter.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Brand name (drugs)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/authorized-representative",
+      "content": "<p>Someone who you choose to act on your behalf with the Marketplace, like a family member or other trusted person. Some authorized representatives may have legal authority to act on your behalf.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Authorized representative",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/attest-attestation",
+      "content": "<p>When you apply for health coverage through the Marketplace, you're required to agree (or \"attest\") to the truth of the information provided by signing the application.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Attest/Attestation",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/annual-deductible-combined",
+      "content": "<p>Usually in Health Savings Account (HSA) eligible plans, the total amount that family members on a plan must pay out-of-pocket for health care or prescription drugs before the health plan begins to pay.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Annual deductible combined",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/alimony",
+      "content": "<p>Alimony is money you get from a spouse with whom you no longer live, or a former spouse, if paid to you as part of a divorce agreement, separation agreement, or court order. Payments designated in the agreement or order as child support or as a non-taxable property settlement aren\u2019t alimony.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Alimony",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/agent",
+      "content": "<p><span>Trained professionals certified to sell health plans in the state they\u2019re licensed. Generally paid by insurance companies when people they help enroll in a plan they sell.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Agent and broker (health insurance)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/advanced-premium-tax-credit",
+      "content": "<p>A tax credit you can take in advance to lower your monthly health insurance payment (or \u201cpremium\u201d). When you apply for coverage in the Health Insurance Marketplace\u00ae, you estimate your expected income for the year. If you qualify for a premium tax credit based on your estimate, you can use any amount of the credit in advance to lower your premium.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Advance premium tax credit (APTC)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2013-06-05 00:00:00 +0000",
+      "url": "/glossary/accreditation",
+      "content": "<p>If a Marketplace health plan is approved, this is the \u201cseal of approval\u201d given to the plan by an independent organization to show that the plan meets national quality standards.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Accreditation",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/wellness-programs",
+      "content": "<p>A program intended to improve and promote health and fitness that's usually offered through the work place, although insurance plans can offer them directly to their enrollees. The program allows your employer or plan to offer you premium discounts, cash rewards, gym memberships, and other incentives to participate. Some examples of wellness programs include programs to help you stop smoking, diabetes management programs, weight loss programs, and preventative health screenings.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Wellness program",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/well-baby-and-well-child-visits",
+      "content": "<p>Routine doctor visits for comprehensive preventive health services that occur when a baby is young and annual visits until a child reaches age 21. Services include physical exam and measurements, vision and hearing screening, and oral health risk assessments.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Well-baby and well-child visits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/waiting-period-job-based-coverage",
+      "content": "<p>The time that must pass before coverage can become effective for an employee or dependent who is otherwise eligible for coverage under a job-based health plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Waiting period (job-based coverage)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/value-based-purchasing-vbp",
+      "content": "<p>Linking provider payments to improved performance by health care providers. This form of payment holds health care providers accountable for both the cost and quality of care they provide. It attempts to reduce inappropriate care and to identify and reward the best-performing providers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Value-based purchasing (VBP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/urgent-care",
+      "content": "<p>Care for an illness, injury or condition serious enough that a reasonable person would seek care right away, but not so severe it requires emergency room care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Urgent care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/uncompensated-care",
+      "content": "<p>Health care or services provided by hospitals or health care providers that don't get reimbursed. Often uncompensated care arises when people don't have insurance and cannot afford to pay the cost of care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Uncompensated care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/ucr-usual-customary-and-reasonable",
+      "content": "<p>The amount paid for a medical service in a geographic area based on what providers in the area usually charge for the same or similar medical service. The UCR amount sometimes is used to determine the allowed amount.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "UCR (usual, customary, and reasonable)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/state-continuation-coverage",
+      "content": "<p>A state-based requirement similar to COBRA that applies to group health insurance policies of employers with fewer than 20 employees. In some states, state continuation coverage rules also apply to larger group insurance policies and add to COBRA protections. For example, in some states, if you're leaving a job-based plan, you must be allowed to continue your coverage until you reach the age of Medicare eligibility.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "State continuation coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/specialist",
+      "content": "<p>A physician specialist focuses on a specific area of medicine or a group of patients to diagnose, manage, prevent or treat certain types of symptoms and conditions. A non-physician specialist is a provider who has more training in a specific area of health care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Specialist",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/special-health-care-need",
+      "content": "<p>The health care and related needs of children who have chronic physical, developmental, behavioral or emotional conditions. Such needs are of a type or amount beyond that required by children generally.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Special health care need",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/special-enrollment-period",
+      "content": "<p><span>A period of time outside of Open Enrollment when you can enroll in or change Marketplace plans.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Special Enrollment Period (SEP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/skilled-nursing-facility-care",
+      "content": "<p>Skilled nursing care and rehabilitation services provided on a continuous, daily basis in a skilled nursing facility. Examples of skilled nursing facility care include physical therapy or intravenous injections that can only be given by a registered nurse or doctor.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Skilled nursing facility care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/skilled-nursing-care",
+      "content": "<p>Services from licensed nurses in your own home or in a nursing home. Skilled care services are from technicians and therapists in your own home or in a nursing home.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Skilled nursing care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/self-insured-plan",
+      "content": "<p>Type of plan usually present in larger companies where the employer itself collects premiums from enrollees and takes on the responsibility of paying employees\u2019 and dependents\u2019 medical claims. These employers can contract for insurance services such as enrollment, claims processing, and provider networks with a third party administrator, or they can be self-administered.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Self-insured plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/risk-adjustment",
+      "content": "<p>A statistical process that takes into account the underlying health status and health spending of the enrollees in an insurance plan when looking at their health care outcomes or health care costs.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Risk adjustment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/rider-exclusionary-rider",
+      "content": "<p>A rider is an amendment to an insurance policy. Some riders add coverage (for example, if you buy a maternity rider to add coverage for pregnancy to your policy).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Rider (exclusionary rider)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/rescission",
+      "content": "<p>The retroactive cancellation of a health insurance policy. Insurance companies will sometimes retroactively cancel your entire policy if you made a mistake on your initial application when you buy an individual market insurance policy. Under the Affordable Care Act, rescission is illegal except in cases of fraud or intentional misrepresentation of material fact as prohibited by the terms of the plan or coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Rescission",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/reinsurance",
+      "content": "<p>A reimbursement system that protects insurers from very high claims. It usually involves a third party paying part of an insurance company\u2019s claims once they pass a certain amount. Reinsurance is a way to stabilize an insurance market and make coverage more available and affordable.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Reinsurance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/rehabilitative-rehabilitation-services",
+      "content": "<p>Health care services that help you keep, get back, or improve skills and functioning for daily living that have been lost or impaired because you were sick, hurt, or disabled. These services may include physical and occupational therapy, speech-language pathology, and psychiatric rehabilitation services in a variety of inpatient and/or outpatient settings.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Rehabilitative/Rehabilitation services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/reconstructive-surgery",
+      "content": "<p>Surgery and follow-up treatment needed to correct or improve a part of the body because of birth defects, accidents, injuries or medical conditions.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Reconstructive surgery",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/rate-review",
+      "content": "<p>A process that allows state insurance departments to review rate increases before insurance companies can apply them to you.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Rate review",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/qualified-health-plan",
+      "content": "<p>An insurance plan that\u2019s certified by the Health Insurance Marketplace\u00ae, provides essential health benefits, follows established limits on cost-sharing (like deductibles, copayments, and out-of-pocket maximum amounts), and meets other requirements under the Affordable Care Act. All qualified health plans meet the Affordable Care Act requirement for having health coverage, known as \u201cminimum essential coverage.\u201d</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Qualified health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/public-health",
+      "content": "<p>A field that seeks to improve lives and the health of communities through the prevention and treatment of disease and the promotion of healthy behaviors such as healthy eating and exercise.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Public health",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/primary-care",
+      "content": "<p>Health services that cover a range of prevention, wellness, and treatment for common illnesses. Primary care providers include doctors, nurses, nurse practitioners, and physician assistants. They often maintain long-term relationships with you and advise and treat you on a range of health related issues. They may also coordinate your care with specialists.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Primary care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/primary-care-provider",
+      "content": "<p>A physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine), nurse practitioner, clinical nurse specialist or physician assistant, as allowed under state law, who provides, coordinates or helps a patient access a range of health care services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Primary care provider",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/primary-care-physician",
+      "content": "<p>A physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine) who directly provides or coordinates a range of health care services for a patient.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Primary care physician",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/preventive-services",
+      "content": "<p>Routine health care that includes screenings, check-ups, and patient counseling to prevent illnesses, disease, or other health problems.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Preventive services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/prevention-glossary",
+      "content": "<p>Activities to prevent illness such as routine check-ups, immunizations, patient counseling, and screenings.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Prevention",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/prescription-drugs",
+      "content": "<p>Drugs and medications that, by law, require a prescription.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Prescription drugs",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/prescription-drug-coverage",
+      "content": "<p>Health insurance or plan that helps pay for prescription drugs and medications. All Marketplace plans cover prescription drugs.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Prescription drug coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/premium",
+      "content": "<p><span>A monthly amount you pay for coverage whether you get services or not.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Premium",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/preferred-provider",
+      "content": "<p>A provider who has a contract with your health insurer or plan to provide services to you at a discount. Check your policy to see if you can see all preferred providers or if your health insurance or plan has a \u201ctiered\u201d network and you must pay extra to see some providers. Your health insurance or plan may have preferred providers who are also \u201cparticipating\u201d providers. Participating providers also contract with your health insurer or plan, but the discount may not be as great, and you may have to pay more.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Preferred provider",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/preferred-provider-organization-ppo",
+      "content": "<p>A type of health plan that contracts with medical providers, such as hospitals and doctors, to create a network of participating providers. You pay less if you use providers that belong to the plan\u2019s network. You can use doctors, hospitals, and providers outside of the network for an additional cost.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Preferred Provider Organization (PPO)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/preauthorization",
+      "content": "<p>A decision by your health insurer or plan that a health care service, treatment plan, prescription drug or durable medical equipment is medically necessary. Sometimes called prior authorization, prior approval or precertification. Your health insurance or plan may require preauthorization for certain services before you receive them, except in an emergency. Preauthorization isn\u2019t a promise your health insurance or plan will cover the cost.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Preauthorization",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/pre-existing-condition",
+      "content": "<p>A health problem, like asthma, diabetes, or cancer, you had before the date that new health coverage starts. Insurance companies can't refuse to cover treatment for your pre-existing condition or charge you more.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pre-existing condition",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/pre-existing-condition-job-based-coverage",
+      "content": "<p>Any condition (either physical or mental) including a disability for which medical advice, diagnosis, care, or treatment was recommended or received within the 6-month period ending on your enrollment date in a health insurance plan. Genetic information, without a diagnosis of a disease or a condition, cannot be treated as a pre-existing condition. Pregnancy cannot be considered a pre-existing condition and newborns, newly adopted children and children placed for adoption who are enrolled within 30 days cannot be subject to pre-existing condition exclusions.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pre-existing condition (job-based coverage)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/pre-existing-condition-insurance-plan-pcip",
+      "content": "<p>A program (that no longer exists) created by the Affordable Care Act to provide a health coverage option if you were uninsured for at least 6 months, had a pre-existing condition, and were denied coverage (or offered insurance without coverage of the pre-existing condition) by a private insurance company.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pre-existing Condition Insurance Plan (PCIP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/pre-existing-condition-exclusion-period-job-based-coverage",
+      "content": "<p>The time period during which a health plan won't pay for care relating to a pre-existing condition. Under a job-based plan, this cannot exceed 12 months for a regular enrollee or 18 months for a late-enrollee.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pre-existing condition exclusion period (job-based coverage)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/pre-existing-condition-exclusion-period-individual-policy",
+      "content": "<p>The time period during which an individual policy won't pay for care relating to a pre-existing condition. Under an individual policy, conditions may be excluded permanently (known as an \"exclusionary rider\"). Rules on pre-existing condition exclusion periods in individual policies vary widely by state.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Pre-existing condition exclusion period (individual policy)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/policy-year",
+      "content": "<p>A 12-month period of benefits coverage under an individual health insurance plan. This 12-month period may not be the same as the calendar year. To find out when your policy year begins, you can check your policy documents or contact your insurer. (Note: In group health plans, this 12-month period is called a \u201cplan year\u201d).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Policy year",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/point-of-service-plan-pos-plan",
+      "content": "<p>A type of plan in which you pay less if you use doctors, hospitals, and other health care providers that belong to the plan\u2019s network. POS plans also require you to get a referral from your primary care doctor in order to see a specialist.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Point of Service (POS) Plans",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/plan",
+      "content": "<p>A benefit your employer, union or other group sponsor provides to you to pay for your health care services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/plan-year",
+      "content": "<p>A 12-month period of benefits coverage under a group health plan. This 12-month period may not be the same as the calendar year. To find out when your plan year begins, you can check your plan documents or ask your employer. (Note: For individual health insurance policies this 12-month period is called a \u201cpolicy year\u201d).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Plan year",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/physician-services",
+      "content": "<p>Health care services a licensed medical physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine) provides or coordinates.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Physician services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/payment-bundling",
+      "content": "<p>A payment structure in which different health care providers who are treating you for the same or related conditions are paid an overall sum for taking care of your condition rather than being paid for each individual treatment, test, or procedure. In doing so, providers are rewarded for coordinating care, preventing complications and errors, and reducing unnecessary or duplicative tests and treatments.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Payment bundling",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/patient-protection-and-affordable-care-act",
+      "content": "<p>The first part of the comprehensive health care reform law enacted on March 23, 2010.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Patient Protection and Affordable Care Act",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/patient-centered-outcomes-research",
+      "content": "<p>Research that compares different medical treatments and interventions to provide evidence on which strategies are most effective in different populations and situations. The goal is to empower you and your doctor with additional information to make sound health care decisions.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Patient-centered outcomes research",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/out-of-pocket-costs",
+      "content": "<p><span>Costs you pay when you get a service covered by your plan (like deductibles, co-pays, and coinsurance) plus all costs for any items not covered by your plan</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Out-of-pocket costs",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/open-enrollment-period",
+      "content": "<p><span>November 1 \u2013 January 15 each year.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Open Enrollment Period",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/nondiscrimination",
+      "content": "<p>A requirement that job-based coverage not discriminate based on health status. Coverage under job-based plans cannot be denied or restricted. You also can't be charged more because of your health status. Job-based plans can restrict coverage based on other factors such as part-time employment that aren't related to health status.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Nondiscrimination",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/non-preferred-provider",
+      "content": "<p>A provider who doesn\u2019t have a contract with your health insurer or plan to provide services to you. You\u2019ll pay more to see a non-preferred provider. Check your policy to see if you can go to all providers who have contracted with your health insurance or plan, or if your health insurance or plan has a \u201ctiered\u201d network and you must pay extra to see some providers.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Non-preferred provider",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/new-plan",
+      "content": "<p>As used in connection with the Affordable Care Act: A health plan that is not a grandfathered health plan and therefore subject to all of the reforms in the Affordable Care Act.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "New plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/network",
+      "content": "<p>The facilities, providers and suppliers your health insurer or plan has contracted with to provide health care services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Network",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/minimum-essential-coverage",
+      "content": "<p>Any insurance plan that meets the Affordable Care Act requirement for having health coverage. To avoid the penalty for not having insurance for plans 2018 and earlier, you must be enrolled in a plan that qualifies as minimum essential coverage (sometimes called \u201cqualifying health coverage\u201d). Examples of plans that qualify include: Marketplace plans; job-based plans; Medicare; and Medicaid &amp; CHIP.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Minimum essential coverage (MEC)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicare",
+      "content": "<p><span>A federal health program for people 65 and older and certain younger people with disabilities and ESRD.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicare",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicare-prescription-drug-donut-hole",
+      "content": "<p>Medicare drug plans previously had a coverage gap (also called the \"donut hole\"). The donut hole was a temporary limit on what the drug plan would cover for drugs.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicare prescription drug donut hole",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicare-part-d",
+      "content": "<p>A program that helps pay for prescription drugs for people with Medicare who join a plan that includes Medicare prescription drug coverage. There are two ways to get Medicare prescription drug coverage: through a Medicare Prescription Drug Plan or a Medicare Advantage Plan that includes drug coverage. These plans are offered by insurance companies and other private companies approved by Medicare.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicare Part D",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicare-hospital-insurance-tax",
+      "content": "<p>A tax under the Federal Insurance Contributions Act (FICA) that is a United States payroll tax imposed by the federal government on both employees and employers to fund Medicare.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicare hospital insurance tax",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicare-advantage-medicare-part-c",
+      "content": "<p>A type of Medicare health plan offered by a private company that contracts with Medicare to provide you with all your Part A and Part B benefits. Medicare Advantage Plans include Health Maintenance Organizations, Preferred Provider Organizations, Private Fee-for-Service Plans, Special Needs Plans, and Medicare Medical Savings Account Plans. If you\u2019re enrolled in a Medicare Advantage Plan, most Medicare services are covered through the plan and aren\u2019t paid for under Original Medicare. Most Medicare Advantage Plans offer prescription drug coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicare Advantage (Medicare Part C)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medically-necessary",
+      "content": "<p>Health care services or supplies needed to diagnose or treat an illness, injury, condition, disease or its symptoms and that meet accepted standards of medicine.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medically necessary",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medical-underwriting",
+      "content": "<p>A process used by insurance companies to try to figure out your health status when you're applying for health insurance coverage to determine whether to offer you coverage, at what price, and with what exclusions or limits.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medical underwriting",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medical-loss-ratio-mlr",
+      "content": "<p>A basic financial measurement used in the Affordable Care Act to encourage health plans to provide value to enrollees. If an insurer uses 80 cents out of every premium dollar to pay its customers' medical claims and activities that improve the quality of care, the company has a medical loss ratio of 80%. A medical loss ratio of 80% indicates that the insurer is using the remaining 20 cents of each premium dollar to pay overhead expenses, such as marketing, profits, salaries, administrative costs, and agent commissions. The Affordable Care Act sets minimum medical loss ratios for different markets, as do some state laws.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medical loss ratio (MLR)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/medicaid",
+      "content": "<p><span>A joint federal and state insurance program that provides free or low-cost health coverage to some low-income individuals, families, children, pregnant women, the elderly, and people with disabilities.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Medicaid",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/long-term-care",
+      "content": "<p>Services that include medical and non-medical care provided to people who are unable to perform basic activities of daily living such as dressing or bathing. Long-term supports and services can be provided at home, in the community, in assisted living or in nursing homes. Individuals may need long-term supports and services at any age. Medicare and most health insurance plans don\u2019t pay for long-term care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Long-term care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/life-time-limit",
+      "content": "<p>A cap on the total lifetime benefits you may get from your insurance company. An insurance company may impose a total lifetime dollar limit on benefits (like a $1 million lifetime cap) or limits on specific benefits (like a $200,000 lifetime cap on organ transplants or one gastric bypass per lifetime) or a combination of the two. After a lifetime limit is reached, the insurance plan will no longer pay for covered services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Lifetime limit",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/job-based-health-plan",
+      "content": "<p>Coverage that is offered to an employee (and often his or her family) by an employer.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Job-based health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/insurance-co-op",
+      "content": "<p>A non-profit entity in which the same people who own the company are insured by the company. Cooperatives can be formed at a national, state or local level, and can include doctors, hospitals and businesses as member-owners.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Insurance co-op",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/individual-health-insurance-policy",
+      "content": "<p>Policies for people who aren't connected to job-based coverage. Individual health insurance policies are regulated under state law.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Individual health insurance policy",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/in-network-coinsurance",
+      "content": "<p>The percent (for example, 20%) you pay of the allowed amount for covered health care services to providers who contract with your health insurance or plan. In-network coinsurance usually costs you less than out-of-network coinsurance.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "In-network coinsurance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/in-network-co-payment",
+      "content": "<p>A fixed amount (for example, $15) you pay for covered health care services to providers who contract with your health insurance or plan. In-network copayments usually are less than out-of-network copayments.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "In-network copayment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/household",
+      "content": "<p>The Marketplace generally considers your household to be you, your spouse if you\u2019re married, and your tax dependents. Your eligibility for savings is generally based on the income of all household members, even those who don\u2019t need insurance.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Household",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/hospitalization",
+      "content": "<p>Care in a hospital that requires admission as an inpatient and usually requires an overnight stay. An overnight stay for observation could be outpatient care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Hospitalization",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/hospital-readmissions",
+      "content": "<p>A situation where you were discharged from the hospital and wind up going back in for the same or related care within 30, 60 or 90 days. The number of hospital readmissions is often used in part to measure the quality of hospital care, since it can mean that your follow-up care wasn't properly organized, or that you weren't fully treated before discharge.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Hospital readmissions",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/hospital-outpatient-care",
+      "content": "<p>Care in a hospital that usually doesn\u2019t require an overnight stay.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Hospital outpatient care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/hospice-services",
+      "content": "<p>Services to provide comfort and support for persons in the last stages of a terminal illness and their families.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Hospice services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/home-health-care",
+      "content": "<p>Health care services a person receives at home.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Home health care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/home-and-community-based-services-hcbs",
+      "content": "<p>Services and support provided by most state Medicaid programs in your home or community that gives help with such daily tasks as bathing or dressing. This care is covered when provided by care workers or, if your state permits it, by your family.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Home and community-based services (HCBS)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/hipaa-eligible-individual",
+      "content": "<p>Your status once you have had 18 months of continuous creditable health coverage. To be HIPAA (Health Insurance Portability and Accountability Act) eligible, at least the last day of your creditable coverage must have been under a group health plan; you also must have used up any COBRA or state continuation coverage; you must not be eligible for Medicare or Medicaid; you must not have other health insurance; and you must apply for individual health insurance within 63 days of losing your prior creditable coverage. When you're buying individual health insurance, HIPAA eligibility gives you greater protections than you would otherwise have under state law.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "HIPAA eligible individual",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/high-risk-pool-plan-state",
+      "content": "<p>Similar to the Pre-Existing Condition Insurance Plan under the Affordable Care Act, for years many states have offered plans that provide coverage if you have been locked out of the individual insurance market because of a pre-existing condition. High-risk pool plans may also offer coverage if you're HIPAA eligible or meet other requirements. High-risk pool plans offer health insurance coverage that is subsidized by a state government. Typically, your premium is up to twice as much as you would pay for individual coverage if you were healthy.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "High-risk pool plan (state)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/high-deductible-health-plan",
+      "content": "<p>A plan with a higher deductible than a traditional insurance plan. The monthly premium is usually lower, but you pay more health care costs yourself before the insurance company starts to pay its share (your deductible). A high deductible plan (HDHP) can be combined with a health savings account (HSA), allowing you to pay for certain medical expenses with money free from federal taxes.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "High Deductible Health Plan (HDHP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/high-cost-excise-tax",
+      "content": "<p>Under the Affordable Care Act starting in 2018, a tax on insurance companies that provide high-cost plans. This tax encourages streamlining of health plans to make premiums more affordable.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "High-cost excise tax",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-status",
+      "content": "<p>Refers to your medical conditions (both physical and mental health), claims experience, receipt of health care, medical history, genetic information, evidence of insurability, and disability.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health status",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-savings-account-hsa",
+      "content": "<p>A type of savings account that lets you set aside money on a pre-tax basis to pay for qualified medical expenses. By using untaxed dollars in a Health Savings Account (HSA) to pay for deductibles, copayments, coinsurance, and some other expenses, you may be able to lower your overall health care costs. HSA funds generally may not be used to pay premiums.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health Savings Account (HSA)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-reimbursement-account-hra",
+      "content": "<p><span>Employer-funded group heath plans where employees are reimbursed tax-free for qualified medical expenses up to a certain dollar amount each year.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health Reimbursement Arrangement (HRA)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-maintenance-organization-hmo",
+      "content": "<p>A type of health insurance plan that usually limits coverage to care from doctors who work for or contract with the HMO. It generally won't cover out-of-network care except in an emergency. An HMO may require you to live or work in its service area to be eligible for coverage. HMOs often provide integrated care and focus on prevention and wellness.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health Maintenance Organization (HMO)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-insurance",
+      "content": "<p>A contract that requires your health insurer to pay some or all of your health care costs in exchange for a premium.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health insurance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-insurance-marketplace-glossary",
+      "content": "<p>A service that helps people shop for and enroll in health insurance. The federal government operates the Health Insurance Marketplace\u00ae, available at HealthCare.gov, for most states. Some states run their own Marketplaces.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health Insurance Marketplace\u00ae",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/health-care-workforce-incentive",
+      "content": "<p>The use of incentives and recruiting to encourage people to enter into health care professions like primary care and to encourage providers to practice in underserved areas.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Health care workforce incentive",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/habilitative-habilitation-services",
+      "content": "<p>Health care services that help you keep, learn, or improve skills and functioning for daily living. Examples include therapy for a child who isn't walking or talking at the expected age. These services may include physical and occupational therapy, speech-language pathology, and other services for people with disabilities in a variety of inpatient and/or outpatient settings.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Habilitative/Habilitation services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/guaranteed-renewal",
+      "content": "<p>A requirement that your health insurance issuer must offer to renew your policy as long as you continue to pay premiums. Except in some states, guaranteed renewal doesn't limit how much you can be charged if you renew your coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Guaranteed renewal",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/guaranteed-issue",
+      "content": "<p>A requirement that health plans must permit you to enroll regardless of health status, age, gender, or other factors that might predict the use of health services. Except in some states, guaranteed issue doesn't limit how much you can be charged if you enroll.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Guaranteed issue",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/grievance",
+      "content": "<p>A complaint that you communicate to your health insurer or plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Grievance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/grandfathered",
+      "content": "<p>As used in connection with the Affordable Care Act: Exempt from certain provisions of this law.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Grandfathered",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/grandfathered-health-plan",
+      "content": "<p>An individual health insurance policy purchased on or before March 23, 2010. These plans weren\u2019t sold through the Marketplace, but by insurance companies, agents, or brokers. They may not include some rights and protections provided under the Affordable Care Act.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Grandfathered health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/fully-insured-job-based-plan",
+      "content": "<p>A health plan purchased by an employer from an insurance company.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Fully insured job-based plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/formulary",
+      "content": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a drug list.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Formulary",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/flexible-spending-account-fsa",
+      "content": "<p>An arrangement through your employer that lets you pay for many out-of-pocket medical expenses with tax-free dollars. Allowed expenses include insurance copayments and deductibles, qualified prescription drugs, insulin, and medical devices.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Flexible Spending Account (FSA)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/flexible-benefits-plan",
+      "content": "<p>A benefit program that offers employees a choice between various benefits including cash, life insurance, health insurance, vacations, retirement plans, and child care. Although a common core of benefits may be required, you can choose how your remaining benefit dollars are to be allocated for each type of benefit from the total amount promised by the employer. Sometimes you can contribute more for additional coverage. Also known as a Cafeteria plan or IRS 125 Plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Flexible benefits plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/federally-qualified-health-center-fqhc",
+      "content": "<p>Federally funded nonprofit health centers or clinics that serve medically underserved areas and populations. Federally qualified health centers provide primary care services regardless of your ability to pay. Services are provided on a sliding scale fee based on your ability to pay.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Federally Qualified Health Center (FQHC)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2023-03-23 00:00:00 +0000",
+      "url": "/glossary/federal-poverty-level-fpl",
+      "content": "<p>A measure of income updated each year by the Department of Health and Human Services (HHS) that\u2019s used to determine eligibility for certain programs and benefits, like Marketplace savings, and Medicaid and the Children's Health Insurance Program (CHIP) coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Federal poverty level (FPL)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/family-and-medical-leave-act-fmla",
+      "content": "<p>A federal law that guarantees up to 12 weeks of job protected leave for certain employees when they need to take time off due to serious illness or disability, to have or adopt a child, or to care for another family member. When on leave under FMLA, you can continue coverage under your job-based plan.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Family and Medical Leave Act (FMLA)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/exclusive-provider-organization-epo-plan",
+      "content": "<p>A managed care plan where services are covered only if you go to doctors, specialists, or hospitals in the plan\u2019s network (except in an emergency).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Exclusive Provider Organization (EPO) Plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/excluded-services",
+      "content": "<p>Health care services that your health insurance or plan doesn\u2019t pay for or cover.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Excluded services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/exchange",
+      "content": "<p>Another term for the Health Insurance Marketplace\u00ae, a service available in every state that helps individuals, families, and small businesses shop for and enroll in affordable medical insurance.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Exchange",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/essential-health-benefits",
+      "content": "<p>A set of 10 categories of services health insurance plans must cover under the Affordable Care Act. These include doctors\u2019 services, inpatient and outpatient hospital care, prescription drug coverage, pregnancy and childbirth, mental health services, and more. Some plans cover more services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Essential health benefits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/employer-shared-responsibility-payment",
+      "content": "<p>The Affordable Care Act requires certain employers with at least 50 full-time employees (or equivalents) to offer health insurance coverage to its full-time employees (and their dependents) that meets certain minimum standards set by the Affordable Care Act or to make a tax payment called the ESRP.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Employer shared responsibility payment (ESRP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/emergency-services",
+      "content": "<p>Evaluation of an emergency medical condition and treatment to keep the condition from getting worse.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Emergency services",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/emergency-room-care",
+      "content": "<p>Emergency services you get in an emergency room.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Emergency room care",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/emergency-medical-transportation",
+      "content": "<p>Ambulance services for an emergency medical condition.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Emergency medical transportation",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/emergency-medical-condition",
+      "content": "<p>An illness, injury, symptom or condition so serious that a reasonable person would seek care right away to avoid severe harm.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Emergency medical condition",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/early-and-periodic-screening-diagnostic-and-treatment-services-epsdt",
+      "content": "<p>A term used to refer to the comprehensive set of benefits covered for children in Medicaid.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Early and Periodic Screening, Diagnostic, and Treatment Services (EPSDT)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/durable-medical-quipment-dme",
+      "content": "<p>Equipment and supplies ordered by a health care provider for everyday or extended use. Coverage for DME may include: oxygen equipment, wheelchairs, crutches or blood testing strips for diabetics.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Durable medical equipment (DME)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/donut-hole-medicare-prescription-drug",
+      "content": "<p>Medicare drug plans previously had a coverage gap (also called the \"donut hole\"). The donut hole was a temporary limit on what the drug plan would cover for drugs.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Donut hole (Medicare prescription drug)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/disability",
+      "content": "<p>A limit in a range of major life activities. This includes activities like seeing, hearing, walking and tasks like thinking and working. Because different programs may have different disability standards, please check the program you're interested in for its disability standards. The list of activities mentioned above isn't exhaustive.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Disability",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/dependent-coverage",
+      "content": "<p>Insurance coverage for family members of the policyholder, such as spouses, children, or partners.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Dependent coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/creditable-coverage",
+      "content": "<p>Health insurance coverage under any of the following: a group health plan; individual health insurance; student health insurance; Medicare; Medicaid; CHAMPUS and TRICARE; the Federal Employees Health Benefits Program; Indian Health Service; the Peace Corps; Public Health Plan (any plan established or maintained by a State, the U.S. government, a foreign country); Children\u2019s Health Insurance Program (CHIP); or, a state health insurance high risk pool. If you have prior creditable coverage, it will reduce the length of a pre-existing condition exclusion period under new job-based coverage.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Creditable coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/cost-sharing",
+      "content": "<p>The share of costs covered by your insurance that you pay out of your own pocket. This term generally includes deductibles, coinsurance, and copayments, or similar charges, but it doesn't include premiums, balance billing amounts for non-network providers, or the cost of non-covered services. Cost sharing in Medicaid and CHIP also includes premiums.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Cost sharing",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/conversion",
+      "content": "<p>The ability, in some states, to switch your job-based coverage to an individual policy when you lose eligibility for job-based coverage. Family members not covered under a job-based policy may also be able to convert to an individual policy if they lose dependent status (for example, after a divorce).</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Conversion",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/complications-of-pregnancy",
+      "content": "<p>Conditions due to pregnancy, labor and delivery that require medical care to prevent serious harm to the health of the mother or the fetus. Morning sickness and a non-emergency caesarean section aren\u2019t complications of pregnancy.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Complication of pregnancy",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/competitive-bidding",
+      "content": "<p>Open bidding for federal contracts between independent groups that compete for the contract by providing the best bid.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Competitive bidding",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/community-rating",
+      "content": "<p>A rule that prevents health insurers from varying premiums within a geographic area based on age, gender, health status or other factors.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Community rating",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/cobra",
+      "content": "<p>A federal law that may allow you to temporarily keep health coverage after your employment ends, you lose coverage as a dependent of the covered employee, or another qualifying event. If you elect COBRA (Consolidated Omnibus Budget Reconciliation Act) coverage, you pay 100% of the premiums, including the share the employer used to pay, plus a small administrative fee.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "COBRA",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/co-payment",
+      "content": "<p><span>A fixed amount you pay for a plan-covered service, like $30.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Copayment",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/co-insurance",
+      "content": "<p><span>A percentage of the cost that you pay for each plan-covered service, like 20%.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Coinsurance",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/claim",
+      "content": "<p>A request for payment that you or your health care provider submits to your health insurer when you get items or services you think are covered.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Claim",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/chronic-disease-management",
+      "content": "<p>An integrated care approach to managing illness which includes screenings, check-ups, monitoring and coordinating treatment, and patient education. It can improve your quality of life while reducing your health care costs if you have a chronic disease by preventing or minimizing the effects of a disease.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Chronic disease management",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/childrens-health-insurance-program-chip",
+      "content": "<p><span>A joint federal and state insurance program that provides free or low-cost health coverage to children and pregnant women in families that earn too much to qualify for Medicaid.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Children's Health Insurance Program (CHIP)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/catastrophic-health-plan",
+      "content": "<p>Health plans that meet all of the requirements applicable to other Qualified Health Plans (QHPs) but don't cover any benefits other than 3 primary care visits per year before the plan's deductible is met.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Catastrophic health plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/care-coordination",
+      "content": "<p>The organization of your treatment across several health care providers. Medical homes and Accountable Care Organizations are two common ways to coordinate care.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Care coordination",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/biosimilar-biological-products",
+      "content": "<p>The generic version of more complicated medications.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Biosimilar biological products",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/benefits",
+      "content": "<p>The health care items or services covered under a health insurance plan. Covered benefits and excluded services are defined in the health insurance plan's coverage documents. In Medicaid or CHIP, covered benefits and excluded services are defined in state program rules.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Benefits",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/benefit-year",
+      "content": "<p>A year of benefits coverage under an individual health insurance plan. The benefit year for plans bought inside or outside the Marketplace begins January 1 of each year and ends December 31 of the same year. Your coverage ends December 31 even if your coverage started after January 1. Any changes to benefits or rates to a health insurance plan are made at the beginning of the calendar year.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Benefit year",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/balance-billing",
+      "content": "<p>When a provider bills you for the difference between the provider\u2019s charge and the allowed amount. For example, if the provider\u2019s charge is $100 and the allowed amount is $70, the provider may bill you for the remaining $30. A preferred provider may not balance bill you for covered services.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Balance billing",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/appeal",
+      "content": "<p>A request for your health insurance company or the Health Insurance Marketplace\u00ae to review a decision that denies a benefit or payment.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Appeal",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/annual-limit",
+      "content": "<p>A cap on the benefits your insurance company will pay in a year while you're enrolled in a particular health insurance plan. These caps are sometimes placed on particular services such as prescriptions or hospitalizations. Annual limits may be placed on the dollar amount of covered services or on the number of visits that will be covered for a particular service. After an annual limit is reached, you must pay all associated health care costs for the rest of the year.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Annual limit",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/allowed-amount",
+      "content": "<p>The maximum amount a plan will pay for a covered health care service. May also be called \u201celigible expense,\u201d \u201cpayment allowance,\u201d or \u201cnegotiated rate.\u201d</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Allowed amount",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/affordable-coverage",
+      "content": "<p><span>In <strong>2026</strong>, a job-based health plan is considered \"affordable\" if your share of the monthly premium for the lowest-cost plan offered by the employer is less than 9.96% of your household income.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Affordable coverage",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/affordable-care-act",
+      "content": "<p>The comprehensive health care reform law enacted in March 2010 to make affordable health insurance available to more people, expand Medicaid, and support innovative medical care delivery methods designed to lower the costs of health care generally.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Affordable Care Act (ACA)",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/actuarial-value",
+      "content": "<p>The percentage of total average costs for covered benefits that a plan will cover. For example, if a plan has an actuarial value of 70%, on average, you would be responsible for 30% of the costs of all covered benefits. However, you could be responsible for a higher or lower percentage of the total costs of covered services for the year, depending on your actual health care needs and the terms of your insurance policy.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Actuarial value",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/accountable-care-organization",
+      "content": "<p>A group of health care providers who give coordinated care, chronic disease management, and thereby improve the quality of care patients get. The organization's payment is tied to achieving health care quality goals and outcomes that result in cost savings.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Accountable care organization",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/lawfully-present",
+      "content": "<p>The term \u201clawfully present\u201d is used to describe consumers who have \u201cQualified non-citizen\u201d immigration status without a waiting period or other specific statuses.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Lawfully present",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/zero-cost-sharing-plan",
+      "content": "<p>A plan available to members of federally recognized tribes and Alaska Native Claims Settlement Act (ANCSA) Corporation shareholders whose income is between 100% and 300% of the federal poverty level and qualify for premium tax credits. People enrolled in this type of plan:</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Zero cost sharing plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/self-employment-ledger",
+      "content": "<p>Any accurate, detailed record of your self-employment income and expenses. It can be a spreadsheet, a document from an accounting software program, a handwritten \"ledger\" book, or anything that records all self-employment income and expenses.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Self-employment ledger",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/reconcile",
+      "content": "<p><span>Use IRS Form 8962 to find out if you used the right amount of premium tax credit during the year. Use the form to compare the advance amount you use to the amount you qualify for based on your final income. If you used too much, you\u2019ll repay it when you file your taxes. If you used too little, claim the difference as a credit.</span></p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Reconcile",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/minimum-value",
+      "content": "<p>A standard of minimum coverage that applies to job-based health plans. If your employer\u2019s plan meets this standard and is considered \u201caffordable,\u201d you won\u2019t qualify for a premium tax credit if you buy a Marketplace insurance plan instead.</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Minimum value",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    },
+    {
+      "date": "2022-05-19 00:00:00 +0000",
+      "url": "/glossary/limited-cost-sharing-plan",
+      "content": "<p>A plan available to members of federally recognized tribes and Alaska Native Claims Settlement Act (ANCSA) Corporation shareholders regardless of income or eligibility for premium tax credits. People enrolled in this type of plan:</p>",
+      "tags": [
+        "glossary"
+      ],
+      "title": "Limited cost sharing plan",
+      "categories": [
+        "glossary"
+      ],
+      "lang": "en",
+      "layout": "glossary-word"
+    }
+  ]
+}

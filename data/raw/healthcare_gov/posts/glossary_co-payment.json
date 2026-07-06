@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about copayments by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Copayment",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "co-payment",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A fixed amount you pay for a plan-covered service, like $30.</span></p>",
+  "meta-title": "Copayment - Glossary",
+  "layout": null,
+  "page_name": "Copayment",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A fixed amount ($20, for example) you pay for a covered health care service after you've paid your deductible.</p><p>Let's say your health insurance plan's <a href=\"/glossary/allowed-amount\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"78ebdc9b-0630-4afb-8619-f12062520a41\" data-entity-bundle=\"glossary\" data-entity-id=\"35676\" data-internal-href=\"/node/35676\" data-entity-substitution=\"canonical\">allowable cost</a> for a doctor's office visit is $100. Your copayment for a doctor visit is $20.</p><ul><li>If you've paid your <a href=\"/glossary/deductible\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-entity-bundle=\"glossary\" data-entity-id=\"34906\" data-internal-href=\"/node/34906\" data-entity-substitution=\"canonical\">deductible</a>: You pay $20, usually at the time of the visit.</li><li>If you haven't met your deductible: You pay $100, the full allowable amount for the visit.</li></ul><p>Copayments (sometimes called \"copays\") can vary for different services within the same plan, like drugs, lab tests, and visits to specialists.</p><p>Generally plans with lower monthly <a href=\"/glossary/premium\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"b625d61d-da5b-4825-bb54-2bb728b7a4c0\" data-entity-bundle=\"glossary\" data-entity-id=\"35151\" data-internal-href=\"/node/35151\" data-entity-substitution=\"canonical\">premiums</a> have higher copayments. Plans with higher monthly premiums usually have lower copayments.</p><h2>Related content</h2><ul><li><a href=\"/glossary/deductible\" title=\"Learn about deductibles\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-entity-bundle=\"glossary\" data-entity-id=\"34906\" data-internal-href=\"/glossary/deductible/\" data-entity-substitution=\"canonical\">Learn about deductibles</a></li><li><a href=\"/glossary/allowed-amount\" title=\"Learn about allowed amounts\" data-entity-type=\"node\" data-entity-uuid=\"78ebdc9b-0630-4afb-8619-f12062520a41\" data-entity-bundle=\"glossary\" data-entity-id=\"35676\" data-internal-href=\"/glossary/allowed-amount/\" data-entity-substitution=\"canonical\">Learn about allowed amounts</a></li><li><a href=\"/choose-a-plan/your-total-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"3ff4c042-5db7-4450-b20b-7170fe56bd90\" data-entity-id=\"37861\" data-entity-bundle=\"article\" title=\"Your total costs for health care: Premium, deductible &amp; out-of-pocket costs\">Learn how deductibles and copayments affect your total costs of care</a></li></ul>",
+  "url": "/glossary/co-payment"
+}

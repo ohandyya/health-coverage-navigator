@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about subsidized coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Subsidized coverage",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "subsidized-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Reduced or low-cost health coverage for people with income below certain levels.</p>",
+  "meta-title": "Subsidized coverage - Glossary",
+  "layout": null,
+  "page_name": "Subsidized coverage",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Reduced or low-cost health coverage for people with income below certain levels.</p><p>Examples of subsidized coverage include Medicaid and the Children\u2019s Health Insurance Program (CHIP). Marketplace insurance plans with the premium tax credit are sometimes known as subsidized coverage too.</p><p>In states that have expanded Medicaid, you may qualify if your household income is below 138% of the federal poverty level (FPL). <a href=\"https://aspe.hhs.gov/poverty-guidelines \">Get federal poverty levels from HHS.</a></p><p>In all states, your household income must be between 100% and 400% FPL to qualify for the premium tax credit that can lower your insurance costs.</p><h2>Related Content</h2><ul><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-substitution=\"canonical\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Income levels that qualify for lower health coverage costs</a></li><li><a href=\"/medicaid-chip/getting-medicaid-chip\" data-entity-type=\"node\" data-entity-uuid=\"845b29f0-0682-4d2d-ab42-9c013b3ec2e3\" data-entity-substitution=\"canonical\" data-entity-id=\"37806\" data-entity-bundle=\"article\" title=\"Medicaid &amp; CHIP coverage\">Medicaid and CHIP coverage</a></li><li><a href=\"/lower-costs/save-on-monthly-premiums\" data-entity-type=\"node\" data-entity-uuid=\"24662f58-922c-4c7b-9294-c33ed6bcaf69\" data-entity-substitution=\"canonical\" data-entity-id=\"38071\" data-entity-bundle=\"article\" title=\"How to save on your monthly insurance bill with the premium tax credit\">How to save on monthly insurance premiums</a></li></ul>",
+  "url": "/glossary/subsidized-coverage"
+}

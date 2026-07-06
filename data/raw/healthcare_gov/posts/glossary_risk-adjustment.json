@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about risk adjustments by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Risk adjustment",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "risk-adjustment",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A statistical process that takes into account the underlying health status and health spending of the enrollees in an insurance plan when looking at their health care outcomes or health care costs.</p>",
+  "meta-title": "Risk adjustment - Glossary",
+  "layout": null,
+  "page_name": "Risk adjustment",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A statistical process that takes into account the underlying health status and health spending of the enrollees in an insurance plan when looking at their health care outcomes or health care costs.</p>",
+  "url": "/glossary/risk-adjustment"
+}

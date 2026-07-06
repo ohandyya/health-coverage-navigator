@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about actuarial value by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Actuarial value",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "actuarial-value",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The percentage of total average costs for covered benefits that a plan will cover. For example, if a plan has an actuarial value of 70%, on average, you would be responsible for 30% of the costs of all covered benefits. However, you could be responsible for a higher or lower percentage of the total costs of covered services for the year, depending on your actual health care needs and the terms of your insurance policy.</p>",
+  "meta-title": "Actuarial value - Glossary",
+  "layout": null,
+  "page_name": "Actuarial value",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The percentage of total average costs for covered benefits that a plan will cover. For example, if a plan has an actuarial value of 70%, on average, you would be responsible for 30% of the costs of all covered benefits. However, you could be responsible for a higher or lower percentage of the total costs of covered services for the year, depending on your actual health care needs and the terms of your insurance policy.</p>",
+  "url": "/glossary/actuarial-value"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about investment income by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Investment income",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "investment-income",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The income you get from an investment, like interest you get from a bank or dividends you get from a stock you own.</p>",
+  "meta-title": "Investment Income - Glossary",
+  "layout": null,
+  "page_name": "Investment income",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The income you get from an investment, like interest you get from a bank or dividends you get from a stock you own.</p><p><a href=\"https://www.irs.gov/publications/p550\">Review IRS Publication 550 for more information.</a></p>",
+  "url": "/glossary/investment-income"
+}

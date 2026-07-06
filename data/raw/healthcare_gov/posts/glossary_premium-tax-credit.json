@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about premium tax credits by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Premium tax credit",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "premium-tax-credit",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A tax credit you can use to lower your monthly insurance payment (your \u201cpremium\u201d).</span></p>",
+  "meta-title": "Premium tax credit - Glossary",
+  "layout": null,
+  "page_name": "Premium tax credit",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A tax credit you can use to lower your monthly Marketplace plan <a href=\"/node/40341\" data-entity-type=\"node\" data-entity-uuid=\"e9327655-6c15-4880-bd5a-c3b9242d990a\" data-entity-substitution=\"canonical\" data-entity-id=\"40341\" data-entity-bundle=\"brief\" title=\"Premium (tooltip)\">premium</a>. Your tax credit is based on your household information and estimated income you enter on your application.</p><h2>Federal poverty levels (FPLs) &amp; premium tax credit eligibility</h2><ul><li><strong>Income between 100% and 400% FPL:</strong> If your income is in this range, in all states you qualify for the premium tax credit that lowers your monthly premium.</li></ul><p>You can use all, some, or none of your premium tax credit in advance to lower your monthly premium.</p><ul><li>If you use more of the premium tax credit than you qualify for based on your final yearly income, you must pay the difference when you file your federal income tax return.</li><li>If you use less of the premium tax credit than you qualify for, you\u2019ll get the difference counted toward your refund or lower the amount of taxes you owe when you file your taxes.</li></ul><p>You can buy health insurance through other sources, but the only way to get the premium tax credit is through the Marketplace.</p><h2>Related content</h2><ul><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-substitution=\"canonical\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Will you qualify for a premium tax credit?</a></li><li><a href=\"/lower-costs/save-on-monthly-premiums\" data-entity-type=\"node\" data-entity-uuid=\"24662f58-922c-4c7b-9294-c33ed6bcaf69\" data-entity-substitution=\"canonical\" data-entity-id=\"38071\" data-entity-bundle=\"article\" title=\"How to save on your monthly insurance bill with the premium tax credit\">How to save on monthly premiums</a></li></ul>",
+  "url": "/glossary/premium-tax-credit"
+}

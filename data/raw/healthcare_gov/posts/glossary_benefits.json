@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health benefits by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Benefits",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "benefits",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The health care items or services covered under a health insurance plan. Covered benefits and excluded services are defined in the health insurance plan's coverage documents. In Medicaid or CHIP, covered benefits and excluded services are defined in state program rules.</p>",
+  "meta-title": "Benefits - Glossary",
+  "layout": null,
+  "page_name": "Benefits",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The health care items or services covered under a health insurance plan. Covered benefits and excluded services are defined in the health insurance plan's coverage documents. In Medicaid or CHIP, covered benefits and excluded services are defined in state program rules.</p>",
+  "url": "/glossary/benefits"
+}

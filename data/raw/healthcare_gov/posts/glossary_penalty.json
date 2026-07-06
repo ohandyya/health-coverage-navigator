@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the penalty by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Penalty",
+  "date": "2013-06-11 00:00:00 +0000",
+  "slug": "penalty",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A payment (\"fee,\" \"fine,\" \"individual mandate\") you made when you filed taxes if you didn't have health insurance that counted as qualifying health coverage for plan years 2018 and earlier. <strong>The fee for not having health insurance no longer applies</strong>. This means you no longer pay a tax penalty for not having health coverage.</p>",
+  "meta-title": "Penalty - Glossary",
+  "layout": null,
+  "page_name": "Penalty",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A payment (\"fee,\" \"fine,\" \"individual mandate\") you made when you filed taxes if you didn't have health insurance that counted as qualifying health coverage for plan years 2018 and earlier. <strong>The fee for not having health insurance no longer applies</strong>. This means you no longer pay a tax penalty for not having health coverage.</p>\n\n<h2>Related content</h2>\n\n<ul><li><a data-entity-bundle=\"glossary\" data-entity-id=\"34506\" data-entity-type=\"node\" data-entity-uuid=\"8383b38e-ed36-4c3e-8ded-a54e5d0808dc\" data-internal-href=\"/node/34506\" href=\"/glossary/qualifying-health-coverage\" title=\"Review different coverage types\">Review different coverage types</a></li>\n\t<li><a href=\"/health-coverage-exemptions/forms-how-to-apply/\">Learn about enrolling in Catastrophic coverage with an exemption</a></li>\n</ul>",
+  "url": "/glossary/penalty"
+}

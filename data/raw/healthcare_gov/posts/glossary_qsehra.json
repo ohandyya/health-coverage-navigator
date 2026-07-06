@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Qualified Small Employer Health Reimbursement Arrangements by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "QSEHRA",
+  "date": "2018-11-14 00:00:00 +0000",
+  "slug": "qsehra",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>Where small employers (that don\u2019t offer health coverage) help pay for their employees\u2019 medical expenses, like plan premiums.</span></p>",
+  "meta-title": "QSEHRA - Glossary",
+  "layout": null,
+  "page_name": "QSEHRA",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Small employers who don't offer group health coverage to their employees can help employees pay for medical expenses through a Qualified Small Employer Health Reimbursement Arrangement (QSEHRA). If your employer offers you a QSEHRA, you can use it to help pay your household's health care costs (like your monthly premium) for <a href=\"/glossary/qualifying-health-coverage\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"8383b38e-ed36-4c3e-8ded-a54e5d0808dc\" data-entity-bundle=\"glossary\" data-entity-id=\"34506\" data-internal-href=\"/node/34506\" data-entity-substitution=\"canonical\">qualifying health coverage</a>.</p><h2>Related content</h2><ul><li><a href=\"/qsehra\">Information for employees offered QSEHRA</a></li><li><a href=\"/small-businesses/learn-more/explore-coverage\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"77da8559-73e8-4f97-9332-07581e3765e6\" data-entity-id=\"39291\" data-entity-bundle=\"article\" title=\"Health insurance for businesses\">Information for employers offering QSEHRA</a></li></ul>",
+  "url": "/glossary/qsehra"
+}

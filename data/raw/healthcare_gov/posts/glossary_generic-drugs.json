@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about generic drugs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Generic drugs",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "generic-drugs",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A prescription drug that has the same active-ingredient formula as a brand-name drug. Generic drugs usually cost less than brand-name drugs. The Food and Drug Administration (FDA) rates these drugs to be as safe and effective as brand-name drugs.</p>",
+  "meta-title": "Generic Drugs - Glossary",
+  "layout": null,
+  "page_name": "Generic drugs",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A prescription drug that has the same active-ingredient formula as a brand-name drug. Generic drugs usually cost less than brand-name drugs. The Food and Drug Administration (FDA) rates these drugs to be as safe and effective as brand-name drugs.</p>",
+  "url": "/glossary/generic-drugs"
+}

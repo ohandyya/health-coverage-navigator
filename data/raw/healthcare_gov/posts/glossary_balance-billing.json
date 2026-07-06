@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about balance billing by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Balance billing",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "balance-billing",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>When a provider bills you for the difference between the provider\u2019s charge and the allowed amount. For example, if the provider\u2019s charge is $100 and the allowed amount is $70, the provider may bill you for the remaining $30. A preferred provider may not balance bill you for covered services.</p>",
+  "meta-title": "Balance billing - Glossary",
+  "layout": null,
+  "page_name": "Balance billing",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>When a provider bills you for the difference between the provider\u2019s charge and the allowed amount. For example, if the provider\u2019s charge is $100 and the allowed amount is $70, the provider may bill you for the remaining $30. A preferred provider may not balance bill you for covered services.</p>",
+  "url": "/glossary/balance-billing"
+}

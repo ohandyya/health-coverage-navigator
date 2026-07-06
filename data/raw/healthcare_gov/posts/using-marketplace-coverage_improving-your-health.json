@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Using your health insurance coverage"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Finding resources on staying healthy",
+  "main-title": "Using your health insurance coverage",
+  "meta-title": "Finding resources on staying healthy",
+  "meta-description": "Now that you have health coverage, learn what you can do to stay healthy and get the care you need. ",
+  "title-short": "Finding resources on staying healthy",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Using your health insurance coverage",
+  "page_name": "Finding resources on staying healthy",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Using your health insurance coverage",
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "improving-your-health",
+  "tags": [],
+  "excerpt": "<p>Now that you have health coverage, learn what you can do to stay healthy and get the care you need.</p>",
+  "content": "<p><span>Now that you have health coverage, use it to get </span><a class=\"external-link\" href=\"/glossary/primary-care\" data-entity-type=\"node\" data-entity-uuid=\"8bc178f1-edef-482c-a5f2-321dd7078360\" data-entity-substitution=\"canonical\" data-entity-id=\"35116\" data-entity-bundle=\"glossary\" title=\"Primary care\">primary care</a><span> and </span><a class=\"external-link\" href=\"/glossary/preventive-services\" data-entity-type=\"node\" data-entity-uuid=\"568b5999-3ac8-43ba-a349-af8d3261be44\" data-entity-substitution=\"canonical\" data-entity-id=\"35131\" data-entity-bundle=\"glossary\" title=\"Preventive services\">preventive services</a><span> to help you and your family stay healthy.</span></p><h2><span>Put your health first &amp; make the most of your coverage</span></h2><ul class=\"ul1\"><li class=\"li5\"><a href=\"https://www.cms.gov/priorities/health-equity/c2c#\" data-link-button-type=\"1\"><span>Get tips and a checklist on staying healthy</span></a><span>.</span></li><li class=\"li6\"><span class=\"s3\">Watch the video series \u201c</span><span class=\"s4\">Coverage to Care\u201d to discover </span><span class=\"s3\">what to do now that you have health coverage:</span><ul class=\"ul1\"><li class=\"li7\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=qYGU4NTjvEU\"><span class=\"s5 s6\">How to Maximize Your Health Care Coverage</span></a></li><li class=\"li7\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=4A9vdKVJQXs\"><span class=\"s5 s6\">Confirm Your Coverage</span></a></li><li class=\"li7\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=799_DQHFX8g\"><span class=\"s5 s6\">Know Where to Go for Answers</span></a></li><li class=\"li7\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=ay95YeoAz7g\"><span class=\"s5 s6\">Find a Provider</span></a></li><li class=\"li7\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=cnRQyzjGPnU\"><span class=\"s5 s6\">Make an Appointment</span></a></li><li class=\"li8\"><a class=\"external-link\" href=\"https://www.youtube.com/watch?v=YJPZvlT-SNc\"><span class=\"s5 s6\">Fill Your Prescriptions</span></a></li></ul></li></ul>",
+  "url": "/using-marketplace-coverage/improving-your-health"
+}

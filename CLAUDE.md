@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is at the scaffolding stage: a `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12, no dependencies yet) plus [plan.md](plan.md), the design document. No agent/RAG code, tests, or dependencies have been added yet — those come in with Phase 0.
+This repository is at the scaffolding stage: a `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12, no dependencies yet) plus [docs/plan.md](docs/plan.md), the design document. No agent/RAG code, tests, or dependencies have been added yet — those come in with Phase 0.
 
 ## Commands
 
@@ -28,7 +28,7 @@ Health Coverage Navigator: an agent that answers health-insurance questions ("is
 
 Getting the agent to classify a sub-question into the correct lane (and combine lanes for compound questions) is the central thing being built and evaluated.
 
-## Data sources (see plan.md for full details and links)
+## Data sources (see docs/plan.md for full details and links)
 
 **Bulk corpus (for RAG ingestion):**
 - HealthCare.gov consumer-education content — published as JSON (append `.json` to any post URL), explicitly licensed for reuse. Best MVP corpus.
@@ -46,6 +46,22 @@ Getting the agent to classify a sub-question into the correct lane (and combine 
 - HealthCare.gov Content API — same content as the bulk JSON, usable live; CORS-enabled.
 
 **Licensing caveat:** CPT/procedure codes are AMA/ADA-copyrighted — keep the public corpus/repo limited to NCDs, not LCDs or coding Articles.
+
+## Public-repo data guardrail (ACTION REQUIRED before committing data)
+
+**This repo is public.** Before staging, committing, or writing any file under `data/` (or any new corpus/fixture directory), Claude MUST stop and verify the data is cleared for public distribution. If it is not — or if you are unsure — do NOT add it; flag it to the user and ask.
+
+**Blocked from the public repo (do not vendor):**
+- **Medicare Coverage Database LCDs and Billing/Coding Articles** — they embed **AMA/ADA-copyrighted CPT/CDT codes** under restricted license. Index **NCDs only** (NCDs contain no procedure codes).
+- Any dataset containing **CPT, CDT, HCPCS Level II, or ICD proprietary code tables**, or other third-party-copyrighted/license-restricted content.
+- **PII, PHI, secrets, or API keys** of any kind (e.g. a CMS Marketplace API key — those go in env/secrets, never in the repo).
+
+**Cleared for the public repo (safe to vendor):**
+- **HealthCare.gov** consumer-education content (Content API JSON) — published explicitly for third-party reuse.
+- **Medicare Coverage Database NCDs** (no procedure codes).
+- U.S.-government public-domain works (e.g. Medicare & You handbook, Exchange PUFs, openFDA, NPPES bulk files) — verify per-source before adding.
+
+**Check before adding a new data source:** (1) Is it a U.S.-government/public-domain work or explicitly licensed for reuse? (2) Does it embed AMA/ADA/other proprietary code tables? (3) Any PII/PHI/secrets? If (1) is not a clear yes, or (2)/(3) is a yes, stop and ask the user rather than committing it. When a source is only *partly* clean (e.g. MCD, which has both NCDs and LCDs), vendor only the cleared subset.
 
 ## Architecture phases
 

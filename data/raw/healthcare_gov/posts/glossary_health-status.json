@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health statuses by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health status",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "health-status",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Refers to your medical conditions (both physical and mental health), claims experience, receipt of health care, medical history, genetic information, evidence of insurability, and disability.</p>",
+  "meta-title": "Health Status - Glossary",
+  "layout": null,
+  "page_name": "Health status",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Refers to your medical conditions (both physical and mental health), claims experience, receipt of health care, medical history, genetic information, evidence of insurability, and disability.</p>",
+  "url": "/glossary/health-status"
+}

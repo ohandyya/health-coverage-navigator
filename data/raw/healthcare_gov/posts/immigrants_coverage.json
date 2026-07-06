@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Health coverage for immigrants",
+  "main-title": null,
+  "meta-title": "Health coverage for immigrants",
+  "meta-description": "Get information on rules and options for immigrants at Healthcare.gov.",
+  "title-short": "Coverage for immigrants",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Health coverage for immigrants",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "coverage",
+  "tags": [],
+  "excerpt": "<p>Get information on rules and options for immigrants at Healthcare.gov.</p>",
+  "content": "<p>People in these groups can get coverage through the Marketplace if they're eligible:</p><ul><li>United States (U.S.) citizens</li><li>U.S. nationals</li><li>Lawfully present immigrants</li></ul><p><a href=\"/quick-guide/eligibility\" data-entity-type=\"node\" data-entity-uuid=\"8d081109-ec64-40a3-8975-f014511af690\" data-entity-substitution=\"canonical\" data-entity-id=\"38031\" data-entity-bundle=\"article\" title=\"Are you eligible to use the Marketplace?\">Find out if you're eligible to use the Marketplace.</a></p><div class=\"box-content information-lightweight\"><p>Undocumented immigrants can't get Marketplace health coverage. They may apply for coverage on behalf of documented individuals.</p></div>",
+  "url": "/immigrants/coverage"
+}

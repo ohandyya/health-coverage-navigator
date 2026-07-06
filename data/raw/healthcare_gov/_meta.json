@@ -1,0 +1,8 @@
+{
+  "fetched_at": "2026-07-06T10:39:23.856678+00:00",
+  "discovered_count": 804,
+  "fetched": 799,
+  "skipped_existing": 5,
+  "failed": 0,
+  "tool": "health-coverage-navigator/0.1 (+open-source RAG corpus builder)"
+}

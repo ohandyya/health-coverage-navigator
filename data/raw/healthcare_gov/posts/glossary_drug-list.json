@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about drug lists by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Drug list",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "drug-list",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a formulary.</p>",
+  "meta-title": "Drug list - Glossary",
+  "layout": null,
+  "page_name": "Drug list",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a formulary.</p>",
+  "url": "/glossary/drug-list"
+}

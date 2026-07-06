@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about guaranteed renewals by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Guaranteed renewal",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "guaranteed-renewal",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A requirement that your health insurance issuer must offer to renew your policy as long as you continue to pay premiums. Except in some states, guaranteed renewal doesn't limit how much you can be charged if you renew your coverage.</p>",
+  "meta-title": "Guaranteed Renewal - Glossary",
+  "layout": null,
+  "page_name": "Guaranteed renewal",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A requirement that your health insurance issuer must offer to renew your policy as long as you continue to pay premiums. Except in some states, guaranteed renewal doesn't limit how much you can be charged if you renew your coverage.</p>",
+  "url": "/glossary/guaranteed-renewal"
+}

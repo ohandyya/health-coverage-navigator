@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about minimum value by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Minimum value",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "minimum-value",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A standard of minimum coverage that applies to job-based health plans. If your employer\u2019s plan meets this standard and is considered \u201caffordable,\u201d you won\u2019t qualify for a premium tax credit if you buy a Marketplace insurance plan instead.</p>",
+  "meta-title": "Minimum value - Glossary",
+  "layout": null,
+  "page_name": "Minimum value",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A standard of minimum coverage that applies to job-based health plans. If your employer\u2019s plan meets this standard and is considered \u201caffordable,\u201d you won\u2019t qualify for a premium tax credit if you buy a Marketplace insurance plan instead.</p><p>A health plan meets the minimum value standard if both of these apply:</p><ul><li>It\u2019s designed to pay at least 60% of the total cost of medical services for a standard population</li><li>Its benefits include substantial coverage of physician and inpatient hospital services</li></ul><p>To find out if your job-based plan meets the minimum value standard, ask your employer. You can also ask them to fill out the <a href=\"/downloads/employer-coverage-tool.pdf\" target=\"_blank\" data-entity-type=\"media\" data-entity-uuid=\"45d6c7e2-0620-44f5-8807-81f157bd740d\" data-entity-substitution=\"canonical\" data-button-link-type=\"link\" data-entity-id=\"10961\" data-entity-bundle=\"document\" data-internal-href=\"/media/10051\" title=\"employer-coverage-tool.pdf\">Employer Coverage Tool</a>&nbsp;(PDF, 125 KB).</p><h2>Related content</h2><ul><li><a href=\"/have-job-based-coverage/change-to-marketplace-plan\" data-entity-type=\"node\" data-entity-uuid=\"add39eaf-99d1-4c37-8c49-5d5bafaf93a7\" data-entity-substitution=\"canonical\" data-entity-id=\"37341\" data-entity-bundle=\"article\" data-internal-href=\"/have-job-based-coverage/change-to-marketplace-plan/\" title=\"Steps to decide between job-based or Marketplace coverage\">Get tips before accepting job-based coverage</a></li><li><a href=\"/glossary/affordable-coverage\" title=\"How to know if a plan is considered \u201caffordable\u201d\" data-entity-type=\"node\" data-entity-uuid=\"7ecef932-6b05-4a97-b177-519d149e6ee3\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"35681\" data-internal-href=\"/glossary/affordable-coverage/\">How to know if a plan is considered \u201caffordable\u201d</a></li></ul>",
+  "url": "/glossary/minimum-value"
+}

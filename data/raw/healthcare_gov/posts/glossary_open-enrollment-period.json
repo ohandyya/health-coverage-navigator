@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Open Enrollment Periods by reviewing the definition in the HealthCare.gov glossary.",
+  "title": "Open Enrollment Period",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "open-enrollment-period",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>November 1 \u2013 January 15 each year.</span></p>",
+  "meta-title": "Open Enrollment Period - Glossary",
+  "layout": null,
+  "page_name": "Open Enrollment Period",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The yearly period (November 1 \u2013 January 15) when people can enroll in a Marketplace health insurance plan.</p><p>Outside Open Enrollment, you may still be able to enroll in Marketplace coverage if you have certain life events, like getting married, having a baby, or losing other health coverage, or based on your estimated household income.</p><ul><li>Job-based plans may have different Open Enrollment Periods. Check with your employer.</li><li>You can apply and enroll in Medicaid or the Children's Health Insurance Program (CHIP) any time of year.</li></ul><h2>Related content</h2><ul><li><a href=\"/quick-guide/dates-and-deadlines\" data-entity-type=\"node\" data-entity-uuid=\"16b698ba-1d60-4a84-bae8-a0e0cc0d1be9\" data-entity-substitution=\"canonical\" data-entity-id=\"38026\" data-entity-bundle=\"article\" title=\"When can you get health insurance?\">Marketplace dates and deadlines</a></li><li><a href=\"/more-savings\" data-entity-type=\"node\" data-entity-uuid=\"6ff4952a-4d2d-4626-a9a3-0aed531347af\" data-entity-substitution=\"canonical\" data-entity-id=\"36136\" data-entity-bundle=\"article\" title=\"New, lower costs on Marketplace coverage\">New, lower costs available</a></li></ul>",
+  "url": "/glossary/open-enrollment-period"
+}

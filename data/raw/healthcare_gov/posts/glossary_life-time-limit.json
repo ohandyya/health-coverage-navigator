@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about lifetime limits by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Lifetime limit",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "life-time-limit",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A cap on the total lifetime benefits you may get from your insurance company. An insurance company may impose a total lifetime dollar limit on benefits (like a $1 million lifetime cap) or limits on specific benefits (like a $200,000 lifetime cap on organ transplants or one gastric bypass per lifetime) or a combination of the two. After a lifetime limit is reached, the insurance plan will no longer pay for covered services.</p>",
+  "meta-title": "Lifetime Limit - Glossary",
+  "layout": null,
+  "page_name": "Lifetime limit",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A cap on the total lifetime benefits you may get from your insurance company. An insurance company may impose a total lifetime dollar limit on benefits (like a $1 million lifetime cap) or limits on specific benefits (like a $200,000 lifetime cap on organ transplants or one gastric bypass per lifetime) or a combination of the two. After a lifetime limit is reached, the insurance plan will no longer pay for covered services.</p>",
+  "url": "/glossary/life-time-limit"
+}

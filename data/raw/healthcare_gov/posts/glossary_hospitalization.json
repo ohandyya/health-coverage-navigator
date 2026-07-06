@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about hospitalization by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Hospitalization",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "hospitalization",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Care in a hospital that requires admission as an inpatient and usually requires an overnight stay. An overnight stay for observation could be outpatient care.</p>",
+  "meta-title": "Hospitalization - Glossary",
+  "layout": null,
+  "page_name": "Hospitalization",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Care in a hospital that requires admission as an inpatient and usually requires an overnight stay. An overnight stay for observation could be outpatient care.</p>",
+  "url": "/glossary/hospitalization"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about member survey results by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Member survey results",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "member-survey-results",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A survey conducted by the Consumer Assessment of Healthcare Providers and Systems (CAHPS) which asks health plan members to rate the care their experiences with their health plan and its services.</p>",
+  "meta-title": "Member survey results - Glossary",
+  "layout": null,
+  "page_name": "Member survey results",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A survey conducted by the Consumer Assessment of Healthcare Providers and Systems (CAHPS) which asks health plan members to rate the care their experiences with their health plan and its services.</p>",
+  "url": "/glossary/member-survey-results"
+}

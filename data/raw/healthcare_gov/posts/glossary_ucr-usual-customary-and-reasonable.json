@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about UCR (Usual, Customary, and Reasonable) costs by reviewing the defintion in the HealthCare.gov Glossary.",
+  "title": "UCR (usual, customary, and reasonable)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "ucr-usual-customary-and-reasonable",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The amount paid for a medical service in a geographic area based on what providers in the area usually charge for the same or similar medical service. The UCR amount sometimes is used to determine the allowed amount.</p>",
+  "meta-title": "UCR (usual, customary, and reasonable) - Glossary",
+  "layout": null,
+  "page_name": "UCR (usual, customary, and reasonable)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The amount paid for a medical service in a geographic area based on what providers in the area usually charge for the same or similar medical service. The UCR amount sometimes is used to determine the allowed amount.</p>",
+  "url": "/glossary/ucr-usual-customary-and-reasonable"
+}

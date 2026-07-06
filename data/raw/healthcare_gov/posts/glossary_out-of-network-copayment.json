@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about out-of-network copayments by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Out-of-network copayment",
+  "date": "2013-06-06 00:00:00 +0000",
+  "slug": "out-of-network-copayment",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A fixed amount (for example, $30) you pay for covered health care services from providers who don't contract with your health insurance or plan. Out-of-network copayments usually are more than in-network copayments.</p>",
+  "meta-title": "Out-of-network copayment - Glossary",
+  "layout": null,
+  "page_name": "Out-of-network copayment",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A fixed amount (for example, $30) you pay for covered health care services from providers who don't contract with your health insurance or plan. Out-of-network copayments usually are more than in-network copayments.</p>",
+  "url": "/glossary/out-of-network-copayment"
+}

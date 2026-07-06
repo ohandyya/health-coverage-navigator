@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the Patient Protection and Affordable Care Act by reviewing the defintion in the HealthCare.gov Glossary.",
+  "title": "Patient Protection and Affordable Care Act",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "patient-protection-and-affordable-care-act",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The first part of the comprehensive health care reform law enacted on March 23, 2010.</p>",
+  "meta-title": "Patient Protection and Affordable Care Act - Glossary",
+  "layout": null,
+  "page_name": "Patient Protection and Affordable Care Act",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The law was enacted on March 23, 2010 and amended by the Health Care and Education Reconciliation Act on March 30, 2010. The name \u201c<a href=\"/glossary/affordable-care-act\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"d0d4a67f-7cd2-4023-8b8a-64771f25460f\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"35686\" data-internal-href=\"/node/35686\">Affordable Care Act</a>\u201d refers to the final, amended version of the law.</p><p>The law provides numerous rights and protections that make health coverage fairer and easier to understand, along with subsidies (through the \u201c<a href=\"/glossary/premium-tax-credit\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"d42500cd-967f-429f-81da-ee3e7bc40130\" data-entity-id=\"34736\" data-entity-bundle=\"glossary\" title=\"Premium tax credit\">premium tax credit</a>\u201d and \u201c<a href=\"/glossary/cost-sharing-reduction\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"42625af8-962d-4caa-8ad4-fd9407421ac9\" data-entity-id=\"34916\" data-entity-bundle=\"glossary\" title=\"Cost sharing reduction (CSR)\">cost-sharing reductions</a>\u201d) to make it more affordable.</p><p>The law also expands <a href=\"/glossary/medicaid\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"13c0081d-9e96-420a-a724-6e81e89d20c1\" data-entity-id=\"35311\" data-entity-bundle=\"glossary\" title=\"Medicaid\">Medicaid</a> to cover more people with low incomes.</p><h2>Related content</h2><ul><li><a href=\"/where-can-i-read-the-affordable-care-act\" data-entity-type=\"node\" data-entity-uuid=\"a233899d-f02a-4358-b1dd-68ced1882656\" data-entity-substitution=\"canonical\" data-entity-id=\"36151\" data-entity-bundle=\"article\" title=\"Read the Affordable Care Act\">Read the Affordable Care Act</a></li><li><a href=\"/health-care-law-protections\" data-entity-type=\"node\" data-entity-uuid=\"7d7be520-aaf6-4762-b4a0-cc03ecab83b5\" data-entity-substitution=\"canonical\" data-entity-id=\"37106\" data-entity-bundle=\"explainer\" title=\"Health insurance rights &amp; protections\">Rights &amp; protections</a></li><li><a href=\"/medicaid-chip/medicaid-expansion-and-you\" data-entity-type=\"node\" data-entity-uuid=\"c23fb866-8e13-48c3-8389-95557670d21f\" data-entity-substitution=\"canonical\" data-entity-id=\"37811\" data-entity-bundle=\"article\" title=\"Medicaid expansion &amp; what it means for you\">Medicaid expansion</a></li></ul>",
+  "url": "/glossary/patient-protection-and-affordable-care-act"
+}

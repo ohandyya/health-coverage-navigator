@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about emergency room care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Emergency room care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "emergency-room-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Emergency services you get in an emergency room.</p>",
+  "meta-title": "Emergency room care - Glossary",
+  "layout": null,
+  "page_name": "Emergency room care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Emergency services you get in an emergency room.</p>",
+  "url": "/glossary/emergency-room-care"
+}

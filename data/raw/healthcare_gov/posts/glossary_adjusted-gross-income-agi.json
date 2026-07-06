@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Adjusted Gross Income (AGI) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Adjusted Gross Income (AGI)",
+  "date": "2016-08-31 00:00:00 +0000",
+  "slug": "adjusted-gross-income-agi",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Your total (or \u201cgross\u201d) income for the tax year, minus certain adjustments you\u2019re allowed to take. Adjustments include deductions for conventional IRA contributions, student loan interest, and more. Adjusted gross income appears on IRS Form 1040, line 11.</p>",
+  "meta-title": "Adjusted Gross Income (AGI) - Glossary",
+  "layout": null,
+  "page_name": "Adjusted Gross Income (AGI)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Your total (or \u201cgross\u201d) income for the tax year, minus certain adjustments you\u2019re allowed to take. Adjustments include deductions for conventional IRA contributions, student loan interest, and more. Adjusted gross income appears on IRS Form 1040, line 11.</p><p>To report expected income on your Marketplace health insurance application, start with your most recent year's adjusted gross income and update it based on income and household changes you expect for the coverage year.</p><p>The Marketplace uses a different figure, called <a href=\"/glossary/modified-adjusted-gross-income-magi\" title=\"modified adjusted gross income  (MAGI)\" data-entity-type=\"node\" data-entity-uuid=\"14f4388b-09ea-4c66-bb8d-e540bace2366\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"34571\" data-internal-href=\"/glossary/modified-adjusted-gross-income-magi/\">modified adjusted gross income (MAGI)</a>, to determine eligibility for savings. MAGI isn't a line on your tax return.</p><p><a href=\"https://www.irs.gov/publications/p17/pt04.html\">Get the most recent official IRS rules on using income adjustments to determine your AGI.</a></p>",
+  "url": "/glossary/adjusted-gross-income-agi"
+}

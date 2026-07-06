@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about hospital outpatient care by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Hospital outpatient care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "hospital-outpatient-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Care in a hospital that usually doesn\u2019t require an overnight stay.</p>",
+  "meta-title": "Hospital Outpatient Care - Glossary",
+  "layout": null,
+  "page_name": "Hospital outpatient care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Care in a hospital that usually doesn\u2019t require an overnight stay.</p>",
+  "url": "/glossary/hospital-outpatient-care"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about physician services by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Physician services",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "physician-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care services a licensed medical physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine) provides or coordinates.</p>",
+  "meta-title": "Physician services - Glossary",
+  "layout": null,
+  "page_name": "Physician services",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care services a licensed medical physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine) provides or coordinates.</p>",
+  "url": "/glossary/physician-services"
+}

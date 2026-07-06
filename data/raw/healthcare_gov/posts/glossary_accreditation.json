@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about accreditation by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Accreditation",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "accreditation",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>If a Marketplace health plan is approved, this is the \u201cseal of approval\u201d given to the plan by an independent organization to show that the plan meets national quality standards.</p>",
+  "meta-title": "Accreditation - Glossary",
+  "layout": null,
+  "page_name": "Accreditation",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>If a Marketplace health plan is approved, this is the \u201cseal of approval\u201d given to the plan by an independent organization to show that the plan meets national quality standards.</p>",
+  "url": "/glossary/accreditation"
+}

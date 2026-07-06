@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Special Enrollment Periods by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Special Enrollment Period (SEP)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "special-enrollment-period",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A period of time outside of Open Enrollment when you can enroll in or change Marketplace plans.</span></p>",
+  "meta-title": "Special Enrollment Period (SEP) - Glossary",
+  "layout": null,
+  "page_name": "Special Enrollment Period (SEP)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A time outside the yearly Open Enrollment Period when you can sign up for health insurance. You qualify for a Special Enrollment Period if you\u2019ve had certain life events, including losing health coverage, moving, getting married, having a baby, or adopting a child.</p><p>Depending on your Special Enrollment Period type, you usually have 60 days before or 60 days following the event to enroll in a plan. You can enroll in Medicaid or the Children\u2019s Health Insurance Program (CHIP) any time.</p><p>Job-based plans must provide a Special Enrollment Period of at least 30 days.</p><h2>Related content</h2><ul><li><a href=\"/screener\">Check if you qualify for a Special Enrollment Period</a></li><li><a href=\"/coverage-outside-open-enrollment/special-enrollment-period\" data-entity-type=\"node\" data-entity-uuid=\"6d0c88c0-b2fd-4690-a0cf-93c8856af3f5\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37296\" data-internal-href target title=\"Special Enrollment Periods\">Learn more about Special Enrollment Periods</a></li><li><a href=\"/quick-guide/dates-and-deadlines\" data-entity-type=\"node\" data-entity-uuid=\"16b698ba-1d60-4a84-bae8-a0e0cc0d1be9\" data-entity-substitution=\"canonical\" data-entity-id=\"38026\" data-entity-bundle=\"article\" title=\"When can you get health insurance?\">Get Open Enrollment dates and deadlines</a></li><li><a href=\"/more-savings\" data-entity-type=\"node\" data-entity-uuid=\"6ff4952a-4d2d-4626-a9a3-0aed531347af\" data-entity-substitution=\"canonical\" data-entity-id=\"36136\" data-entity-bundle=\"article\" title=\"New, lower costs on Marketplace coverage\">New, lower costs available</a></li></ul>",
+  "url": "/glossary/special-enrollment-period"
+}

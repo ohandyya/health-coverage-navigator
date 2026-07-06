@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about hospital readmissions by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Hospital readmissions",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "hospital-readmissions",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A situation where you were discharged from the hospital and wind up going back in for the same or related care within 30, 60 or 90 days. The number of hospital readmissions is often used in part to measure the quality of hospital care, since it can mean that your follow-up care wasn't properly organized, or that you weren't fully treated before discharge.</p>",
+  "meta-title": "Hospital Readmissions - Glossary",
+  "layout": null,
+  "page_name": "Hospital readmissions",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A situation where you were discharged from the hospital and wind up going back in for the same or related care within 30, 60 or 90 days. The number of hospital readmissions is often used in part to measure the quality of hospital care, since it can mean that your follow-up care wasn't properly organized, or that you weren't fully treated before discharge.</p>",
+  "url": "/glossary/hospital-readmissions"
+}

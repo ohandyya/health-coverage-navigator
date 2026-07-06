@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health care networks by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Network",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "network",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The facilities, providers and suppliers your health insurer or plan has contracted with to provide health care services.</p>",
+  "meta-title": "Network - Glossary",
+  "layout": null,
+  "page_name": "Network",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The facilities, providers and suppliers your health insurer or plan has contracted with to provide health care services.</p>",
+  "url": "/glossary/network"
+}

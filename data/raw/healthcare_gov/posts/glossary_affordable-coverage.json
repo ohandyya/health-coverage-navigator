@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about affordable coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Affordable coverage",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "affordable-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>In <strong>2026</strong>, a job-based health plan is considered \"affordable\" if your share of the monthly premium for the lowest-cost plan offered by the employer is less than 9.96% of your household income.</span></p>",
+  "meta-title": "Affordable coverage - Glossary",
+  "layout": null,
+  "page_name": "Affordable coverage",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<div class=\"p-rich-text-section\">A job-based health plan is considered \"affordable\" if your share of the monthly premium in the lowest-cost plan offered by the employer is:</div><ul><li><div class=\"p-rich-text-section\"><strong>In 2025</strong>: less than 9.02% of your household income</div></li><li><strong>In 2026</strong>: less than 9.96% of your household income</li></ul><p>The lowest-cost plan must also meet the minimum value standard.</p><p>If you\u2019re the employee, affordability is based on only the premium you\u2019d pay for self-only (individual) coverage.</p><p>For coverage starting January 1, if you\u2019re offered job-based coverage through a household member\u2019s job, affordability is based on the premium amount to cover everyone in the household.</p><p>Total household income includes incomes from everybody in the household who\u2019s required to file a tax return.</p><p>If the premiums aren\u2019t considered affordable for the employee and the household, they may qualify for savings in a Marketplace plan. But, if the premium is considered affordable for the employee, but not for other members of the household, then only the other household members may qualify for savings.</p><h2><strong>Related content</strong></h2><ul><li><a href=\"/have-job-based-coverage/change-to-marketplace-plan\" data-entity-type=\"node\" data-entity-uuid=\"add39eaf-99d1-4c37-8c49-5d5bafaf93a7\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37341\" data-internal-href target title=\"Steps to decide between job-based or Marketplace coverage\">Get tips before accepting job-based coverage</a></li><li><a href=\"/income-and-household-information/how-to-report\" data-entity-type=\"node\" data-entity-uuid=\"33862067-12c6-4d4d-8f21-37fad141bd24\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37421\" data-internal-href target title=\"How to estimate your expected income\">How to estimate your household income</a></li><li><a href=\"/have-job-based-coverage/change-to-marketplace-plan\" data-entity-type=\"node\" data-entity-uuid=\"add39eaf-99d1-4c37-8c49-5d5bafaf93a7\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37341\" data-internal-href=\"/node/35721\" target title=\"Steps to decide between job-based or Marketplace coverage\">How to know if a plan meets the \"minimum value\"&nbsp;standard</a></li></ul>",
+  "url": "/glossary/affordable-coverage"
+}

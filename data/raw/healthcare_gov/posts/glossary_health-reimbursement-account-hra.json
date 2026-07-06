@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Health Reimbursement Arrangements (HRAs) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health Reimbursement Arrangement (HRA)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "health-reimbursement-account-hra",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>Employer-funded group heath plans where employees are reimbursed tax-free for qualified medical expenses up to a certain dollar amount each year.</span></p>",
+  "meta-title": "Health Reimbursement Arrangement (HRA) - Glossary",
+  "layout": null,
+  "page_name": "Health Reimbursement Arrangement (HRA)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health Reimbursement Arrangements (HRAs) are employer-funded group health plans from which employees are reimbursed tax-free for qualified medical expenses up to a fixed dollar amount per year. Unused amounts may be rolled over to be used in subsequent years. The employer funds and owns the arrangement. Health Reimbursement Arrangements are sometimes called Health Reimbursement Accounts.</p>",
+  "url": "/glossary/health-reimbursement-account-hra"
+}

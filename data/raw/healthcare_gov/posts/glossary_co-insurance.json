@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about coinsurance by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Coinsurance",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "co-insurance",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A percentage of the cost that you pay for each plan-covered service, like 20%.</span></p>",
+  "meta-title": "Coinsurance - Glossary",
+  "layout": null,
+  "page_name": "Coinsurance",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The percentage of costs of a covered health care service you pay (20%, for example) after you've paid your deductible.</p><p>Let's say your health insurance plan's <a href=\"/glossary/allowed-amount\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"78ebdc9b-0630-4afb-8619-f12062520a41\" data-entity-bundle=\"glossary\" data-entity-id=\"35676\" data-internal-href=\"/node/35676\" data-entity-substitution=\"canonical\">allowed amount</a> for an office visit is $100 and your coinsurance is 20%.</p><ul><li>If you've paid your <a href=\"/glossary/deductible\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-entity-bundle=\"glossary\" data-entity-id=\"34906\" data-internal-href=\"/node/34906\" data-entity-substitution=\"canonical\">deductible</a>: You pay 20% of $100, or $20. The insurance company pays the rest.</li><li>If you haven't met your deductible: You pay the full allowed amount, $100.</li></ul><p><strong>Example of coinsurance with high medical costs</strong></p><p>Let's say the following amounts apply to your plan and you need a lot of treatment for a serious condition. Allowable costs are $12,000.</p><ul><li>Deductible: $3,000</li><li>Coinsurance: 20%</li><li>Out-of-pocket maximum: $6,850</li></ul><p>You'd pay all of the first $3,000 (your deductible).</p><p>You'll pay 20% of the remaining $9,000, or $1,800 (your coinsurance).</p><p>So your total out-of-pocket costs would be $4,800 \u2014 your $3,000 deductible plus your $1,800 coinsurance.</p><p>If your total out-of-pocket costs reach $6,850, you'd pay only that amount, including your deductible and coinsurance. The insurance company would pay for all covered services for the rest of your plan year.</p><p>Generally speaking, plans with low monthly <a href=\"/glossary/premium\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"b625d61d-da5b-4825-bb54-2bb728b7a4c0\" data-entity-bundle=\"glossary\" data-entity-id=\"35151\" data-internal-href=\"/node/35151\" data-entity-substitution=\"canonical\">premiums</a> have higher coinsurance, and plans with higher monthly premiums have lower coinsurance.</p><h2>Related content</h2><ul><li><a href=\"/glossary/deductible\" title=\"Learn about deductibles\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-entity-bundle=\"glossary\" data-entity-id=\"34906\" data-internal-href=\"/glossary/deductible/\" data-entity-substitution=\"canonical\">Learn about deductibles</a></li><li><a href=\"/glossary/allowed-amount\" title=\"Learn about allowed amounts\" data-entity-type=\"node\" data-entity-uuid=\"78ebdc9b-0630-4afb-8619-f12062520a41\" data-entity-bundle=\"glossary\" data-entity-id=\"35676\" data-internal-href=\"/glossary/allowed-amount/\" data-entity-substitution=\"canonical\">Learn about allowed amounts</a></li><li><a href=\"/glossary/out-of-pocket-maximum-limit\" title=\"Learn about out-of-pocket maximums\" data-entity-type=\"node\" data-entity-uuid=\"5089c5d5-f67f-429d-b658-2e0ad0b3390c\" data-entity-bundle=\"glossary\" data-entity-id=\"34586\" data-internal-href=\"/glossary/out-of-pocket-maximum-limit/\" data-entity-substitution=\"canonical\">Learn about out-of-pocket maximums</a></li><li><a href=\"/choose-a-plan/your-total-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"3ff4c042-5db7-4450-b20b-7170fe56bd90\" data-entity-id=\"37861\" data-entity-bundle=\"article\" title=\"Your total costs for health care: Premium, deductible &amp; out-of-pocket costs\">Learn how deductibles and coinsurance affect your total costs of care</a></li></ul>",
+  "url": "/glossary/co-insurance"
+}

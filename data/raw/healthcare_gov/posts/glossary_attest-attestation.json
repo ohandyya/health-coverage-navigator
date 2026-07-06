@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about attestation by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Attest/Attestation",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "attest-attestation",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>When you apply for health coverage through the Marketplace, you're required to agree (or \"attest\") to the truth of the information provided by signing the application.</p>",
+  "meta-title": "Attest/Attestation - Glossary",
+  "layout": null,
+  "page_name": "Attest/Attestation",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>When you apply for health coverage through the Marketplace, you're required to agree (or \"attest\") to the truth of the information provided by signing the application.</p>",
+  "url": "/glossary/attest-attestation"
+}

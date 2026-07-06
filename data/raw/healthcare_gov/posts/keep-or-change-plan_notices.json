@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Keep or change your insurance plan"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Open Enrollment letters",
+  "main-title": null,
+  "meta-title": "Your health insurance letters",
+  "meta-description": "Learn when you'll get letter (notices), why you got them, what to do. See options, deadlines, next steps if you do or don't receive. Avoid coverage gaps.",
+  "title-short": "Marketplace enrollment notices",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Keep or change your insurance plan",
+  "page_name": "Open Enrollment letters",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Keep or change your insurance plan",
+  "date": "2023-10-26 00:00:00 +0000",
+  "slug": "notices",
+  "tags": [],
+  "excerpt": "<p>By late October, you should get<span> two notices by mail or email. Together they explain your status and options for this year's&nbsp;coverage.</span></p>",
+  "content": "<p>If you have a Marketplace plan when Open Enrollment starts, you should get 2 re-enrollment letters by November 1 \u2014 one from the Marketplace and one from your plan.</p><h2>Your Marketplace letter tells you:</h2><ul class=\"ds-c-list\"><li>Review information from your plan about your coverage and costs for the new year.</li><li>How to update your application to make sure you get the right savings.</li><li>Any action you must take to get the premium tax credit for the new year. You may have to send documents, like tax or income information.</li><li>Compare available plans and enroll in a plan that best meets your needs.</li></ul><h2>Your insurance company letter tells you:</h2><ul class=\"ds-c-list\"><li>Whether your current plan is available for the new year.</li><li>If not, whether the company is offering you a similar or alternate plan.</li><li>Any plan changes for the new year.</li><li>The premium amount, after any premium tax credit has been applied. The tax credit may be based on information the Marketplace already has or from other sources.</li></ul><div class=\"box-content information-heavyweight\"><p>Keep your Marketplace and insurance company letters in a safe place and have them handy when you enroll.</p></div><h2>More answers: Open Enrollment letters</h2><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\">What if I don't get a Marketplace letter?</dt><dd class=\"accordion-content\"><p><a href=\"/contact-us\" data-entity-type=\"node\" data-entity-uuid=\"2839b07e-0a5b-48bd-8fa4-ba9908d08200\" data-entity-substitution=\"canonical\" data-entity-id=\"39406\" data-entity-bundle=\"landing_page\" title=\"Contact us\">Contact the&nbsp;Marketplace Call Center.</a> Before you call, log in to your Marketplace account and check your messages. The letter may be there.</p></dd></dl><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\">What if I don't get my insurance company letter?</dt><dd class=\"accordion-content\"><p>Contact your insurance company, not the Marketplace.</p></dd></dl>",
+  "url": "/keep-or-change-plan/notices"
+}

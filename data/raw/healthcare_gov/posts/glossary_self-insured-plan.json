@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about self-insured plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Self-insured plan",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "self-insured-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Type of plan usually present in larger companies where the employer itself collects premiums from enrollees and takes on the responsibility of paying employees\u2019 and dependents\u2019 medical claims. These employers can contract for insurance services such as enrollment, claims processing, and provider networks with a third party administrator, or they can be self-administered.</p>",
+  "meta-title": "Self-insured plan - Glossary",
+  "layout": null,
+  "page_name": "Self-insured plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Type of plan usually present in larger companies where the employer itself collects premiums from enrollees and takes on the responsibility of paying employees\u2019 and dependents\u2019 medical claims. These employers can contract for insurance services such as enrollment, claims processing, and provider networks with a third party administrator, or they can be self-administered.</p>",
+  "url": "/glossary/self-insured-plan"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about reinsurance by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Reinsurance",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "reinsurance",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A reimbursement system that protects insurers from very high claims. It usually involves a third party paying part of an insurance company\u2019s claims once they pass a certain amount. Reinsurance is a way to stabilize an insurance market and make coverage more available and affordable.</p>",
+  "meta-title": "Reinsurance - Glossary",
+  "layout": null,
+  "page_name": "Reinsurance",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A reimbursement system that protects insurers from very high claims. It usually involves a third party paying part of an insurance company\u2019s claims once they pass a certain amount. Reinsurance is a way to stabilize an insurance market and make coverage more available and affordable.</p>",
+  "url": "/glossary/reinsurance"
+}

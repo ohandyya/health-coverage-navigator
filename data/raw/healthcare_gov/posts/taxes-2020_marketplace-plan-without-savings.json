@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "2020 taxes & the Health Insurance Marketplace\u00ae"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "2020 Marketplace plan without premium tax credits",
+  "main-title": null,
+  "meta-title": "2020 Marketplace plan without premium tax credits",
+  "meta-description": "See tax requirements for Health Insurance Marketplace\u00ae Coverage bought in 2020. Learn when to expect forms 1095-A, 8962, what to do next.",
+  "title-short": "If you had a Marketplace health plan without premium tax credits in 2020",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "2020 taxes & the Health Insurance Marketplace\u00ae",
+  "page_name": "2020 Marketplace plan without premium tax credits",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "2020 taxes & the Health Insurance Marketplace\u00ae",
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "marketplace-plan-without-savings",
+  "tags": [],
+  "excerpt": "<p>See tax requirements for Health Insurance Marketplace\u00ae Coverage bought in 2020. Learn when to expect forms 1095-A, 8962, what to do next.</p>",
+  "content": "<p>You must file a federal tax return for 2020 \u2014 even if you usually don't file or your income is below the level requiring you to.</p>\n\n<h2>1. Get your Form 1095-A, Health Insurance Marketplace\u00ae Statement</h2>\n\n<p><a href=\"/login\">Find it in your HealthCare.gov account</a> \u2014 select your <strong>2020</strong> application, then select \"Tax Forms\" from the menu on the left.</p>\n\n<p><a href=\"/tax-form-1095/#find-1095-a\">Get help finding your 1095-A</a>.</p>\n\n<p><strong>Don\u2019t file your 2020 taxes</strong> until you have an accurate 1095-A.</p>\n\n<h2>2. Make sure information on your 1095-A is right \u2014 and if not, call us</h2>\n\n<p>Confirm basic information about your health plan and household members on Parts I and II of the form. <a href=\"/contact-us/\">Contact the Marketplace Call Center</a> if you find an error.</p>\n\n<p>If you paid full price for your health plan, Part III, column C should be blank or have the number \"0\".</p>\n\n<h2>3. If you paid full price and are sure you don't qualify for a premium tax credit</h2>\n\n<p><strong>You don\u2019t have to fill out or include Form 8962, Premium Tax Credit, when you file your federal taxes.</strong> Keep your Form 1095-A with your other tax records.</p>\n\n<h2>4. If you paid full price and want to see if you qualify for a premium tax credit based on your final 2020 income</h2>\n\n<ul><li>Use the <a href=\"/tax-tool/\">Health Coverage Tax Tool</a> to find the premium for the <a data-entity-bundle=\"glossary\" data-entity-id=\"34551\" data-entity-type=\"node\" data-entity-uuid=\"e5efe854-d75e-47cb-9e96-879479972c67\" data-internal-href=\"/node/34551\" href=\"/glossary/second-lowest-cost-silver-plan-slcsp\" title=\"glossary\">second lowest cost Silver plan (SLCSP)</a> that applied to you for 2020. (If you paid full price, this information won\u2019t appear on your 1095-A.)</li>\n\t<li>Use this SLCSP figure to fill out <a href=\"https://www.irs.gov/pub/irs-prior/f8962--2020.pdf\">Form 8962, Premium Tax Credit</a> (PDF, 110 KB). You'll find out if you qualify for a premium tax credit based on your final 2020 income.</li>\n\t<li>If you qualify, your credit will either increase your 2020 refund or reduce your tax owed.</li>\n</ul><h2>Tax forms and and guides:</h2>\n\n<ul><li><a href=\"/tax-form-1095/#find-1095-a\">Guide to using Form 1095-A</a></li>\n\t<li><a href=\"https://www.irs.gov/Affordable-Care-Act/Individuals-and-Families/Health-Insurance-Marketplace-Statements\">IRS information on Form 1095-A</a></li>\n\t<li><a href=\"/tax-tool/\">Health coverage tax tool</a> (use <strong>only</strong> if your SLCSP is missing or wrong)</li>\n\t<li><a href=\"https://www.irs.gov/pub/irs-prior/f1040--2020.pdf\">Form 1040, U.S. Individual Income Tax Return</a> (PDF, 147 KB) and <a href=\"https://www.irs.gov/pub/irs-prior/i1040gi--2020.pdf\">Form 1040 instructions</a> (PDF, 4.2 MB)</li>\n\t<li><a href=\"https://www.irs.gov/pub/irs-prior/f8962--2020.pdf\">Form 8962, Premium Tax Credit</a> (PDF, 110 KB) and <a href=\"https://www.irs.gov/pub/irs-prior/i8962--2020.pdf\">Form 8962 instructions</a> (PDF, 348 KB)</li>\n</ul><h2>More than one coverage status?</h2>\n\n<p>If you were enrolled in a Marketplace plan without premium tax credits for only part of 2020, or other household members had different coverage, visit the relevant pages for enrollment in:</p>\n\n<ul><li><a href=\"/taxes-2020/marketplace-plan-with-savings/\">Marketplace plan with premium tax credits</a></li>\n\t<li><a href=\"/taxes-2020/job-based-coverage/\">Job-based coverage</a></li>\n\t<li><a href=\"/taxes-2020/other-health-coverage/\">Other coverage</a></li>\n\t<li><a href=\"/taxes-2020/no-health-coverage/\">Not having coverage</a></li>\n</ul>",
+  "url": "/taxes-2020/marketplace-plan-without-savings"
+}

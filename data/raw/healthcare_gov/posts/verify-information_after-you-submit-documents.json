@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "When the Marketplace needs more information"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "After you submit your documents",
+  "main-title": null,
+  "meta-title": "What Happens After Sending Application Documents",
+  "meta-description": "What to expect after you submit verification information. Find out how & when Marketplace will respond, confirm health coverage. Links to contact info",
+  "title-short": "After you submit your documents",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "When the Marketplace needs more information",
+  "page_name": "After you submit your documents",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "When the Marketplace needs more information",
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "after-you-submit-documents",
+  "tags": [],
+  "excerpt": "<p>What to expect after you submit verification information. Find out how &amp; when Marketplace will respond, confirm health coverage. Links to contact info</p>",
+  "content": "<p>After we get the documents you submitted, we will:</p>\n\n<ol class=\"ds-c-list\"><li>Match your documents with your application</li>\n\t<li>Review each document to decide if it confirm what we need</li>\n\t<li>Contact you if we need more information</li>\n</ol><h2>If you haven't heard from us in a month</h2>\n\n<p>Your issues may still be under review, or we may not have received the documents.</p>\n\n<p>If you want to check if we've received your documents, <a href=\"/contact-us/\">contact the Marketplace Call Center</a>.</p>\n\n<ul class=\"ds-c-list\"><li><strong>If the Call Center says the Marketplace HAS received your documents:</strong> You don't need to do anything else unless you get a request for more information. If the Call Center verifies that we have your documents, <strong>don't send the same documents a second time, even if you continue to get reminder emails.</strong></li>\n\t<li><strong>If the Call Center says the Marketplace HAS NOT received your documents:</strong> Review your eligibility notice and reminder notices you've received to see which documents to send. Gather the required documents, and <a data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"7eefd611-a2df-4757-ab64-2badbd272c9d\" href=\"/tips-and-troubleshooting/uploading-documents\" title=\"Uploading documents\">upload or mail them as soon as possible</a>.</li>\n</ul>",
+  "url": "/verify-information/after-you-submit-documents"
+}

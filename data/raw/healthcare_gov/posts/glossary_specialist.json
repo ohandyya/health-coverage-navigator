@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about specialists by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Specialist",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "specialist",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A physician specialist focuses on a specific area of medicine or a group of patients to diagnose, manage, prevent or treat certain types of symptoms and conditions. A non-physician specialist is a provider who has more training in a specific area of health care.</p>",
+  "meta-title": "Specialist - Glossary",
+  "layout": null,
+  "page_name": "Specialist",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A physician specialist focuses on a specific area of medicine or a group of patients to diagnose, manage, prevent or treat certain types of symptoms and conditions. A non-physician specialist is a provider who has more training in a specific area of health care.</p>",
+  "url": "/glossary/specialist"
+}

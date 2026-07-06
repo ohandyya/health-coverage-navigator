@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about coordination of benefits by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Coordination of benefits",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "coordination-of-benefits",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A way to figure out who pays first when 2 or more health insurance plans are responsible for paying the same medical claim.</p>",
+  "meta-title": "Coordination of benefits - Glossary",
+  "layout": null,
+  "page_name": "Coordination of benefits",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A way to figure out who pays first when 2 or more health insurance plans are responsible for paying the same medical claim.</p>",
+  "url": "/glossary/coordination-of-benefits"
+}

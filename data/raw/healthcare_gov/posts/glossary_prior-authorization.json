@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about prior authorization by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Prior authorization",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "prior-authorization",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Approval from a health plan that may be required before you get a service or fill a prescription in order for the service or prescription to be covered by your plan.</p>",
+  "meta-title": "Prior authorization - Glossary",
+  "layout": null,
+  "page_name": "Prior authorization",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Approval from a health plan that may be required before you get a service or fill a prescription in order for the service or prescription to be covered by your plan.</p>",
+  "url": "/glossary/prior-authorization"
+}

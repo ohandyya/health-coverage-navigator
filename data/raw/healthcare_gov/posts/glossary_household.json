@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about households and health insurance by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Household",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "household",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The Marketplace generally considers your household to be you, your spouse if you\u2019re married, and your tax dependents. Your eligibility for savings is generally based on the income of all household members, even those who don\u2019t need insurance.</p>",
+  "meta-title": "Household - Glossary",
+  "layout": null,
+  "page_name": "Household",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The Marketplace generally considers your household to be you, your spouse if you\u2019re married, and your tax dependents. Your eligibility for savings is generally based on the income of all household members, even those who don\u2019t need insurance.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/income-and-household-information/household-size/\">Who\u2019s included in your household</a></li>\n\t<li><a href=\"/income-and-household-information/income/\">What\u2019s included as income</a></li>\n</ul>",
+  "url": "/glossary/household"
+}

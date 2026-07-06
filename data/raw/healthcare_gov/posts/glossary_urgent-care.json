@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about urgent care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Urgent care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "urgent-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Care for an illness, injury or condition serious enough that a reasonable person would seek care right away, but not so severe it requires emergency room care.</p>",
+  "meta-title": "Urgent care - Glossary",
+  "layout": null,
+  "page_name": "Urgent care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Care for an illness, injury or condition serious enough that a reasonable person would seek care right away, but not so severe it requires emergency room care.</p>",
+  "url": "/glossary/urgent-care"
+}

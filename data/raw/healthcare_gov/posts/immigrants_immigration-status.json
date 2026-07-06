@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Immigration status to qualify for the Marketplace",
+  "main-title": null,
+  "meta-title": "Find out what immigration statuses qualify for coverage in the Marketplace",
+  "meta-description": "Find out what immigration statuses qualify for coverage in the Marketplace.",
+  "title-short": "Immigration status",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Immigration status to qualify for the Marketplace",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "immigration-status",
+  "tags": [],
+  "excerpt": "<p>Find out what immigration statuses qualify for coverage in the Marketplace.</p>",
+  "content": "<div data-entity-type=\"node\" data-entity-uuid=\"721e8e6c-a069-4273-9c93-0e380b2cd864\" data-embed-button=\"brief\" data-entity-embed-display=\"view_mode:node.inline\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-brief node--view-mode-inline\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n    \n            <div class=\"clearfix text-formatted field field--name-field-content-body field--type-text-long field--label-hidden field__item\"><div class=\"box-content warning-heavyweight\"><p><strong>As of August 25, 2025</strong>, Deferred Action for Childhood Arrivals (DACA) recipients are no longer eligible for Marketplace coverage. Due to a court order on December 11, 2025, certain noncitizen immigration statuses in all states are now eligible for Marketplace coverage. <a href=\"/court-decisions\" data-entity-type=\"node\" data-entity-uuid=\"b95c2a55-7d54-4a1d-b3ad-edbbae473351\" data-entity-substitution=\"canonical\" data-entity-id=\"40096\" data-entity-bundle=\"article\" title=\"Recent court decisions impacting the Marketplace\"><span>Learn more about this court order.</span></a></p></div></div>\n      \n  </div>\n\n</article>\n</div>\n<h3>Immigration statuses that may qualify</h3><p>These immigration statuses may be eligible to get Marketplace coverage:</p><ul><li>Lawful Permanent Resident (LPR/Green Card holder)</li><li>Asylee</li><li>Refugee</li><li>Paroled into the U.S.</li><li>Granted an employment authorization document (EAD), also called a work permit or I-766</li><li>Individual with Non-immigrant Status including workers visas (such as H1, H-2A, H-2B), student visas, U-visa, T-visa, and other visas</li><li>Deferred Action Status</li></ul><div class=\"box-content information-lightweight\"><div class=\"content\">Deferred Action for Childhood Arrivals (DACA) recipients <strong>aren't</strong> eligible for Marketplace coverage.&nbsp;</div></div><ul><li>Cuban/Haitian entrant</li><li>Conditional entrant granted before 1980</li><li>Battered spouse, child, or parent</li><li>Victim of trafficking and their spouse, child, sibling, or parent</li><li>Special Immigrant Visa holders from Iraq or Afghanistan</li><li>Granted Withholding of Deportation or Withholding of Removal, under the immigration laws or under the Convention against Torture (CAT)</li><li>Violence Against Women Act (VAWA) Self-Petitioners</li><li>Member of a federally-recognized Indian tribe or American Indian born in Canada</li><li>Citizens of the Marshall Islands, Micronesia, and Palau who are living in one of the U.S. states or territories (referred to as Compact of Free Association, or COFA migrants)</li><li>Lawful Temporary Resident</li><li>Temporary Protected Status (TPS)</li><li>Deferred Enforced Departure (DED)</li><li>Special Immigrant Juvenile Classification</li><li>Family Unity beneficiary, including those who are under section 1504 of the Legal Immigration and Family Equity (LIFE) Act Amendments</li></ul><h3>Applicant for certain statuses that may qualify</h3><p>You may be eligible to get Marketplace coverage if you're an applicant for one of these statuses:</p><ul><li>Adjustment to Lawful Permanent Resident (LPR/Green Card holder) status.</li><li>Special Immigrant Juvenile Classification.</li><li>Victim of Trafficking Visa.</li><li>Children under 14 with a pending application for asylum for Withholding of Deportation or Withholding for Removal under the immigration laws or under the Convention against Torture (CAT).&nbsp;</li></ul><p><a href=\"/immigrants/documentation\" data-entity-type=\"node\" data-entity-uuid=\"62806ce1-d881-49e3-b69a-aaba41f1e685\" data-entity-substitution=\"canonical\" data-entity-id=\"36486\" data-entity-bundle=\"article\" title=\"Immigration documentation types\">Get a list of documents you'll need to fill out a Marketplace application.</a>&nbsp;</p><p>If you aren't eligible for Marketplace coverage you may be able to get health care at a lower cost through a community health center. They provide primary care services on a sliding fee scale based on your income. <a href=\"/community-health-centers\" data-entity-type=\"node\" data-entity-uuid=\"b2adb62b-29a5-4793-a3eb-f355ef193fc2\" data-entity-substitution=\"canonical\" data-entity-id=\"36056\" data-entity-bundle=\"article\" title=\"How to find low-cost health care in your community\">Get details and find a community health center near you.</a></p>",
+  "url": "/immigrants/immigration-status"
+}

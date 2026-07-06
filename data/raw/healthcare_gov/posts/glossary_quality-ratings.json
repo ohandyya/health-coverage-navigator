@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Quality Ratings (or 'star' ratings) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Quality ratings (\"star\" ratings)",
+  "date": "2023-10-26 00:00:00 +0000",
+  "slug": "quality-ratings",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Ratings range from 1-5 stars to help you compare Marketplace plans.&nbsp;</p>",
+  "meta-title": "Quality ratings (\"star\" ratings) - Glossary",
+  "layout": null,
+  "page_name": "Quality ratings (\"star\" ratings)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Ratings range from 1-5 stars to help you compare Marketplace plans.&nbsp;</p><p>Each health plan has an overall \"star rating,\" which is based on the quality of health care services and members' experiences with their health plan. You'll find this overall rating for the health plan and additional ratings for each of these 3 categories: member experience, medical care, and plan administration.</p><p>Ratings for this year are based on data from last year.&nbsp;</p><p>In some cases \u2014 like when plans are new or have low enrollment \u2014 ratings aren\u2019t available. This doesn't mean the plans are low quality.</p><h2>Related content</h2><ul><li><a href=\"/choose-a-plan\" data-entity-type=\"node\" data-entity-uuid=\"8ed4cc6f-e8db-415f-b721-b5eb689c8a07\" data-entity-substitution=\"canonical\" data-entity-id=\"37866\" data-entity-bundle=\"explainer\" title=\"How to pick a health insurance plan\">How to pick a health plan</a></li><li><a href=\"/quality-ratings\" data-entity-type=\"node\" data-entity-uuid=\"eac36223-834f-4962-b829-d8b07983ddd5\" data-entity-substitution=\"canonical\" data-entity-id=\"35996\" data-entity-bundle=\"article\" title=\"Quality ratings of health plans\">Learn more about quality ratings</a></li></ul>",
+  "url": "/glossary/quality-ratings"
+}

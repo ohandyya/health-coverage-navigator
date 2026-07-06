@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about application IDs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Application ID",
+  "date": "2014-12-05 00:00:00 +0000",
+  "slug": "application-id",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Each Marketplace application has a unique identification number, or Application ID. After you apply for Marketplace coverage, you\u2019ll get a notice with your eligibility results that contains your Application ID. You'll need your Application ID to continue with an existing application, compare plans, and complete enrollment. If you are doing this by phone, you can provide your Application ID to the Marketplace Call Center representative so they can find your application faster. If you're continuing your application, comparing plans, and enrolling online, you'll be asked to enter your Application ID after you log in to your account and select \"Find my existing application.\"</p>",
+  "meta-title": "Application ID - Glossary",
+  "layout": null,
+  "page_name": "Application ID",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Each Marketplace application has a unique identification number, or Application ID. After you apply for Marketplace coverage, you\u2019ll get a notice with your eligibility results that contains your Application ID. You'll need your Application ID to continue with an existing application, compare plans, and complete enrollment. If you are doing this by phone, you can provide your Application ID to the Marketplace Call Center representative so they can find your application faster. If you're continuing your application, comparing plans, and enrolling online, you'll be asked to enter your Application ID after you log in to your account and select \"Find my existing application.\"</p>\n\n<p><strong>Note:</strong> Your Application ID is different from your <a data-entity-bundle=\"glossary\" data-entity-id=\"34556\" data-entity-type=\"node\" data-entity-uuid=\"f2e5818b-60b0-40de-8943-f8b7cd125496\" data-internal-href=\"/node/34556\" href=\"/glossary/plan-id\" title=\"Plan ID\">Plan ID</a>.</p>\n\n<p><img alt=\"Image: {Application ID number circled}\" src=\"/assets/application-id.png\"></p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/apply-and-enroll/\">How to apply &amp; enroll</a></li>\n\t<li><a href=\"/applied-by-phone-or-mail/\">If you applied for coverage by paper or phone</a></li>\n</ul>",
+  "url": "/glossary/application-id"
+}

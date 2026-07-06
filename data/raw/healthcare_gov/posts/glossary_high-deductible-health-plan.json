@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about high deductible health plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "High Deductible Health Plan (HDHP)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "high-deductible-health-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A plan with a higher deductible than a traditional insurance plan. The monthly premium is usually lower, but you pay more health care costs yourself before the insurance company starts to pay its share (your deductible). A high deductible plan (HDHP) can be combined with a health savings account (HSA), allowing you to pay for certain medical expenses with money free from federal taxes.</p>",
+  "meta-title": "High Deductible Health Plan (HDHP) - Glossary",
+  "layout": null,
+  "page_name": "High Deductible Health Plan (HDHP)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p><span>A plan with a higher deductible than a traditional insurance plan. The monthly premium is usually lower, but you pay more health care costs yourself before the insurance company starts to pay its share (also called your deductible).</span></p><p><span>A high deductible plan can be combined with a health savings account (HSA), for you to pay for certain medical expenses with money you set aside in your tax-free HSA. This is why it\u2019s more commonly called an HSA-eligible plan.</span></p><h2>Related Content</h2><ul class=\"ul1\"><li class=\"li4\"><a class=\"external-link\" href=\"/high-deductible-health-plan/hdhp-hsa-information\" data-entity-type=\"node\" data-entity-uuid=\"038156bc-da82-4551-9a9c-9e11b9c187c2\" data-entity-substitution=\"canonical\" data-entity-id=\"36461\" data-entity-bundle=\"article\" title=\"What are Health Savings Account-eligible plans?\"><span class=\"s3\">Learn about HSA-eligible plans, including the </span><span class=\"s4\">minimum and maximum yearly deductible amounts</span></a>.</li><li class=\"li5\"><a class=\"external-link\" href=\"https://www.irs.gov/publications/p969/ar02.html\"><span class=\"s5 s6\">Read IRS.gov Publication 969 for details on HSAs, and discover if you qualify</span></a><span class=\"s5\">.</span></li></ul>",
+  "url": "/glossary/high-deductible-health-plan"
+}

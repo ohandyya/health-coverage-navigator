@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about deductibles by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Deductible",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "deductible",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>How much you\u2019ll pay for certain covered services and items each year before your plan starts to pay (except free preventive services).</span></p>",
+  "meta-title": "Deductible - Glossary",
+  "layout": null,
+  "page_name": "Deductible",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The amount you pay for covered health care services before your insurance plan starts to pay. With a $2,000 deductible, for example, you pay the first $2,000 of covered services yourself.</p><p>After you pay your deductible, you usually pay only a <a href=\"/glossary/co-payment\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"8923e304-18ed-4cf7-bb09-9cfa370d6b5c\" data-entity-bundle=\"glossary\" data-entity-id=\"35611\" data-internal-href=\"/node/35611\" data-entity-substitution=\"canonical\">copayment</a> or <a href=\"/glossary/co-insurance\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"f12676c2-6d8f-4880-a942-74a098a3d582\" data-entity-bundle=\"glossary\" data-entity-id=\"35616\" data-internal-href=\"/node/35616\" data-entity-substitution=\"canonical\">coinsurance</a> for covered services. Your insurance company pays the rest.</p><ul><li>Many plans pay for certain services, like a checkup or disease management programs, before you've met your deductible. Check your plan details.</li><li>All Marketplace health plans pay the full cost of certain <a href=\"/coverage/preventive-care-benefits\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"50e58395-bcfe-4b0a-b6ca-4a4389b9b31e\" data-entity-id=\"37331\" data-entity-bundle=\"article\" title=\"Preventive health services\">preventive benefits</a> even before you meet your deductible.</li><li>Some plans have separate deductibles for certain services, like prescription drugs.</li><li>Family plans often have both an individual deductible, which applies to each person, and a family deductible, which applies to all family members.</li></ul><p>Generally, plans with lower monthly <a href=\"/glossary/premium\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"b625d61d-da5b-4825-bb54-2bb728b7a4c0\" data-entity-bundle=\"glossary\" data-entity-id=\"35151\" data-internal-href=\"/node/35151\" data-entity-substitution=\"canonical\">premiums</a> have higher deductibles. Plans with higher monthly premiums usually have lower deductibles.</p><h2>Related content</h2><ul><li><a href=\"/choose-a-plan/your-total-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"3ff4c042-5db7-4450-b20b-7170fe56bd90\" data-entity-id=\"37861\" data-entity-bundle=\"article\" title=\"Your total costs for health care: Premium, deductible &amp; out-of-pocket costs\">Learn how deductibles and out-of-pocket costs affect your total costs of care</a></li><li><a href=\"/choose-a-plan\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"8ed4cc6f-e8db-415f-b721-b5eb689c8a07\" data-entity-id=\"37866\" data-entity-bundle=\"explainer\" title=\"How to pick a health insurance plan\">How to pick a health plan that works for you</a></li></ul>",
+  "url": "/glossary/deductible"
+}

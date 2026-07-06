@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about nondiscrimination by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Nondiscrimination",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "nondiscrimination",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A requirement that job-based coverage not discriminate based on health status. Coverage under job-based plans cannot be denied or restricted. You also can't be charged more because of your health status. Job-based plans can restrict coverage based on other factors such as part-time employment that aren't related to health status.</p>",
+  "meta-title": "Nondiscrimination - Glossary",
+  "layout": null,
+  "page_name": "Nondiscrimination",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A requirement that job-based coverage not discriminate based on health status. Coverage under job-based plans cannot be denied or restricted. You also can't be charged more because of your health status. Job-based plans can restrict coverage based on other factors such as part-time employment that aren't related to health status.</p>",
+  "url": "/glossary/nondiscrimination"
+}

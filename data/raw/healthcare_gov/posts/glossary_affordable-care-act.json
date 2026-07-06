@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the Affordable Care Act by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Affordable Care Act (ACA)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "affordable-care-act",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The comprehensive health care reform law enacted in March 2010 to make affordable health insurance available to more people, expand Medicaid, and support innovative medical care delivery methods designed to lower the costs of health care generally.</p>",
+  "meta-title": "Affordable Care Act (ACA) - Glossary",
+  "layout": null,
+  "page_name": "Affordable Care Act (ACA)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p><span>The health care reform law enacted in March 2010 has 3 primary goals:</span></p><ul><li>Make affordable health insurance available to more people. The law provides consumers with subsidies (the \u201cpremium tax credit\u201d) that lower costs for households with incomes between 100% and 400% of the <a href=\"/glossary/federal-poverty-level-fpl\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"ec2b1ba9-e86f-433c-9bf4-0562900e54cf\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"35496\" data-internal-href=\"/node/35496\">federal poverty level</a>.</li><li>Expand Medicaid to cover all adults with income below 138% of the FPL. (Not all states have expanded their Medicaid programs.) <a href=\"/medicaid-chip/medicaid-expansion-and-you\" data-entity-type=\"node\" data-entity-uuid=\"c23fb866-8e13-48c3-8389-95557670d21f\" data-entity-substitution=\"canonical\" data-entity-id=\"37811\" data-entity-bundle=\"article\" title=\"Medicaid expansion &amp; what it means for you\">Learn more about Medicaid expansion and what it means for you.</a></li><li>Support innovative medical care delivery methods designed to lower the costs of health care generally.</li></ul><h2>Related content</h2><ul><li><a href=\"/where-can-i-read-the-affordable-care-act\" data-entity-type=\"node\" data-entity-uuid=\"a233899d-f02a-4358-b1dd-68ced1882656\" data-entity-substitution=\"canonical\" data-entity-id=\"36151\" data-entity-bundle=\"article\" title=\"Read the Affordable Care Act\">Read the Affordable Care Act</a></li><li><a href=\"/health-care-law-protections\" data-entity-type=\"node\" data-entity-uuid=\"7d7be520-aaf6-4762-b4a0-cc03ecab83b5\" data-entity-substitution=\"canonical\" data-entity-id=\"37106\" data-entity-bundle=\"explainer\" title=\"Health insurance rights &amp; protections\">Rights &amp; protections under the health care law</a></li><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-substitution=\"canonical\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Check if you'll save</a></li></ul>",
+  "url": "/glossary/affordable-care-act"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about allowed amounts by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Allowed amount",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "allowed-amount",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The maximum amount a plan will pay for a covered health care service. May also be called \u201celigible expense,\u201d \u201cpayment allowance,\u201d or \u201cnegotiated rate.\u201d</p>",
+  "meta-title": "Allowed amount - Glossary",
+  "layout": null,
+  "page_name": "Allowed amount",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The maximum amount a plan will pay for a covered health care service. May also be called \u201celigible expense,\u201d \u201cpayment allowance,\u201d or \u201cnegotiated rate.\u201d</p>\n\n<p>If your provider charges more than the plan\u2019s allowed amount, you may have to pay the difference. (See <a data-entity-bundle=\"glossary\" data-entity-id=\"35661\" data-entity-type=\"node\" data-entity-uuid=\"3f77d0a7-4cdf-4b2e-8feb-e8c957c1d697\" data-internal-href=\"/node/35661\" href=\"/glossary/balance-billing\" title=\"Balance Billing\">Balance Billing</a>)</p>",
+  "url": "/glossary/allowed-amount"
+}

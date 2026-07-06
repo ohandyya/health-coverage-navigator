@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about plan IDs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Plan ID",
+  "date": "2014-12-05 00:00:00 +0000",
+  "slug": "plan-id",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Each Marketplace health plan has a unique 14-character identifier that's a combination of numbers and/or letters.</p>",
+  "meta-title": "Plan ID - Glossary",
+  "layout": null,
+  "page_name": "Plan ID",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Each Marketplace health plan has a unique 14-character identifier that's a combination of numbers and/or letters.</p>\n\n<p>You can find a plan's ID below the plan name when you preview plans and prices.</p>\n\n<p>If you\u2019ve already enrolled in a plan, you'll find your plan's ID in your Marketplace account under \"My Plans and Programs.\"</p>\n\n<p><strong>Note:</strong> Your Plan ID is different from your <a data-entity-bundle=\"glossary\" data-entity-id=\"34561\" data-entity-type=\"node\" data-entity-uuid=\"53f8f0e3-b3d5-4096-ba97-1b9524135015\" data-internal-href=\"/node/34561\" href=\"/glossary/application-id\" title=\"Application ID\">Application ID</a>.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/help/how-do-i-find-my-plan-id/\">How do I find my plan ID?</a></li>\n\t<li><a href=\"/keep-or-change-plan/\">Keep or change your plan</a></li>\n</ul>",
+  "url": "/glossary/plan-id"
+}
