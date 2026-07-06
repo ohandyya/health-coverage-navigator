@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about value-based purchasing by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Value-based purchasing (VBP)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "value-based-purchasing-vbp",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Linking provider payments to improved performance by health care providers. This form of payment holds health care providers accountable for both the cost and quality of care they provide. It attempts to reduce inappropriate care and to identify and reward the best-performing providers.</p>",
+  "meta-title": "Value-based purchasing (VBP) - Glossary",
+  "layout": null,
+  "page_name": "Value-based purchasing (VBP)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Linking provider payments to improved performance by health care providers. This form of payment holds health care providers accountable for both the cost and quality of care they provide. It attempts to reduce inappropriate care and to identify and reward the best-performing providers.</p>",
+  "url": "/glossary/value-based-purchasing-vbp"
+}

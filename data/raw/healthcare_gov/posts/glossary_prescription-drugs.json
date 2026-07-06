@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about prescription drugs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Prescription drugs",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "prescription-drugs",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Drugs and medications that, by law, require a prescription.</p>",
+  "meta-title": "Prescription drugs - Glossary",
+  "layout": null,
+  "page_name": "Prescription drugs",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Drugs and medications that, by law, require a prescription.</p>",
+  "url": "/glossary/prescription-drugs"
+}

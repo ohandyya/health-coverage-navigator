@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about TRICARE by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "TRICARE",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "tricare",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A health care program for active-duty and retired uniformed services members and their families.</p>",
+  "meta-title": "TRICARE - Glossary",
+  "layout": null,
+  "page_name": "TRICARE",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A health care program for active-duty and retired uniformed services members and their families.</p>",
+  "url": "/glossary/tricare"
+}

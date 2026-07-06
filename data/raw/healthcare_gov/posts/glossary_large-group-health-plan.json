@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about large group health plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Large group health plan",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "large-group-health-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>In general, a group health plan that covers employees of an employer that has 51 or more employees. In some states large groups are defined as 101 or more.</p>",
+  "meta-title": "Large Group Health Plan - Glossary",
+  "layout": null,
+  "page_name": "Large group health plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>In general, a group health plan that covers employees of an employer that has 51 or more employees. In some states large groups are defined as 101 or more.</p>",
+  "url": "/glossary/large-group-health-plan"
+}

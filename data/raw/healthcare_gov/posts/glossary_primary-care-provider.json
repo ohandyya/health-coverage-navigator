@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about primary care providers by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Primary care provider",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "primary-care-provider",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine), nurse practitioner, clinical nurse specialist or physician assistant, as allowed under state law, who provides, coordinates or helps a patient access a range of health care services.</p>",
+  "meta-title": "Primary care provider - Glossary",
+  "layout": null,
+  "page_name": "Primary care provider",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A physician (M.D. \u2013 Medical Doctor or D.O. \u2013 Doctor of Osteopathic Medicine), nurse practitioner, clinical nurse specialist or physician assistant, as allowed under state law, who provides, coordinates or helps a patient access a range of health care services.</p>",
+  "url": "/glossary/primary-care-provider"
+}

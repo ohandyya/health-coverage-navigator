@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about job-based health plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Job-based health plan",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "job-based-health-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Coverage that is offered to an employee (and often his or her family) by an employer.</p>",
+  "meta-title": "Job-based Health Plan - Glossary",
+  "layout": null,
+  "page_name": "Job-based health plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Coverage that is offered to an employee (and often his or her family) by an employer.</p>",
+  "url": "/glossary/job-based-health-plan"
+}

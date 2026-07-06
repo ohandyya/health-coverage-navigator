@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about home and community-based services (HCBS) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Home and community-based services (HCBS)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "home-and-community-based-services-hcbs",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Services and support provided by most state Medicaid programs in your home or community that gives help with such daily tasks as bathing or dressing. This care is covered when provided by care workers or, if your state permits it, by your family.</p>",
+  "meta-title": "Home and Community-Based Services (HCBS) - Glossary",
+  "layout": null,
+  "page_name": "Home and community-based services (HCBS)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Services and support provided by most state Medicaid programs in your home or community that gives help with such daily tasks as bathing or dressing. This care is covered when provided by care workers or, if your state permits it, by your family.</p>",
+  "url": "/glossary/home-and-community-based-services-hcbs"
+}

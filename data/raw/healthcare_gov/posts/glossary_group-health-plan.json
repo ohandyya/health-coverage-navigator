@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about group health plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Group health plan",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "group-health-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>In general, a health plan offered by an employer or employee organization that provides health coverage to employees and their families.</p>",
+  "meta-title": "Group Health Plan - Glossary",
+  "layout": null,
+  "page_name": "Group health plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>In general, a health plan offered by an employer or employee organization that provides health coverage to employees and their families.</p>",
+  "url": "/glossary/group-health-plan"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Review the definition of medically necessary in the HealthCare.gov Glossary.",
+  "title": "Medically necessary",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medically-necessary",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care services or supplies needed to diagnose or treat an illness, injury, condition, disease or its symptoms and that meet accepted standards of medicine.</p>",
+  "meta-title": "Medically necessary - Glossary",
+  "layout": null,
+  "page_name": "Medically necessary",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care services or supplies needed to diagnose or treat an illness, injury, condition, disease or its symptoms and that meet accepted standards of medicine.</p>",
+  "url": "/glossary/medically-necessary"
+}

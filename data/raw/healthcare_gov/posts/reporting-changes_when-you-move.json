@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "How to report a move",
+  "main-title": null,
+  "meta-title": "How to report a move to the Marketplace",
+  "meta-description": "Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.",
+  "title-short": "How to report a move",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "How to report a move",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "when-you-move",
+  "tags": [],
+  "excerpt": "<p>Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.</p>",
+  "content": "<p>The steps you\u2019ll take depend on if you move to a different state or within the same state.</p><h2>If you move within the same state</h2><p><a href=\"/reporting-changes/how-to-report-changes\" data-entity-type=\"node\" data-entity-uuid=\"1fc76093-b6e3-4264-beb9-0c66e430c157\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37436\" data-internal-href=\"/reporting-changes/how-to-report-changes/\" title=\"How to report changes to the Marketplace\">Update your application to report your change of address</a>. Your coverage options and savings probably won\u2019t change based only on your new address, but we\u2019ll let you know if you need to pick a new plan.</p><p><a class=\"aname\"></a><a class=\"ck-anchor\"></a><a class=\"ck-anchor\"></a><a class=\"ck-anchor\"><a class=\"ck-anchor\" id=\"different\"></a></a></p><h2>If you move to a different state</h2><div class=\"box-content information-lightweight\"><p><strong>When you move to a new state, you can\u2019t keep your plan</strong></p><p>It\u2019s very important to report moves out of state immediately so you can enroll in a new plan without a break in coverage \u2014 and avoid paying for coverage that doesn\u2019t apply in your new state.</p></div><p>When you move out of state, you\u2019ll need to start a new Marketplace application and enroll in a plan in your new state. How you apply depends on whether your new state uses HealthCare.gov or its own website.</p><p><a href=\"/downloads/how-to-report-new-state-move.pdf\" data-entity-type=\"media\" data-entity-uuid=\"e73fe57d-3fd5-47cc-abb6-ab4cfdbe16d4\" data-entity-substitution=\"canonical\" data-entity-id=\"10101\" data-entity-bundle=\"document\" title=\"how-to-report-new-state-move.pdf\">Get screen-by-screen uploading directions, with pictures</a> (PDF, 330 KB), or follow these steps:</p><ol class=\"ds-c-list\"><li><a href=\"/login\" title=\"Log into your account\">Log into your Marketplace account.</a></li><li>Go to your applications. </li><li>Select the year you want coverage and your new state.<ul class=\"ds-c-list\"><li>Can't find your state? If your new state runs its own Marketplace, you\u2019ll use its website to apply. <a href=\"/marketplace-in-your-state\" data-entity-type=\"node\" data-entity-uuid=\"7eadbde2-3ffe-45f5-bc14-ee18670a8a12\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"36131\" data-internal-href=\"/node/36131\" target title=\"The Marketplace in your state\">Find your state on this list</a>.</li></ul></li><li>Select \u201cApply or renew\u201d to start a new application.</li><li>After you finish your application for your new state, you\u2019ll be able to compare plans and prices available to you. Pick a plan and pay your first month\u2019s premium to <a href=\"/apply-and-enroll/complete-your-enrollment\" data-entity-type=\"node\" data-entity-uuid=\"65636127-2a63-4f89-ac7e-004b529a7a23\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37251\" data-internal-href=\"/node/37251\" target title=\"Complete your enrollment &amp; pay your first premium\">complete your enrollment</a>.</li></ol><p><strong>Note:</strong>&nbsp;<span>If you're reviewing and updating your application</span>, select \u201cStart a New State Application.\u201d If you\u2019re in the process of reporting a life change, select \u201cReport a move to a new state,\u201d then select \u201cContinue.\u201d On the \u201cMoving to a new state\u201d screen, select \u201cContinue.\u201d Then, select the year and new state from the drop-down menu.</p><h2>Update your profile with your new address</h2><p>No matter where you move, you should <strong>also</strong> update your HealthCare.gov profile. Here\u2019s how:</p><ol class=\"ds-c-list\"><li><a href=\"/login\">Log in to your Marketplace account</a>.</li><li>Select your name in the top right of the screen and select \u201cMy Profile.\u201d</li><li>Select \u201cEdit\u201d next to the \u201cAddress\u201d field. <strong>Note:</strong> Sometimes a more detailed address than the one you type in (like one with your full ZIP code) may pop up. Select it so we\u2019ll have your most accurate address.</li><li>Report email and phone changes on your HealthCare.gov profile this same way.</li></ol>",
+  "url": "/reporting-changes/when-you-move"
+}

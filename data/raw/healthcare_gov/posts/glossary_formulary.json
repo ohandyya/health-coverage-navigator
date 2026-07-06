@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about formularies by reviewing the definition in the HealthCare.gov Glossary.\"",
+  "title": "Formulary",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "formulary",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a drug list.</p>",
+  "meta-title": "Formulary - Glossary",
+  "layout": null,
+  "page_name": "Formulary",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A list of prescription drugs covered by a prescription drug plan or another insurance plan offering prescription drug benefits. Also called a drug list.</p>",
+  "url": "/glossary/formulary"
+}

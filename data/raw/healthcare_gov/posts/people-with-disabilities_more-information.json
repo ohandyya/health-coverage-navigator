@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "More information about health care for people with disabilities",
+  "main-title": null,
+  "meta-title": "More information about health care for people with disabilities",
+  "meta-description": "Find out where to get additional information if you have a disability and are looking for health coverage.",
+  "title-short": "More information for people with disabilities",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "More information about health care for people with disabilities",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "more-information",
+  "tags": [],
+  "excerpt": "<p>Find out where to get additional information if you have a disability and are looking for health coverage.</p>",
+  "content": "<ul class=\"ds-c-list\"><li>Get more information on <a href=\"https://www.medicare.gov/basics/get-started-with-medicare/using-medicare/how-to-get-medicare-services/information-for-my-situation\" data-link-button-type=\"1\">Medicare and disabilities</a> or call 1-800-MEDICARE (1-800-633-4227). TTY: 1-877-486-2048</li><li>Find <a href=\"/medicaid-chip\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"bd54f2a2-5856-487e-8f38-fc28ec82444d\" data-entity-id=\"37836\" data-entity-bundle=\"explainer\" title=\"Medicaid &amp; CHIP\">contact information for your state\u2019s Medicaid agency</a>. Select your state from the <a href=\"/medicaid-chip\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"bd54f2a2-5856-487e-8f38-fc28ec82444d\" data-entity-id=\"37836\" data-entity-bundle=\"explainer\" title=\"Medicaid &amp; CHIP\">menu on this Medicaid page</a> for contact information.</li><li>See your <a href=\"/health-care-law-protections\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"7d7be520-aaf6-4762-b4a0-cc03ecab83b5\" data-entity-id=\"37106\" data-entity-bundle=\"explainer\" title=\"Health insurance rights &amp; protections\">rights and protections</a> under the health care law, including coverage for pre-existing conditions, no annual or lifetime coverage limits, and free preventive care.</li><li><a href=\"https://localhelp.healthcare.gov/\">Find someone in your community</a> who can help you with your Marketplace application and answer your questions. Many Navigators and other trained helpers are familiar with disability issues and helping people with disabilities.</li><li><a href=\"/contact-us\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"2839b07e-0a5b-48bd-8fa4-ba9908d08200\" data-entity-id=\"39406\" data-entity-bundle=\"landing_page\" title=\"Contact us\">Contact the Marketplace Call Center</a>. Phone help is available 24 hours a day, 7 days a week.</li><li><a href=\"/apply-and-enroll/health-insurance-plans-estimator-overview\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"d69e236e-a1e4-47f7-99f0-1507d4a14170\" data-entity-id=\"37271\" data-entity-bundle=\"article\" title=\"Preview health insurance plans &amp; prices\">Preview health plans and prices</a> before you apply.</li></ul>",
+  "url": "/people-with-disabilities/more-information"
+}

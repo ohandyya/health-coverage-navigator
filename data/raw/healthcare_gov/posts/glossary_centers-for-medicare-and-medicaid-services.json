@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the Centers for Medicare & Medicaid Services (CMS) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Centers for Medicare & Medicaid Services (CMS)",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "centers-for-medicare-and-medicaid-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The federal agency that runs the Medicare, Medicaid, and Children's Health Insurance Programs, and the federally facilitated Marketplace. For more information, visit <a href=\"http://www.cms.gov/\">cms.gov</a>.</p>",
+  "meta-title": "Centers for Medicare & Medicaid Services (CMS) - Glossary",
+  "layout": null,
+  "page_name": "Centers for Medicare & Medicaid Services (CMS)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The federal agency that runs the Medicare, Medicaid, and Children's Health Insurance Programs, and the federally facilitated Marketplace. For more information, visit <a href=\"http://www.cms.gov/\">cms.gov</a>.</p>",
+  "url": "/glossary/centers-for-medicare-and-medicaid-services"
+}

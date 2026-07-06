@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about canceled debts by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Canceled debts",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "cancelled-debts",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>If you incurred a debt from a loan or from buying something on credit and a portion of the amount you owe is discharged or forgiven (\"canceled\"), the amount of the forgiven debt is generally counted as income to you.</p>",
+  "meta-title": "Canceled debts - Glossary",
+  "layout": null,
+  "page_name": "Canceled debts",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>If you incurred a debt from a loan or from buying something on credit and a portion of the amount you owe is discharged or forgiven (\"canceled\"), the amount of the forgiven debt is generally counted as income to you.</p>\n\n<p>For more information, see <a href=\"https://www.irs.gov/publications/p17/ch12.html\">IRS Publication 17, chapter 12</a>.</p>",
+  "url": "/glossary/cancelled-debts"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about community ratings by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Community rating",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "community-rating",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A rule that prevents health insurers from varying premiums within a geographic area based on age, gender, health status or other factors.</p>",
+  "meta-title": "Community rating - Glossary",
+  "layout": null,
+  "page_name": "Community rating",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A rule that prevents health insurers from varying premiums within a geographic area based on age, gender, health status or other factors.</p>",
+  "url": "/glossary/community-rating"
+}

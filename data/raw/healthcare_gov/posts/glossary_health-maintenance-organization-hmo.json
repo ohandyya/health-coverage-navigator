@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Health Maintenance Organizations by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health Maintenance Organization (HMO)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "health-maintenance-organization-hmo",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A type of health insurance plan that usually limits coverage to care from doctors who work for or contract with the HMO. It generally won't cover out-of-network care except in an emergency. An HMO may require you to live or work in its service area to be eligible for coverage. HMOs often provide integrated care and focus on prevention and wellness.</p>",
+  "meta-title": "Health Maintenance Organization (HMO) - Glossary",
+  "layout": null,
+  "page_name": "Health Maintenance Organization (HMO)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A type of health insurance plan that usually limits coverage to care from doctors who work for or contract with the HMO. It generally won't cover out-of-network care except in an emergency. An HMO may require you to live or work in its service area to be eligible for coverage. HMOs often provide integrated care and focus on prevention and wellness.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/choose-a-plan/plan-types/\">Type of plan and provider network</a></li>\n</ul>",
+  "url": "/glossary/health-maintenance-organization-hmo"
+}

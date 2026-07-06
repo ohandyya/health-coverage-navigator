@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about out-of-pocket costs by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Out-of-pocket costs",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "out-of-pocket-costs",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>Costs you pay when you get a service covered by your plan (like deductibles, co-pays, and coinsurance) plus all costs for any items not covered by your plan</span></p>",
+  "meta-title": "Out-of-pocket costs - Glossary",
+  "layout": null,
+  "page_name": "Out-of-pocket costs",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Your expenses for medical care that aren't reimbursed by insurance. Out-of-pocket costs include deductibles, coinsurance, and copayments for covered services plus all costs for services that aren't covered.</p><h2>Related content</h2><ul><li><a href=\"/lower-costs/save-on-out-of-pocket-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"893f0d1a-44c3-4a40-a4aa-d10e2e349ff0\" data-entity-id=\"38076\" data-entity-bundle=\"article\" title=\"Cost-sharing reductions\">How to save on out-of-pocket health care costs</a></li><li><a href=\"/choose-a-plan/out-of-pocket-costs/\">How to choose Marketplace insurance: Out-of-pocket costs</a></li></ul>",
+  "url": "/glossary/out-of-pocket-costs"
+}

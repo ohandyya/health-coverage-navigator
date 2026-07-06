@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Saving money on health insurance"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Income levels & savings",
+  "main-title": null,
+  "meta-title": "Low Cost Marketplace Health Care, Qualifying Income Levels",
+  "meta-description": "You could save money on health insurance costs. Visit HealthCare.gov to find out if you qualify for cost savings in the Health Insurance Marketplace\u00ae",
+  "title-short": "Low Cost Marketplace Health Care, Qualifying Income Levels",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Saving money on health insurance",
+  "page_name": "Income levels & savings",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Saving money on health insurance",
+  "date": "2023-11-01 00:00:00 +0000",
+  "slug": "qualifying-for-lower-costs",
+  "tags": [],
+  "excerpt": "<p>To learn if you qualify for savings on health care coverage costs, select your household size and estimated income.</p>",
+  "content": "<p>Check if you might save on Marketplace <a href=\"/node/40341\" data-entity-type=\"node\" data-entity-uuid=\"e9327655-6c15-4880-bd5a-c3b9242d990a\" data-entity-substitution=\"canonical\" data-entity-id=\"40341\" data-entity-bundle=\"brief\" title=\"Premium (tooltip)\">premiums</a>, or qualify for <a href=\"/glossary/medicaid\" data-entity-type=\"node\" data-entity-uuid=\"13c0081d-9e96-420a-a724-6e81e89d20c1\" data-entity-substitution=\"canonical\" data-entity-id=\"35311\" data-entity-bundle=\"glossary\" title=\"Medicaid\">Medicaid</a> or <a href=\"/glossary/childrens-health-insurance-program-chip\" data-entity-type=\"node\" data-entity-uuid=\"87f4b3ac-b0c4-45b7-a691-d5b2cc35aac3\" data-entity-substitution=\"canonical\" data-entity-id=\"35631\" data-entity-bundle=\"glossary\" title=\"Children's Health Insurance Program (CHIP)\">Children's Health Insurance Program (CHIP)</a>, based on your income. You'll also find out who to include in your household and how to estimate income before you apply.</p><p>You'll get exact plan prices and savings when you fill out a Marketplace application.</p><div data-entity-type=\"node\" data-entity-uuid=\"a0d63a6d-2766-422c-bc66-139276170028\" data-embed-button=\"embedded_app\" data-entity-embed-display=\"view_mode:node.embedded_app\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-embedded-app node--view-mode-embedded-app\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n      \n            <div class=\"field field--name-title field--type-string field--label-hidden field__item\"><h2><a href=\"/node/38436\" hreflang=\"en\">Lower Costs Qualifier</a></h2></div>\n      \n  <div class=\"field field--name-field-embedded-app-id field--type-string field--label-inline clearfix\">\n    <div class=\"field__label\">English App ID:</div>\n              <div class=\"field__item\">lower-costs-qualifier</div>\n          </div>\n\n  <div class=\"field field--name-field-application-type field--type-entity-reference field--label-inline clearfix\">\n    <div class=\"field__label\">Application Type:</div>\n              <div class=\"field__item\">Medium</div>\n          </div>\n\n  </div>\n\n</article>\n</div>\n<h2>More help before you apply</h2><ul><li><strong>Estimating your expected household income</strong><ul><li>You can start with your household\u2019s&nbsp;<a href=\"/glossary/adjusted-gross-income-agi\" title=\"Adjusted Gross Income (AGI)\" data-entity-type=\"node\" data-entity-uuid=\"d80ead09-50ec-40c9-b6da-0156feb285e5\" data-entity-substitution=\"canonical\" data-content=\"Your total (or \u201cgross\u201d) income for the tax year, minus certain adjustments you\u2019re allowed to take. Adjustments include deductions for conventional IRA contributions, student loan interest, and more. Adjusted gross income appears on IRS Form 1040, line 11.\" data-entity-bundle=\"glossary\" data-entity-id=\"34496\" data-internal-href=\"/node/34496\" data-original-title=\"Adjusted Gross Income (AGI)\">adjusted gross income</a>&nbsp;and update it for expected changes. (<strong>Savings are based on your income estimate for the year you want coverage, not last year.</strong>)</li><li><a href=\"https://www.healthcare.gov/income-calculator\">Use our income calculator to make your best estimate</a>.</li><li>Learn more about&nbsp;<a href=\"/income-and-household-information/how-to-report\" data-entity-type=\"node\" data-entity-uuid=\"33862067-12c6-4d4d-8f21-37fad141bd24\" data-entity-substitution=\"canonical\" data-entity-id=\"37421\" data-entity-bundle=\"article\" title=\"How to estimate your expected income\">estimating income</a>, and see&nbsp;<a href=\"/income-and-household-information/income\" data-entity-type=\"node\" data-entity-uuid=\"d3889157-706f-4681-aa40-5540b64d85f7\" data-entity-substitution=\"canonical\" data-entity-id=\"37426\" data-entity-bundle=\"article\" title=\"What to include as income\">what to include</a>.</li></ul></li><li><strong>Including the right people in your household</strong><ul><li>Count yourself, your spouse if you're married, plus everyone you'll claim as a tax dependent,&nbsp;including those who don\u2019t need coverage.</li><li>Learn more about&nbsp;<a href=\"/income-and-household-information/household-size\" data-entity-type=\"node\" data-entity-uuid=\"4d3355f0-94b1-4335-80ab-e413200655e9\" data-entity-substitution=\"canonical\" data-entity-id=\"37416\" data-entity-bundle=\"article\" title=\"Who to include in your household\">who to include in your household</a>.</li></ul></li></ul>",
+  "url": "/lower-costs/qualifying-for-lower-costs"
+}

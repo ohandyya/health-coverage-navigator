@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about multi-employer plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Multi-employer plan",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "multi-employer-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>In general, a group health plan that's sponsored jointly by 2 or more employers.</p>",
+  "meta-title": "Multi-employer plan - Glossary",
+  "layout": null,
+  "page_name": "Multi-employer plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>In general, a group health plan that's sponsored jointly by 2 or more employers.</p>",
+  "url": "/glossary/multi-employer-plan"
+}

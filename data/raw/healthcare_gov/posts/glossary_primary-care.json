@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about primary care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Primary care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "primary-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health services that cover a range of prevention, wellness, and treatment for common illnesses. Primary care providers include doctors, nurses, nurse practitioners, and physician assistants. They often maintain long-term relationships with you and advise and treat you on a range of health related issues. They may also coordinate your care with specialists.</p>",
+  "meta-title": "Primary care - Glossary",
+  "layout": null,
+  "page_name": "Primary care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health services that cover a range of prevention, wellness, and treatment for common illnesses. Primary care providers include doctors, nurses, nurse practitioners, and physician assistants. They often maintain long-term relationships with you and advise and treat you on a range of health related issues. They may also coordinate your care with specialists.</p>",
+  "url": "/glossary/primary-care"
+}

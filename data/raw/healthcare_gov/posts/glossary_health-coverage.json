@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health coverage",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "health-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Legal entitlement to payment or reimbursement for your health care costs, generally under a contract with a health insurance company, a group health plan offered in connection with employment, or a government program like Medicare, Medicaid, or the Children\u2019s Health Insurance Program (CHIP).</p>",
+  "meta-title": "Health Coverage - Glossary",
+  "layout": null,
+  "page_name": "Health coverage",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Legal entitlement to payment or reimbursement for your health care costs, generally under a contract with a health insurance company, a group health plan offered in connection with employment, or a government program like Medicare, Medicaid, or the Children\u2019s Health Insurance Program (CHIP).</p>",
+  "url": "/glossary/health-coverage"
+}

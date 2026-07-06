@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "2022 health coverage & your federal taxes"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Other health coverage for 2022",
+  "main-title": "2022 health coverage & your federal taxes",
+  "meta-title": "Other health coverage for 2022",
+  "meta-description": "Get 2022 federal tax info for Medicare, Medicaid, Children's Health Insurance Program (CHIP), other coverage. Form 1095-B, 1095-C, more.",
+  "title-short": null,
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "2022 health coverage & your federal taxes",
+  "page_name": "Other health coverage for 2022",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "2022 health coverage & your federal taxes",
+  "date": null,
+  "slug": "other-health-coverage",
+  "tags": [],
+  "excerpt": "<div class=\"clearfix text-formatted field field--name-field-excerpt field--type-text-long field--label-above\"><div class=\"field__item\"><p>Get 2022 federal tax info for Medicare, Medicaid, Children's Health Insurance Program (CHIP), other coverage. Form 1095-B, 1095-C, more.</p></div></div>",
+  "content": "<p>If you had coverage through Medicare, Medicaid, the Children\u2019s Health Insurance Program (CHIP), or another source, depending on the coverage you had, you may get Form 1095-B, Health Coverage, to help you complete your taxes.</p><h2>If you got a Form 1095-B</h2><p>Read Parts III and IV to find information about:</p><ul><li>Your 2022 insurance coverage</li><li>Covered individuals and the months they had coverage</li></ul><h2>Tax forms and instructions:</h2><ul><li><a href=\"https://www.irs.gov/pub/irs-prior/f1040--2022.pdf\">Form 1040, U.S. Individual Income Tax Return</a>&nbsp;(PDF, 152 KB) and&nbsp;<a href=\"https://www.irs.gov/pub/irs-prior/i1040gi--2022.pdf\">Form 1040 instructions</a>&nbsp;(PDF, 4.1 MB)</li><li><a href=\"https://www.irs.gov/Affordable-Care-Act/Questions-and-Answers-about-Health-Care-Information-Forms-for-Individuals\">Questions and answers about Forms 1095-B or 1095-C from the IRS</a></li></ul><h2>More than one type of coverage?</h2><p>If you had other coverage for only part of 2022, or other household members had different coverage, select the other coverage:</p><ul><li><a href=\"/taxes-2022/marketplace-plan-with-savings\" data-entity-type=\"node\" data-entity-uuid=\"f9c97f24-be42-4884-8b3a-eec9d1b7d7de\" data-entity-substitution=\"canonical\" data-entity-id=\"39831\" data-entity-bundle=\"article\" title=\"2022 Marketplace plan with premium tax credit\">Marketplace plan with the premium tax credit</a></li><li><a href=\"/taxes-2022/marketplace-plan-without-savings\" data-entity-type=\"node\" data-entity-uuid=\"fb045bb9-fd18-4f98-838e-cf4b2dc5bf8a\" data-entity-substitution=\"canonical\" data-entity-id=\"39836\" data-entity-bundle=\"article\" title=\"2022 Marketplace plan without premium tax credit\">Marketplace plan without the premium tax credit</a></li><li><a href=\"/taxes-2022/job-based-coverage\" data-entity-type=\"node\" data-entity-uuid=\"82d0257e-dec7-4449-b534-e68f9358bf60\" data-entity-substitution=\"canonical\" data-entity-id=\"39841\" data-entity-bundle=\"article\" title=\"Job-based coverage for 2022\">Job-based coverage</a></li><li><a href=\"/taxes-2022/no-health-coverage\" data-entity-type=\"node\" data-entity-uuid=\"13c31347-0744-4f03-96a1-309382cb23ee\" data-entity-substitution=\"canonical\" data-entity-id=\"39851\" data-entity-bundle=\"article\" title=\"No health coverage for 2022\">No coverage</a><br>&nbsp;</li></ul>",
+  "url": "/taxes-2022/other-health-coverage"
+}

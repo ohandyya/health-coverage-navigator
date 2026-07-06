@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about pre-existing conditions by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Pre-existing condition",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "pre-existing-condition",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A health problem, like asthma, diabetes, or cancer, you had before the date that new health coverage starts. Insurance companies can't refuse to cover treatment for your pre-existing condition or charge you more.</p>",
+  "meta-title": "Pre-existing condition - Glossary",
+  "layout": null,
+  "page_name": "Pre-existing condition",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A health problem, like asthma, diabetes, or cancer, you had before the date that new health coverage starts. Insurance companies can't refuse to cover treatment for your pre-existing condition or charge you more.</p>\n\n<h2>Related Content</h2>\n\n<ul><li>Learn more about <a href=\"/coverage/pre-existing-conditions/\">coverage for pre-existing conditions.</a></li>\n\t<li>Learn more about <a href=\"/what-if-im-pregnant-or-plan-to-get-pregnant/\">coverage for pregnancy and childbirth.</a></li>\n</ul>",
+  "url": "/glossary/pre-existing-condition"
+}

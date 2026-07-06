@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Medicaid by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Medicaid",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medicaid",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p><span>A joint federal and state insurance program that provides free or low-cost health coverage to some low-income individuals, families, children, pregnant women, the elderly, and people with disabilities.</span></p>",
+  "meta-title": "Medicaid - Glossary",
+  "layout": null,
+  "page_name": "Medicaid",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Insurance program that provides free or low-cost health coverage to some low-income people, families and children, pregnant women, the elderly, and people with disabilities. Many states have expanded their Medicaid programs to cover all people below certain income levels.</p><p>Whether you qualify for Medicaid coverage depends partly on whether your state has expanded its program. Medicaid benefits, and program names, vary somewhat between states.</p><p>You can apply anytime. If you qualify, your coverage can begin immediately, any time of year.</p><h2>Related content</h2><ul><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Find out if you qualify for Medicaid based on your household income. We\u2019ll also tell you if you qualify for savings on a health insurance plan instead</a></li><li><a href=\"/medicaid-chip\" data-entity-type=\"node\" data-entity-substitution=\"canonical\" data-entity-uuid=\"bd54f2a2-5856-487e-8f38-fc28ec82444d\" data-entity-id=\"37836\" data-entity-bundle=\"explainer\" title=\"Medicaid &amp; CHIP\">Learn more about Medicaid and how to apply</a></li></ul>",
+  "url": "/glossary/medicaid"
+}

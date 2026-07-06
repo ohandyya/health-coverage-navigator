@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Get ready to apply for health coverage",
+  "main-title": null,
+  "meta-title": "Get ready to apply for health coverage",
+  "meta-description": "Find out how to enroll for or renew coverage in the Health Insurance Marketplace\u00ae works. See if you qualify for lower costs, preview plans and prices",
+  "title-short": "Get ready to apply",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Get ready to apply for health coverage",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2023-10-25 00:00:00 +0000",
+  "slug": "get-ready-to-apply",
+  "tags": [],
+  "excerpt": "<p>Find out how to enroll for or renew coverage in the Health Insurance Marketplace\u00ae works. See if you qualify for lower costs, preview plans and prices</p>",
+  "content": "<div data-entity-type=\"node\" data-entity-uuid=\"e7943b48-db95-4ad9-9d3e-1d8fb3dfb4ac\" data-embed-button=\"brief\" data-entity-embed-display=\"view_mode:node.inline\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-brief node--view-mode-inline\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n    \n            <div class=\"clearfix text-formatted field field--name-field-content-body field--type-text-long field--label-hidden field__item\"><div class=\"box-content information-heavyweight\"><div class=\"content\"><strong>Get health coverage now if you qualify for:</strong></div><ul><li><div class=\"content\">A <a class=\"ck ck-tooltip\" href=\"/node/39946\" data-entity-type=\"node\" data-entity-uuid=\"4efe1a01-b960-4b16-9053-0fe27a180a34\" data-entity-substitution=\"canonical\" data-entity-id=\"39946\" data-entity-bundle=\"brief\" title=\"Special Enrollment Period (term tooltip)\">Special Enrollment Period</a> due to a life event, like moving, losing other coverage, getting married, or having a baby.</div></li><li><div class=\"content\">Free or low-cost coverage through <a href=\"/glossary/medicaid\" data-entity-type=\"node\" data-entity-uuid=\"13c0081d-9e96-420a-a724-6e81e89d20c1\" data-entity-substitution=\"canonical\" data-entity-id=\"35311\" data-entity-bundle=\"glossary\" title=\"Medicaid\">Medicaid</a> or the <a href=\"/glossary/childrens-health-insurance-program-chip\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-uuid=\"87f4b3ac-b0c4-45b7-a691-d5b2cc35aac3\" data-entity-substitution=\"canonical\" data-entity-id=\"35631\" data-entity-bundle=\"glossary\" title=\"Children's Health Insurance Program (CHIP)\">Children's Health Insurance Program (CHIP)</a>.</div></li></ul><div class=\"content\"><a href=\"/screener/\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-uuid=\"2fe96e5a-1008-4641-a0ea-08c4df5081d6\" data-entity-substitution=\"canonical\" data-entity-id=\"40021\" data-entity-bundle=\"link\" title=\"SEP screener\">Check if you qualify.</a></div></div></div>\n      \n  </div>\n\n</article>\n</div>\n<p>Here are some ways to get ready:</p><ul class=\"ds-c-list\"><li><a href=\"/quick-guide\" data-entity-type=\"node\" data-entity-uuid=\"71648c46-3417-41e6-a462-3bfac09b7e01\" data-entity-substitution=\"canonical\" data-entity-id=\"38046\" data-entity-bundle=\"explainer\" title=\"A quick guide to the Health Insurance Marketplace\u00ae\">Get a quick overview of the Marketplace.</a></li><li><a href=\"/lower-costs\" data-entity-type=\"node\" data-entity-uuid=\"4bcf3697-3fc1-4cb2-9de4-8735fbf13eae\" data-entity-substitution=\"canonical\" data-entity-id=\"38081\" data-entity-bundle=\"explainer\" title=\"Saving money on health insurance\">Check if you might save on health coverage.</a></li><li><a href=\"/income-and-household-information\" data-entity-type=\"node\" data-entity-uuid=\"3120874d-3793-4b6e-93a6-c2a51506a8b3\" data-entity-substitution=\"canonical\" data-entity-id=\"37596\" data-entity-bundle=\"explainer\" title=\"Count income &amp; household size\">Learn how to estimate your income</a>&nbsp;for your application.</li><li><a href=\"/downloads/apply-for-or-renew-coverage.pdf\" data-entity-type=\"media\" data-entity-uuid=\"080994e2-ab56-43ad-9168-da794027a262\" data-entity-substitution=\"canonical\" data-entity-id=\"10906\" data-entity-bundle=\"document\" title=\"apply-for-or-renew-coverage.pdf\">Use this&nbsp;checklist</a>&nbsp;(PDF, 251 KB) to gather documents you'll need.</li><li><a href=\"https://localhelp.healthcare.gov/\">Find local help.</a> Search by city and state or ZIP code to find trained helpers in your community.</li></ul>",
+  "url": "/apply-and-enroll/get-ready-to-apply"
+}

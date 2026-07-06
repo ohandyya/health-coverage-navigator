@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about emergency medical transportation by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Emergency medical transportation",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "emergency-medical-transportation",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Ambulance services for an emergency medical condition.</p>",
+  "meta-title": "Emergency medical transportation - Glossary",
+  "layout": null,
+  "page_name": "Emergency medical transportation",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Ambulance services for an emergency medical condition.</p>",
+  "url": "/glossary/emergency-medical-transportation"
+}

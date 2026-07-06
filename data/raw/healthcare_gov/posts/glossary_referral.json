@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about referrals by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Referral",
+  "date": "2013-06-17 00:00:00 +0000",
+  "slug": "referral",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A written order from your primary care doctor for you to see a specialist or get certain medical services. In many Health Maintenance Organizations (HMOs), you need to get a referral before you can get medical care from anyone except your primary care doctor. If you don\u2019t get a referral first, the plan may not pay for the services.</p>",
+  "meta-title": "Referral - Glossary",
+  "layout": null,
+  "page_name": "Referral",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A written order from your primary care doctor for you to see a specialist or get certain medical services. In many Health Maintenance Organizations (HMOs), you need to get a referral before you can get medical care from anyone except your primary care doctor. If you don\u2019t get a referral first, the plan may not pay for the services.</p>",
+  "url": "/glossary/referral"
+}

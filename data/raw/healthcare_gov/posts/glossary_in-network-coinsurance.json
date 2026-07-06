@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about in-network coinsurance by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "In-network coinsurance",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "in-network-coinsurance",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The percent (for example, 20%) you pay of the allowed amount for covered health care services to providers who contract with your health insurance or plan. In-network coinsurance usually costs you less than out-of-network coinsurance.</p>",
+  "meta-title": "In-network Coinsurance - Glossary",
+  "layout": null,
+  "page_name": "In-network coinsurance",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The percent (for example, 20%) you pay of the allowed amount for covered health care services to providers who contract with your health insurance or plan. In-network coinsurance usually costs you less than out-of-network coinsurance.</p>",
+  "url": "/glossary/in-network-coinsurance"
+}

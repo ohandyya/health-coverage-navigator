@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about health insurance by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Health insurance",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "health-insurance",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A contract that requires your health insurer to pay some or all of your health care costs in exchange for a premium.</p>",
+  "meta-title": "Health Insurance - Glossary",
+  "layout": null,
+  "page_name": "Health insurance",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A contract that requires your health insurer to pay some or all of your health care costs in exchange for a premium.</p>",
+  "url": "/glossary/health-insurance"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about accountable care organizations by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Accountable care organization",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "accountable-care-organization",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A group of health care providers who give coordinated care, chronic disease management, and thereby improve the quality of care patients get. The organization's payment is tied to achieving health care quality goals and outcomes that result in cost savings.</p>",
+  "meta-title": "Accountable care organization - Glossary",
+  "layout": null,
+  "page_name": "Accountable care organization",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A group of health care providers who give coordinated care, chronic disease management, and thereby improve the quality of care patients get. The organization's payment is tied to achieving health care quality goals and outcomes that result in cost savings.</p>",
+  "url": "/glossary/accountable-care-organization"
+}

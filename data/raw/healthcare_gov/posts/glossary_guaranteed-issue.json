@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about guaranteed issue by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Guaranteed issue",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "guaranteed-issue",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A requirement that health plans must permit you to enroll regardless of health status, age, gender, or other factors that might predict the use of health services. Except in some states, guaranteed issue doesn't limit how much you can be charged if you enroll.</p>",
+  "meta-title": "Guaranteed Issue - Glossary",
+  "layout": null,
+  "page_name": "Guaranteed issue",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A requirement that health plans must permit you to enroll regardless of health status, age, gender, or other factors that might predict the use of health services. Except in some states, guaranteed issue doesn't limit how much you can be charged if you enroll.</p>",
+  "url": "/glossary/guaranteed-issue"
+}

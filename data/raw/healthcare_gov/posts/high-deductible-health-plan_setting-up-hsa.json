@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Understanding HSA-eligible plans"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Setting up Health Savings Accounts",
+  "main-title": null,
+  "meta-title": "How to set up a Health Savings Account",
+  "meta-description": "Learn how to set up Health Savings Account after enrolling in Health Savings Account-eligible HDHP. Open Health Savings Account through bank, insurance company, more.",
+  "title-short": "Setting up Health Savings Accounts",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Understanding HSA-eligible plans",
+  "page_name": "Setting up Health Savings Accounts",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Understanding HSA-eligible plans",
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "setting-up-hsa",
+  "tags": [],
+  "excerpt": "<p>Learn how to set up Health Savings Account after enrolling in Health Savings Account-eligible HDHP. Open Health Savings Account through bank, insurance company, more.</p>",
+  "content": "<div data-entity-type=\"node\" data-entity-uuid=\"001d872d-4766-43ac-ac9f-27bbd95465f4\" data-embed-button=\"brief\" data-entity-embed-display=\"view_mode:node.inline\" data-langcode=\"en\" data-entity-embed-display-settings=\"[]\" class=\"embedded-entity\">\n<article class=\"node node--type-brief node--view-mode-inline\">\n\n  \n    \n\n  \n  <div class=\"node__content\">\n    \n            <div class=\"clearfix text-formatted field field--name-field-content-body field--type-text-long field--label-hidden field__item\"><div class=\"box-content information-heavyweight\"><p><strong>New for 2026: More plans work with Health Savings Accounts</strong><br><span>You can use a </span><a href=\"/glossary/health-savings-account-hsa\" data-entity-type=\"node\" data-entity-uuid=\"084c227c-e39b-4976-a93a-7694dbc23dbf\" data-entity-substitution=\"canonical\" data-entity-id=\"35411\" data-entity-bundle=\"glossary\" title=\"Health Savings Account (HSA)\"><span>Health Savings Account</span></a><span> to help cover your health care costs when you have a Bronze or Catastrophic plan. </span><a href=\"/hsa-options\" data-entity-type=\"node\" data-entity-uuid=\"25bd367d-d12a-4431-a302-24812a9eb6f0\" data-entity-substitution=\"canonical\" data-entity-id=\"40396\" data-entity-bundle=\"article\" title=\"New in 2026:  More plans now work with Health Savings Accounts\"><span>Learn more about these plan types for 2026.</span></a></p></div></div>\n      \n  </div>\n\n</article>\n</div>\n<p>Once you enroll in a Health Savings Account-eligible plan, then you can open a Health Savings Account through a financial institution, like a bank or credit union.&nbsp;</p><p>To find a financial institution that will set up a Health Savings Account:</p><ul><li>Search for \u201cHealth Savings Account providers\u201d online.</li><li>Check with your health insurance company to see if they partner with Health Savings Account financial institutions.</li><li>Ask your bank if they offer a Health Savings Account option that meets your needs.</li></ul><h2><span>How to choose a Health Savings Account</span></h2><p>Consider these items when comparing Health Savings Accounts at financial institutions:</p><ul><li>Some Health Savings Accounts have fees associated with them, like a charge for opening or closing the account and monthly maintenance fees.</li><li>Banking options, services, and features, like debit cards and online banking, may differ by financial institution.</li><li>How you add money into your Health Savings Account may also vary.</li></ul><p><a href=\"/high-deductible-health-plan/hdhp-hsa-information\" data-entity-type=\"node\" data-entity-uuid=\"038156bc-da82-4551-9a9c-9e11b9c187c2\" data-entity-substitution=\"canonical\" data-entity-id=\"36461\" data-entity-bundle=\"article\" title=\"What are Health Savings Account-eligible plans?\">Get more information on H<span>ealth&nbsp;</span>S<span>avings&nbsp;</span>A<span>ccount</span>-eligible plans.</a></p>",
+  "url": "/high-deductible-health-plan/setting-up-hsa"
+}

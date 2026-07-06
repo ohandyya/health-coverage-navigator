@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about network plans by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Network plan",
+  "date": "2013-06-06 00:00:00 +0000",
+  "slug": "network-plan",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A health plan that contracts with doctors, hospitals, pharmacies, and other health care providers to provide members of the plan with services and supplies at a discounted price.</p>",
+  "meta-title": "Network plan - Glossary",
+  "layout": null,
+  "page_name": "Network plan",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A health plan that contracts with doctors, hospitals, pharmacies, and other health care providers to provide members of the plan with services and supplies at a discounted price.</p>",
+  "url": "/glossary/network-plan"
+}

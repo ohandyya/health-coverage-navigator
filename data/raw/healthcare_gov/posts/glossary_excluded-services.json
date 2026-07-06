@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about excluded services by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Excluded services",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "excluded-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care services that your health insurance or plan doesn\u2019t pay for or cover.</p>",
+  "meta-title": "Excluded services - Glossary",
+  "layout": null,
+  "page_name": "Excluded services",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care services that your health insurance or plan doesn\u2019t pay for or cover.</p>",
+  "url": "/glossary/excluded-services"
+}

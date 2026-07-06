@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about patient-centered outcomes research by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Patient-centered outcomes research",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "patient-centered-outcomes-research",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Research that compares different medical treatments and interventions to provide evidence on which strategies are most effective in different populations and situations. The goal is to empower you and your doctor with additional information to make sound health care decisions.</p>",
+  "meta-title": "Patient-centered outcomes research - Glossary",
+  "layout": null,
+  "page_name": "Patient-centered outcomes research",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Research that compares different medical treatments and interventions to provide evidence on which strategies are most effective in different populations and situations. The goal is to empower you and your doctor with additional information to make sound health care decisions.</p>",
+  "url": "/glossary/patient-centered-outcomes-research"
+}

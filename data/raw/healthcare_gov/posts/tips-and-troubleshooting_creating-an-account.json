@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Creating an account",
+  "main-title": null,
+  "meta-title": "How to create a Marketplace account",
+  "meta-description": "There are 5 steps to follow to create an account in the Health Insurance Marketplace\u00ae",
+  "title-short": "Creating an account",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Creating an account",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "creating-an-account",
+  "tags": [],
+  "excerpt": "<p>There are 5 steps to follow to create an account in the Health Insurance Marketplace\u00ae</p>",
+  "content": "<p>Follow these 6 steps to create your Marketplace account online:</p><ol class=\"ds-c-list\" type=\"1\"><li><a href=\"/create-account\">Get started</a> by entering some basic information, like your name, address, and email.</li><li>Choose a username and password.</li><li>Create and answer security questions for added protection. We\u2019ll use these if we ever have to verify who you are.<ul><li>You may want to write your answers down and keep them in a very secure place so you don\u2019t forget them.</li></ul></li><li>Click \"Create Account.\"</li><li>Set up additional protection to your account by getting a unique security code each time you log in. You can choose to get codes by text message, email, or phone call.</li><li>Verify your identity by answering questions based on information in your credit report. This will prevent other people from creating an account in your name.</li></ol><p>When you answer enough questions correctly, you'll be able to continue. If your identity still can't be verified online, you'll get a message telling you what to do next.</p><h2>Still need help creating an account?</h2><ul class=\"ds-c-list\"><li><a href=\"/contact-us\" data-entity-type=\"node\" data-entity-uuid=\"2839b07e-0a5b-48bd-8fa4-ba9908d08200\" data-entity-substitution=\"canonical\" data-entity-id=\"39406\" data-entity-bundle=\"landing_page\" title=\"Contact us\">Contact the Marketplace Call Center</a>.&nbsp;</li><li>Trouble logging in? <a href=\"/tips-and-troubleshooting/logging-in\" data-entity-type=\"node\" data-entity-uuid=\"963ec5a2-3f30-41c7-8fb3-50a2fcc2f0ed\" data-entity-substitution=\"canonical\" data-entity-id=\"37481\" data-entity-bundle=\"article\" title=\"Logging in to your account\">Learn what to do if you can\u2019t remember your password, username, or answers to your security questions, or if you didn't get your security code.</a></li></ul>",
+  "url": "/tips-and-troubleshooting/creating-an-account"
+}

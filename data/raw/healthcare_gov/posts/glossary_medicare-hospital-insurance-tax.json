@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the Medicare Hospital Insurance Tax by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Medicare hospital insurance tax",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medicare-hospital-insurance-tax",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A tax under the Federal Insurance Contributions Act (FICA) that is a United States payroll tax imposed by the federal government on both employees and employers to fund Medicare.</p>",
+  "meta-title": "Medicare hospital insurance tax - Glossary",
+  "layout": null,
+  "page_name": "Medicare hospital insurance tax",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A tax under the Federal Insurance Contributions Act (FICA) that is a United States payroll tax imposed by the federal government on both employees and employers to fund Medicare.</p>",
+  "url": "/glossary/medicare-hospital-insurance-tax"
+}

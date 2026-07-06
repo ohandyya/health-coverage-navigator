@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about appeals by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Appeal",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "appeal",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A request for your health insurance company or the Health Insurance Marketplace\u00ae to review a decision that denies a benefit or payment.</p>",
+  "meta-title": "Appeal - Glossary",
+  "layout": null,
+  "page_name": "Appeal",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A request for your health insurance company or the Health Insurance Marketplace\u00ae to review a decision that denies a benefit or payment.</p>\n\n<ul><li>If you don't agree with a decision made by the Marketplace, you may be able to file an appeal. Small businesses can also appeal Small Business Health Options Program (SHOP) decisions.</li>\n\t<li>If your health plan refuses to pay a claim or ends your coverage, you have the right to appeal the decision and have it reviewed by a third party.</li>\n</ul><h2>Related content</h2>\n\n<ul><li><a href=\"/marketplace-appeals/\">Marketplace decisions you can appeal</a></li>\n\t<li><a href=\"/marketplace-appeals/ways-to-appeal/\">How to appeal your Marketplace eligibility</a></li>\n\t<li><a href=\"/appeal-insurance-company-decision/appeals/\">How to appeal an insurance company decision</a></li>\n</ul>",
+  "url": "/glossary/appeal"
+}

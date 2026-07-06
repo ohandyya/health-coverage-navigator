@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about net capital gains by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Net capital gains",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "net-capital-gains",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The amount by which your total long-term capital gain for the year is more than your short-term capital loss for the year.</p>",
+  "meta-title": "Net capital gains - Glossary",
+  "layout": null,
+  "page_name": "Net capital gains",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The amount by which your total long-term capital gain for the year is more than your short-term capital loss for the year.</p><p><a href=\"https://www.irs.gov/taxtopics/tc409\">Get more information from the IRS on capital gains and losses.</a></p>",
+  "url": "/glossary/net-capital-gains"
+}

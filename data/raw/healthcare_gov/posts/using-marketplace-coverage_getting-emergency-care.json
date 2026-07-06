@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Using your health insurance coverage"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Getting emergency care",
+  "main-title": "Using your health insurance coverage",
+  "meta-title": "Getting emergency care",
+  "meta-description": "In an emergency, you should get care from the closest hospital that can help you. That hospital will treat you regardless of whether you have insurance. ",
+  "title-short": "Getting emergency care",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Using your health insurance coverage",
+  "page_name": "Getting emergency care",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Using your health insurance coverage",
+  "date": "2022-09-07 00:00:00 +0000",
+  "slug": "getting-emergency-care",
+  "tags": [],
+  "excerpt": "<p>In an emergency, you should get care from the closest hospital that can help you. That hospital will treat you regardless of whether you have insurance.</p>",
+  "content": "<p>In an emergency, you should get care from the closest hospital that can help you. That hospital will treat you regardless of whether you have insurance. Your insurance company can't charge you more for getting emergency room services at an out-of-network hospital.</p>\n\n<h2>I\u2019m having an emergency. Should I go straight to the hospital or do I need to call my insurer first?</h2>\n\n<p>In a true emergency, go straight to the hospital. Insurers can\u2019t require you to get prior approval before getting emergency room services from a provider or hospital outside your plan\u2019s network.</p>\n\n<h2>What does it mean that insurance companies can\u2019t charge me more?</h2>\n\n<p>Insurance plans can\u2019t make you pay more in <a data-entity-bundle=\"glossary\" data-entity-id=\"35611\" data-entity-type=\"node\" data-entity-uuid=\"8923e304-18ed-4cf7-bb09-9cfa370d6b5c\" data-internal-href=\"/node/35611\" href=\"/glossary/co-payment\" title=\"glossary\">copayments</a> or <a data-entity-bundle=\"glossary\" data-entity-id=\"35616\" data-entity-type=\"node\" data-entity-uuid=\"f12676c2-6d8f-4880-a942-74a098a3d582\" data-internal-href=\"/node/35616\" href=\"/glossary/co-insurance\" title=\"glossary\">coinsurance</a> if you get emergency care from an out-of-network hospital. They also can\u2019t require you to get prior approval before getting emergency room services from a provider or hospital outside your plan\u2019s network.</p>\n\n<h2>Will I have to pay anything?</h2>\n\n<p>This depends on the plan that you chose and the hospital you go to. This care may be subject to a deductible, for example, or a hospital may have particular rules in place.</p>",
+  "url": "/using-marketplace-coverage/getting-emergency-care"
+}

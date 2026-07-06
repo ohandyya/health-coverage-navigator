@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about payment bundling by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Payment bundling",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "payment-bundling",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A payment structure in which different health care providers who are treating you for the same or related conditions are paid an overall sum for taking care of your condition rather than being paid for each individual treatment, test, or procedure. In doing so, providers are rewarded for coordinating care, preventing complications and errors, and reducing unnecessary or duplicative tests and treatments.</p>",
+  "meta-title": "Payment bundling - Glossary",
+  "layout": null,
+  "page_name": "Payment bundling",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A payment structure in which different health care providers who are treating you for the same or related conditions are paid an overall sum for taking care of your condition rather than being paid for each individual treatment, test, or procedure. In doing so, providers are rewarded for coordinating care, preventing complications and errors, and reducing unnecessary or duplicative tests and treatments.</p>",
+  "url": "/glossary/payment-bundling"
+}

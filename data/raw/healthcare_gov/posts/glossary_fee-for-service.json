@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about the fee for service method by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Fee for service",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "fee-for-service",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A method in which doctors and other health care providers are paid for each service performed. Examples of services include tests and office visits.</p>",
+  "meta-title": "Fee for Service - Glossary",
+  "layout": null,
+  "page_name": "Fee for service",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A method in which doctors and other health care providers are paid for each service performed. Examples of services include tests and office visits.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/choose-a-plan/plan-types/\">Type of plan and provider network</a></li>\n\t<li><a href=\"/choose-a-plan/plans-categories/\">Marketplace insurance categories</a></li>\n</ul>",
+  "url": "/glossary/fee-for-service"
+}

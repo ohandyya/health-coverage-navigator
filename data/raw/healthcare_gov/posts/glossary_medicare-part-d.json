@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Medicare Part D by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Medicare Part D",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medicare-part-d",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A program that helps pay for prescription drugs for people with Medicare who join a plan that includes Medicare prescription drug coverage. There are two ways to get Medicare prescription drug coverage: through a Medicare Prescription Drug Plan or a Medicare Advantage Plan that includes drug coverage. These plans are offered by insurance companies and other private companies approved by Medicare.</p>",
+  "meta-title": "Medicare Part D - Glossary",
+  "layout": null,
+  "page_name": "Medicare Part D",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A program that helps pay for prescription drugs for people with Medicare who join a plan that includes Medicare prescription drug coverage. There are two ways to get Medicare prescription drug coverage: through a Medicare Prescription Drug Plan or a Medicare Advantage Plan that includes drug coverage. These plans are offered by insurance companies and other private companies approved by Medicare.</p>",
+  "url": "/glossary/medicare-part-d"
+}

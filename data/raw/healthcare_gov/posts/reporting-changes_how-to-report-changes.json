@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "How to report changes to the Marketplace",
+  "main-title": null,
+  "meta-title": "How to report income and household changes to the Marketplace",
+  "meta-description": "Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.",
+  "title-short": "How to report changes",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "How to report changes to the Marketplace",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "how-to-report-changes",
+  "tags": [],
+  "excerpt": "<p>Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.</p>",
+  "content": "<p>You report changes to the Marketplace by updating your application. You can update your application online, by phone, or in person \u2014 <strong>but not by mail</strong>.</p><p><strong>Note:</strong> If you\u2019ve moved to a new address in the <strong>same</strong> state, follow the directions below. If you move to a <strong>different</strong> state, you\u2019ll have to start a new application. <a href=\"/reporting-changes/when-you-move#different\" data-entity-type=\"node\" data-entity-uuid=\"7586ca9a-472f-4e8c-a224-b59028706595\" data-entity-substitution=\"canonical\" data-entity-id=\"37441\" data-entity-bundle=\"article\" title=\"How to report a move\">Learn what to do if you move out of state</a>.</p><p>&nbsp;</p><h2>Update your application online</h2><ul><li>To update your application, you'll need to navigate through your existing application and make edits. When you do, you'll be prompted to re-submit your application. This is the correct next step, and won't cause any disruption with your current coverage.</li><li>Get <a href=\"/downloads/how-to-report-income-household-changes.pdf\" data-entity-type=\"media\" data-entity-uuid=\"4985ee33-9ec1-4fe3-8449-b21a8b9cca4b\" data-entity-substitution=\"canonical\" data-entity-id=\"10096\" data-entity-bundle=\"document\" title=\"how-to-report-income-household-changes.pdf\">screen-by-screen uploading directions, with pictures</a> (PDF, 1.16 MB), or follow these steps:<ol><li><a href=\"/login\">Log in to your HealthCare.gov account.</a></li><li>Choose the application you want to update.</li><li>Click \"Report a Life Change\" on the left-hand menu.</li><li>Read through the list of changes, and click \"Report a Life Change\" to get started.</li><li>Select the kind of change you want to report.</li><li>Navigate through your application and report any <a href=\"/reporting-changes/which-changes-to-report\" data-entity-type=\"node\" data-entity-uuid=\"755b87e3-9842-4149-9572-56319ae327dd\" data-entity-substitution=\"canonical\" data-entity-id=\"37446\" data-entity-bundle=\"article\" title=\"Which changes to report to the Marketplace\">changes to your income, household members, or address; new health coverage offers; and other information</a>.</li><li>After you\u2019re done, you\u2019ll get new eligibility results explaining your options to change plans.</li></ol></li></ul><div class=\"box-content information-lightweight\"><p><strong>Important: Complete all steps on your To-Do List</strong></p><p>In order for your changes to take effect, you must complete all steps on your To-Do list \u2014 including, if you\u2019re given the option, completing your enrollment.</p></div><h2>Update your application by phone</h2><p>Contact the <a href=\"/contact-us\" data-entity-type=\"node\" data-entity-uuid=\"2839b07e-0a5b-48bd-8fa4-ba9908d08200\" data-entity-substitution=\"canonical\" data-entity-id=\"39406\" data-entity-bundle=\"landing_page\" title=\"Contact us\">Marketplace Call Center</a> and a representative can help you update your application.</p><h2>Update your application with in-person help</h2><p><a href=\"https://localhelp.healthcare.gov\">Find someone in your community</a> who can work with you to help make changes to your application.</p><h2>More Answers: How to make updates when your income or household changes</h2><dl class=\"accordion learn-accordion\"><dt class=\"accordion-title\"><span>Do I need to report changes if I\u2019m getting coverage elsewhere, like if I\u2019m now eligible for Medicare or got an offer of job-based insurance?</span></dt><dd class=\"accordion-content\"><p>No. Instead, you\u2019ll want (or need) to end your Marketplace insurance plan if you get other health coverage. See <a href=\"/how-to-cancel-a-marketplace-plan\" data-entity-type=\"node\" data-entity-uuid=\"b34a2f76-4522-47e0-a507-27369512d5eb\" data-entity-substitution=\"canonical\" data-entity-id=\"37966\" data-entity-bundle=\"article\" title=\"How do I cancel my Marketplace plan?\">\"How to cancel your Marketplace plan\"</a> for step-by-step instructions based on your situation.</p></dd></dl>",
+  "url": "/reporting-changes/how-to-report-changes"
+}

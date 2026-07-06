@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Which changes to report to the Marketplace",
+  "main-title": null,
+  "meta-title": "Which income and household changes to report",
+  "meta-description": "Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.",
+  "title-short": "Which changes to report",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Which changes to report to the Marketplace",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2023-12-16 00:00:00 +0000",
+  "slug": "which-changes-to-report",
+  "tags": [],
+  "excerpt": "<p>Tell the Health Insurance Marketplace\u00ae about changes to your income, household, or plan.</p>",
+  "content": "<p>Report these changes as soon as possible <span>\u2014 t</span>hey may affect the savings and coverage options you qualify for.</p><p><strong>Expected income change: </strong><a href=\"/income-and-household-information/how-to-report\" data-entity-type=\"node\" data-entity-uuid=\"33862067-12c6-4d4d-8f21-37fad141bd24\" data-entity-substitution=\"canonical\" data-entity-id=\"37421\" data-entity-bundle=\"article\" title=\"How to estimate your expected income\">Find out how to estimate your income.</a></p><p><strong>Health coverage change: </strong>Someone in your household:</p><ul class=\"ds-c-list\"><li>Got an offer of job-based insurance, even if they don\u2019t enroll in it</li><li>Got coverage from a public program like Medicaid, the Children\u2019s Health Insurance Program (CHIP), or Medicare</li><li>Loses coverage, like job-based coverage or Medicaid</li></ul><p>If someone in your household got job-based coverage (either through your employer or through a family member\u2019s), you may want to <a href=\"/how-to-cancel-a-marketplace-plan\" data-entity-type=\"node\" data-entity-uuid=\"b34a2f76-4522-47e0-a507-27369512d5eb\" data-entity-substitution=\"canonical\" data-entity-id=\"37966\" data-entity-bundle=\"article\" title=\"How do I cancel my Marketplace plan?\">end your Marketplace plan</a>.</p><p><strong>Household or individual member change:</strong></p><ul class=\"ds-c-list\"><li>Birth or adoption</li><li>Place a child for adoption or foster care</li><li>Become pregnant</li><li>Marriage or divorce</li><li>A child on your plan turns 26</li><li>Death</li><li>Gain or lose a dependent some other way</li><li>Move to a new permanent address in the <strong>same state</strong></li></ul><p><strong>Don\u2019t </strong>update your application if you move to a <strong>different state</strong>. <a href=\"/reporting-changes/when-you-move#different\" data-entity-type=\"node\" data-entity-uuid=\"7586ca9a-472f-4e8c-a224-b59028706595\" data-entity-substitution=\"canonical\" data-entity-id=\"37441\" data-entity-bundle=\"article\" title=\"How to report a move\">Learn what to do when you move out of state.</a></p><p><strong>Corrections to name, date of birth, or Social Security Number</strong></p><p><strong>Status changes:</strong></p><ul class=\"ds-c-list\"><li>Disability status</li><li>Tax filing status</li><li>Citizenship or immigration status</li><li>American Indian/Alaska Native or tribal member status</li><li>Incarceration or release from incarceration</li></ul><h2>Report your change</h2><p>Update your application to report a change. <a href=\"/reporting-changes/how-to-report-changes\" data-entity-type=\"node\" data-entity-uuid=\"1fc76093-b6e3-4264-beb9-0c66e430c157\" data-entity-substitution=\"canonical\" data-entity-id=\"37436\" data-entity-bundle=\"article\" title=\"How to report changes to the Marketplace\">Get steps on how to report changes.</a></p>",
+  "url": "/reporting-changes/which-changes-to-report"
+}

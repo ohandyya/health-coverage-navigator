@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about notices by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Notice",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "notice",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>An official form of communication that informs individuals about the status of their applications, their eligibility for programs, or other important information. Notices may be sent by the Marketplace or by health insurers.</p>",
+  "meta-title": "Notice - Glossary",
+  "layout": null,
+  "page_name": "Notice",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>An official form of communication that informs individuals about the status of their applications, their eligibility for programs, or other important information. Notices may be sent by the Marketplace or by health insurers.</p>",
+  "url": "/glossary/notice"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about eligibility assessments by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Eligibility assessment",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "eligibility-assessment",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>In certain states, the Marketplace doesn't provide the final decision on Medicaid eligibility. Instead, the Marketplace conducts an assessment and passes the application to the State Medicaid agency to conduct a final eligibility determination.</p>",
+  "meta-title": "Eligibility assessment - Glossary",
+  "layout": null,
+  "page_name": "Eligibility assessment",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>In certain states, the Marketplace doesn't provide the final decision on Medicaid eligibility. Instead, the Marketplace conducts an assessment and passes the application to the State Medicaid agency to conduct a final eligibility determination.</p>",
+  "url": "/glossary/eligibility-assessment"
+}

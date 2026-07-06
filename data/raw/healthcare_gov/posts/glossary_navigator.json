@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn more about navigators by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Navigator",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "navigator",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>An individual or organization that's trained and able to help consumers, small businesses, and their employees as they look for health coverage options through the Marketplace, including completing eligibility and enrollment forms. These individuals and organizations are required to be unbiased. Their services are free to consumers.</p>",
+  "meta-title": "Navigator - Glossary",
+  "layout": null,
+  "page_name": "Navigator",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>An individual or organization that's trained and able to help consumers, small businesses, and their employees as they look for health coverage options through the Marketplace, including completing eligibility and enrollment forms. These individuals and organizations are required to be unbiased. Their services are free to consumers.</p>\n\n<h2>Related content</h2>\n\n<ul><li>Use our <a href=\"https://localhelp.healthcare.gov/\">Find Local Help</a> tool to get in-person assistance with your Marketplace application</li>\n</ul>",
+  "url": "/glossary/navigator"
+}

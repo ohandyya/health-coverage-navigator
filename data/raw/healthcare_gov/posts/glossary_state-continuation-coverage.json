@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about state continuation coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "State continuation coverage",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "state-continuation-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A state-based requirement similar to COBRA that applies to group health insurance policies of employers with fewer than 20 employees. In some states, state continuation coverage rules also apply to larger group insurance policies and add to COBRA protections. For example, in some states, if you're leaving a job-based plan, you must be allowed to continue your coverage until you reach the age of Medicare eligibility.</p>",
+  "meta-title": "State continuation coverage - Glossary",
+  "layout": null,
+  "page_name": "State continuation coverage",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A state-based requirement similar to COBRA that applies to group health insurance policies of employers with fewer than 20 employees. In some states, state continuation coverage rules also apply to larger group insurance policies and add to COBRA protections. For example, in some states, if you're leaving a job-based plan, you must be allowed to continue your coverage until you reach the age of Medicare eligibility.</p>",
+  "url": "/glossary/state-continuation-coverage"
+}

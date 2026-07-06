@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    null
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Coverage for pre-existing conditions",
+  "main-title": null,
+  "meta-title": "Marketplace health plans cover pre-existing conditions",
+  "meta-description": "Essential health benefits for pre-existing conditions are covered under all Marketplace plans.",
+  "title-short": "Coverage for pre-existing conditions",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": null,
+  "page_name": "Coverage for pre-existing conditions",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": null,
+  "date": "2022-09-29 00:00:00 +0000",
+  "slug": "pre-existing-conditions",
+  "tags": [],
+  "excerpt": "<p>Essential health benefits for pre-existing conditions are covered under all Marketplace plans.</p>",
+  "content": "<p>All Marketplace plans must cover treatment for pre-existing medical conditions.</p>\n\n<ul class=\"ds-c-list\"><li>No insurance plan can reject you, charge you more, or refuse to pay for essential health benefits for any condition you had before your coverage started.</li>\n\t<li>Once you\u2019re enrolled, the plan can\u2019t deny you coverage or raise your rates based only on your health.</li>\n\t<li><a href=\"/medicaid-chip/\">Medicaid</a> and the <a href=\"/medicaid-chip/childrens-health-insurance-program/\">Children's Health Insurance Program (CHIP)</a> also can't refuse to cover you or charge you more because of your pre-existing condition.</li>\n</ul><h2>Pregnancy is covered from the day your plan starts</h2>\n\n<ul class=\"ds-c-list\"><li>If you\u2019re pregnant when you apply, an insurance plan can\u2019t reject you or charge you more because of your pregnancy.</li>\n\t<li>Once you\u2019re enrolled, your pregnancy and childbirth are covered from the day your plan starts.\n\t<ul><li><strong>If you give birth or adopt after enrolling in your Marketplace plan for the year:</strong>\n\t\t<ul><li>Your child\u2019s birth or adoption qualifies you for a <a data-entity-bundle=\"glossary\" data-entity-id=\"35051\" data-entity-type=\"node\" data-entity-uuid=\"8770c400-8e37-4ab5-aab0-4dae913960ea\" data-internal-href=\"/node/35051\" href=\"/glossary/special-enrollment-period\" title=\"glossary\">Special Enrollment Period</a>. This means you can enroll in or change plans outside the annual Open Enrollment Period.</li>\n\t\t\t<li>Your coverage can start from the date of birth or adoption, even if you enroll up to 60 days afterward.</li>\n\t\t</ul></li>\n\t</ul></li>\n</ul><p><a href=\"/what-if-im-pregnant-or-plan-to-get-pregnant/\">Learn more about coverage for pregnancy and childbirth</a>.</p>\n\n<h2>Exception: grandfathered plans don\u2019t have to cover pre-existing conditions</h2>\n\n<p><a data-entity-bundle=\"glossary\" data-entity-id=\"35466\" data-entity-type=\"node\" data-entity-uuid=\"9a3581aa-7773-45bd-bda6-d1d454caf36f\" data-internal-href=\"/node/35466\" href=\"/glossary/grandfathered-health-plan\" title=\"glossary\">Grandfathered plans</a> don\u2019t have to cover pre-existing conditions or <a href=\"/coverage/preventive-care-benefits/\">preventive care</a>. If you have a grandfathered plan and want pre-existing conditions covered, you have 2 options:</p>\n\n<ul class=\"ds-c-list\"><li>You can switch to a Marketplace plan that will cover them during Open Enrollment.</li>\n\t<li>You can buy a Marketplace plan outside Open Enrollment when your grandfathered plan year ends, and you\u2019ll qualify for a Special Enrollment Period.</li>\n</ul><p>Learn more about <a href=\"/health-care-law-protections/grandfathered-plans/\">grandfathered plans</a> and what to do when your <a href=\"/current-plan-changed-or-cancelled/\">plan is changed or cancelled</a>.</p>",
+  "url": "/coverage/pre-existing-conditions"
+}

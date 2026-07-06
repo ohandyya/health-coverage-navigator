@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about insurance co-ops by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Insurance co-op",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "insurance-co-op",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A non-profit entity in which the same people who own the company are insured by the company. Cooperatives can be formed at a national, state or local level, and can include doctors, hospitals and businesses as member-owners.</p>",
+  "meta-title": "Insurance Co-Op - Glossary",
+  "layout": null,
+  "page_name": "Insurance co-op",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A non-profit entity in which the same people who own the company are insured by the company. Cooperatives can be formed at a national, state or local level, and can include doctors, hospitals and businesses as member-owners.</p>",
+  "url": "/glossary/insurance-co-op"
+}

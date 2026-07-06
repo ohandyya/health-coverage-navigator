@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Unemployed people"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "COBRA coverage when you\u2019re unemployed",
+  "main-title": null,
+  "meta-title": "COBRA coverage when you\u2019re unemployed",
+  "meta-description": "See options if you have COBRA insurance coverage at HealthCare.gov. Keep your plan or move to Health Insurance Marketplace\u00ae coverage. Learn more today.",
+  "title-short": "COBRA coverage when you\u2019re unemployed",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Unemployed people",
+  "page_name": "COBRA coverage when you\u2019re unemployed",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Unemployed people",
+  "date": "2024-09-26 00:00:00 +0000",
+  "slug": "cobra-coverage",
+  "tags": [],
+  "excerpt": "<p>See options if you have COBRA insurance coverage at HealthCare.gov. Keep your plan or move to Health Insurance Marketplace\u00ae coverage. Learn more today.</p>",
+  "content": "<p>When you lose job-based coverage, your former employer may offer you COBRA continuation coverage. This may allow you to temporarily keep health coverage until you get other health coverage, whether through a new job or another source.</p><p><a href=\"https://www.dol.gov/agencies/ebsa/laws-and-regulations/laws/cobra\">Learn more about COBRA coverage from the U.S. Department of Labor.</a></p><h2>What if I don\u2019t enroll in COBRA?</h2><p>You don\u2019t have to enroll in COBRA. You can compare the cost of COBRA with plans available through the Marketplace before deciding on health insurance. <a href=\"/quick-guide\" data-entity-type=\"node\" data-entity-uuid=\"71648c46-3417-41e6-a462-3bfac09b7e01\" data-entity-substitution=\"canonical\" data-entity-id=\"38046\" data-entity-bundle=\"explainer\" title=\"A quick guide to the Health Insurance Marketplace\u00ae\">Explore coverage options through the Marketplace.</a></p><p>By submitting one application, you'll discover if you qualify for a Marketplace plan with savings, <a href=\"/glossary/medicaid\" data-entity-type=\"node\" data-entity-uuid=\"13c0081d-9e96-420a-a724-6e81e89d20c1\" data-entity-substitution=\"canonical\" data-entity-id=\"35311\" data-entity-bundle=\"glossary\" title=\"Medicaid\">Medicaid</a>, or the <a href=\"/glossary/childrens-health-insurance-program-chip\" data-entity-type=\"node\" data-entity-uuid=\"87f4b3ac-b0c4-45b7-a691-d5b2cc35aac3\" data-entity-substitution=\"canonical\" data-entity-id=\"35631\" data-entity-bundle=\"glossary\" title=\"Children's Health Insurance Program (CHIP)\">Children's Health Insurance Program (CHIP)</a>.</p><ul><li>You can enroll in a Marketplace plan<strong> within 60 days</strong> of losing your job-based coverage.</li><li><a href=\"/see-plans\">Find Marketplace plans and prices</a> to compare them to your COBRA coverage or offer.</li><li>If eligible for Medicaid or CHIP, you can enroll in those programs any time and coverage can start immediately. <a href=\"/medicaid-chip/getting-medicaid-chip\" data-entity-type=\"node\" data-entity-uuid=\"845b29f0-0682-4d2d-ab42-9c013b3ec2e3\" data-entity-substitution=\"canonical\" data-entity-id=\"37806\" data-entity-bundle=\"article\" title=\"Medicaid &amp; CHIP coverage\">Learn more about these programs.</a></li></ul><h2>Can I switch from COBRA to the Marketplace?</h2><p>It depends on when and why you want to make the switch:</p><ul><li><strong>During </strong><a class=\"ck ck-tooltip\" href=\"/node/39941\" data-entity-type=\"node\" data-entity-uuid=\"8a787967-e6e5-40a1-8b23-db24c283dd34\" data-entity-substitution=\"canonical\" data-entity-id=\"39941\" data-entity-bundle=\"brief\" title=\"Open Enrollment (term tooltip)\"><strong>Open Enrollment</strong></a><strong>:</strong> You can enroll in a Marketplace plan, regardless of why you\u2019re ending COBRA coverage.</li><li><strong>Outside Open Enrollment:</strong> You can switch from COBRA to a Marketplace plan if:<ul><li>Your COBRA coverage is running out.</li><li>You have to pay the full cost of COBRA coverage because your former employer stops contributing, or you lose a government subsidy (like COBRA premium assistance).</li><li>It\u2019s still within 60 days of when you lost your job-based coverage.</li><li>If you choose to end COBRA coverage early, you\u2019ll have to wait until next Open Enrollment to get Marketplace coverage (unless you experience another <a href=\"/glossary/qualifying-life-event\" data-entity-type=\"node\" data-entity-uuid=\"e5dd709b-8a7b-4251-b104-f3db15b40ed8\" data-entity-substitution=\"canonical\" data-entity-id=\"34726\" data-entity-bundle=\"glossary\" title=\"Qualifying life event (QLE)\">life event</a>).</li></ul></li></ul><div class=\"box-content information-heavyweight\"><div class=\"content\"><strong>Always check your coverage start date before you end COBRA&nbsp;</strong></div><div class=\"content\">If you\u2019re eligible for Medicaid or CHIP, you can enroll at any time. But wait until you get a final decision about your Medicaid/CHIP eligibility before ending your COBRA coverage.</div></div>",
+  "url": "/unemployed/cobra-coverage"
+}

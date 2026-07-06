@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about COBRA by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "COBRA",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "cobra",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A federal law that may allow you to temporarily keep health coverage after your employment ends, you lose coverage as a dependent of the covered employee, or another qualifying event. If you elect COBRA (Consolidated Omnibus Budget Reconciliation Act) coverage, you pay 100% of the premiums, including the share the employer used to pay, plus a small administrative fee.</p>",
+  "meta-title": "COBRA - Glossary",
+  "layout": null,
+  "page_name": "COBRA",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A federal law that may allow you to temporarily keep health coverage after your employment ends, you lose coverage as a dependent of the covered employee, or another qualifying event. If you elect COBRA (Consolidated Omnibus Budget Reconciliation Act) coverage, you pay 100% of the premiums, including the share the employer used to pay, plus a small administrative fee.</p>",
+  "url": "/glossary/cobra"
+}

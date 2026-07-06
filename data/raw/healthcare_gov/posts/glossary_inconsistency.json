@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about inconsistencies, sometimes called data matching issues, by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Inconsistency (data matching issue)",
+  "date": "2016-04-19 00:00:00 +0000",
+  "slug": "inconsistency",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A difference between some information you put on your Marketplace application and information we have from other trusted data sources.</p>",
+  "meta-title": "Inconsistency (Data Matching Issue) - Glossary",
+  "layout": null,
+  "page_name": "Inconsistency (data matching issue)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A difference between some information you put on your Marketplace application and information we have from other trusted data sources.</p>\n\n<p>If this happens, the Marketplace will ask you to submit documents to confirm your application information. This may include information about your household income, immigration status, citizenship, or other items on your application. If you don\u2019t submit acceptable documents by the deadline stated in the notice, you could lose your Marketplace plan, premium tax credits, and other help with costs.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/verify-information/documents-and-deadlines/\">See which documents you can submit</a></li>\n\t<li><a href=\"/tips-and-troubleshooting/uploading-documents/\">How to submit documents</a></li>\n</ul>",
+  "url": "/glossary/inconsistency"
+}

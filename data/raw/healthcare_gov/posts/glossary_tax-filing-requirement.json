@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about tax filing requirements by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Tax filing requirement",
+  "date": "2016-08-16 00:00:00 +0000",
+  "slug": "tax-filing-requirement",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The minimum amount (or threshold) of income requiring you to file a federal tax return. <strong>2025 filing requirements for most taxpayers:</strong> Gross income of at least $15,750 (individuals) or $31,500 (married filing jointly). Different thresholds apply for dependents, people 65 and older, and those who use other tax filing statuses (like married filing separately).</p>",
+  "meta-title": "Tax filing requirement - Glossary",
+  "layout": null,
+  "page_name": "Tax filing requirement",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The minimum amount (or threshold) of income requiring you to file a federal tax return. <strong>2025 filing requirements for most taxpayers:</strong> Gross income of at least $15,750 (individuals) or $31,500 (married filing jointly). Different thresholds apply for dependents, people 65 and older, and those who use other tax filing statuses (like married filing separately).</p><p><a href=\"https://www.irs.gov/publications/p501#en_US_2016_publink1000270109\">Get IRS details on filing requirements for most taxpayers (non-dependents and dependents).</a></p><p><a href=\"https://www.irs.gov/publications/p17\" data-entity-type=\"node\" data-entity-uuid=\"67a87058-1089-4cda-a11a-34186d356acf\" data-entity-substitution=\"canonical\" data-entity-id=\"40081\" data-entity-bundle=\"link\" title=\"IRS pub 17, Your Federal Income Tax\">Learn more from the IRS on tax filing status.</a></p>",
+  "url": "/glossary/tax-filing-requirement"
+}

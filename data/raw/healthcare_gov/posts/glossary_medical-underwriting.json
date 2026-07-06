@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about medical underwriting by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Medical underwriting",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "medical-underwriting",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A process used by insurance companies to try to figure out your health status when you're applying for health insurance coverage to determine whether to offer you coverage, at what price, and with what exclusions or limits.</p>",
+  "meta-title": "Medical underwriting - Glossary",
+  "layout": null,
+  "page_name": "Medical underwriting",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A process used by insurance companies to try to figure out your health status when you're applying for health insurance coverage to determine whether to offer you coverage, at what price, and with what exclusions or limits.</p>",
+  "url": "/glossary/medical-underwriting"
+}

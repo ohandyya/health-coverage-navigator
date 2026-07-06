@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about individual health insurance policies by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Individual health insurance policy",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "individual-health-insurance-policy",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Policies for people who aren't connected to job-based coverage. Individual health insurance policies are regulated under state law.</p>",
+  "meta-title": "Individual Health Insurance Policy - Glossary",
+  "layout": null,
+  "page_name": "Individual health insurance policy",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Policies for people who aren't connected to job-based coverage. Individual health insurance policies are regulated under state law.</p>",
+  "url": "/glossary/individual-health-insurance-policy"
+}

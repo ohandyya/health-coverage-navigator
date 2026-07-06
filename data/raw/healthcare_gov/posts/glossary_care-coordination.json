@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about care coordination by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Care coordination",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "care-coordination",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The organization of your treatment across several health care providers. Medical homes and Accountable Care Organizations are two common ways to coordinate care.</p>",
+  "meta-title": "Care coordination - Glossary",
+  "layout": null,
+  "page_name": "Care coordination",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The organization of your treatment across several health care providers. Medical homes and Accountable Care Organizations are two common ways to coordinate care.</p>",
+  "url": "/glossary/care-coordination"
+}

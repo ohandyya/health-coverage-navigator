@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about home health care by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Home health care",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "home-health-care",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Health care services a person receives at home.</p>",
+  "meta-title": "Home Health Care - Glossary",
+  "layout": null,
+  "page_name": "Home health care",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Health care services a person receives at home.</p>",
+  "url": "/glossary/home-health-care"
+}

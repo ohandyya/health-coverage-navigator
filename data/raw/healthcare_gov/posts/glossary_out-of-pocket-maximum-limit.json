@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about out-of-pocket maximums/limits by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Out-of-pocket maximum/limit",
+  "date": "2013-06-07 00:00:00 +0000",
+  "slug": "out-of-pocket-maximum-limit",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The most you have to pay for covered services in a plan year. After you spend this amount on deductibles, copayments, and coinsurance for in-network care and services, your health plan pays 100% of the costs of covered benefits.</p>",
+  "meta-title": "Out-of-pocket maximum/limit - Glossary",
+  "layout": null,
+  "page_name": "Out-of-pocket maximum/limit",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The most you have to pay for covered services in a plan year. After you spend this amount on <a href=\"/glossary/deductible\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-uuid=\"fcb2fa69-9a31-41eb-a26a-5c76637d7625\" data-entity-substitution=\"canonical\" data-entity-id=\"34906\" data-entity-bundle=\"glossary\" title=\"Deductible\">deductibles</a>, <a href=\"/glossary/co-payment\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-uuid=\"8923e304-18ed-4cf7-bb09-9cfa370d6b5c\" data-entity-substitution=\"canonical\" data-entity-id=\"35611\" data-entity-bundle=\"glossary\" title=\"Copayment\">copayments</a>, and <a href=\"/glossary/co-insurance\" data-link-button-type=\"1\" data-entity-type=\"node\" data-entity-uuid=\"f12676c2-6d8f-4880-a942-74a098a3d582\" data-entity-substitution=\"canonical\" data-entity-id=\"35616\" data-entity-bundle=\"glossary\" title=\"Coinsurance\">coinsurance</a> for in-network care and services, your health plan pays 100% of the costs of covered benefits.</p><p>The out-of-pocket limit doesn't include:</p><ul><li>Your monthly <a href=\"/glossary/premium\" title=\"glossary\" data-entity-type=\"node\" data-entity-uuid=\"b625d61d-da5b-4825-bb54-2bb728b7a4c0\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"35151\" data-internal-href=\"/node/35151\">premiums</a></li><li>Anything you spend for services your plan doesn't cover</li><li>Out-of-network care and services</li><li>Costs above the allowed amount for a service that a provider may charge</li></ul><p>The out-of-pocket limit for Marketplace plans varies, but can\u2019t go over a set amount each year.</p><ul><li><strong>For the 2025 plan year: </strong>The out-of-pocket limit for a Marketplace plan can't be more than <strong>$9,200</strong> for an individual and <strong>$18,400</strong> for a family.</li><li><strong>For the 2026 plan year: </strong>The out-of-pocket limit for a Marketplace plan can't be more than <strong>$10,600</strong> for an individual and <strong>$21,200 </strong>for a family.</li></ul><h2>Related content</h2><ul><li><a href=\"/choose-a-plan/your-total-costs\" data-entity-type=\"node\" data-entity-uuid=\"3ff4c042-5db7-4450-b20b-7170fe56bd90\" data-entity-substitution=\"canonical\" data-entity-id=\"37861\" data-entity-bundle=\"article\" title=\"Your total costs for health care: Premium, deductible &amp; out-of-pocket costs\">How to estimate your total costs for health care</a></li><li><a href=\"/choose-a-plan/plans-categories\" data-entity-type=\"node\" data-entity-uuid=\"c1891a77-1418-4fe1-b8c7-bbc5b59a0821\" data-entity-substitution=\"canonical\" data-entity-id=\"37846\" data-entity-bundle=\"article\" title=\"Health plan categories: Bronze, Silver, Gold &amp; Platinum\">Marketplace insurance plan categories</a></li></ul>",
+  "url": "/glossary/out-of-pocket-maximum-limit"
+}

@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Preferred Provider Organizations by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Preferred Provider Organization (PPO)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "preferred-provider-organization-ppo",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A type of health plan that contracts with medical providers, such as hospitals and doctors, to create a network of participating providers. You pay less if you use providers that belong to the plan\u2019s network. You can use doctors, hospitals, and providers outside of the network for an additional cost.</p>",
+  "meta-title": "Preferred Provider Organization (PPO) - Glossary",
+  "layout": null,
+  "page_name": "Preferred Provider Organization (PPO)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A type of health plan that contracts with medical providers, such as hospitals and doctors, to create a network of participating providers. You pay less if you use providers that belong to the plan\u2019s network. You can use doctors, hospitals, and providers outside of the network for an additional cost.</p>\n\n<h2>Related Content</h2>\n\n<ul><li><a href=\"/choose-a-plan/plan-types/\">Type of plan and provider network</a></li>\n\t<li><a href=\"/choose-a-plan/plans-categories/\">Marketplace insurance categories</a></li>\n</ul>",
+  "url": "/glossary/preferred-provider-organization-ppo"
+}

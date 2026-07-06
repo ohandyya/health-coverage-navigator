@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about pre-existing condition exclusion periods for job-based coverage by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Pre-existing condition exclusion period (job-based coverage)",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "pre-existing-condition-exclusion-period-job-based-coverage",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The time period during which a health plan won't pay for care relating to a pre-existing condition. Under a job-based plan, this cannot exceed 12 months for a regular enrollee or 18 months for a late-enrollee.</p>",
+  "meta-title": "Pre-existing condition exclusion period (job-based coverage) - Glossary",
+  "layout": null,
+  "page_name": "Pre-existing condition exclusion period (job-based coverage)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The time period during which a health plan won't pay for care relating to a pre-existing condition. Under a job-based plan, this cannot exceed 12 months for a regular enrollee or 18 months for a late-enrollee.</p>",
+  "url": "/glossary/pre-existing-condition-exclusion-period-job-based-coverage"
+}

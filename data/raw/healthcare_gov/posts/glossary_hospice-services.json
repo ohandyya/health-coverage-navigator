@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about hospice services by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Hospice services",
+  "date": "2022-05-19 00:00:00 +0000",
+  "slug": "hospice-services",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>Services to provide comfort and support for persons in the last stages of a terminal illness and their families.</p>",
+  "meta-title": "Hospice Services - Glossary",
+  "layout": null,
+  "page_name": "Hospice services",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>Services to provide comfort and support for persons in the last stages of a terminal illness and their families.</p>",
+  "url": "/glossary/hospice-services"
+}

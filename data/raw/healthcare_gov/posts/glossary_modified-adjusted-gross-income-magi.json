@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Modified Adjusted Gross Income (MAGI) by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Modified Adjusted Gross Income (MAGI)",
+  "date": "2013-07-08 00:00:00 +0000",
+  "slug": "modified-adjusted-gross-income-magi",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>The figure used to determine eligibility for premium tax credits and other savings for Marketplace health insurance plans and for Medicaid and the Children's Health Insurance Program (CHIP). MAGI is adjusted gross income (AGI) plus these, if any: untaxed foreign income, non-taxable Social Security benefits, and tax-exempt interest.</p>",
+  "meta-title": "Modified Adjusted Gross Income (MAGI) - Glossary",
+  "layout": null,
+  "page_name": "Modified Adjusted Gross Income (MAGI)",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>The figure used to determine eligibility for premium tax credits and other savings for Marketplace health insurance plans and for Medicaid and the Children's Health Insurance Program (CHIP). MAGI is adjusted gross income (AGI) plus these, if any: untaxed foreign income, non-taxable Social Security benefits, and tax-exempt interest.</p><ul><li>For many people, MAGI is identical or very close to adjusted gross income.</li><li>MAGI doesn\u2019t include Supplemental Security Income (SSI).</li><li>MAGI doesn't appear as a line on your tax return.</li></ul><h2>Related content</h2><ul><li><a href=\"/income-and-household-information/income\" data-entity-type=\"node\" data-entity-uuid=\"d3889157-706f-4681-aa40-5540b64d85f7\" data-entity-substitution=\"canonical\" data-entity-id=\"37426\" data-entity-bundle=\"article\" title=\"What to include as income\">How to report your annual household income</a></li><li><a href=\"/glossary/adjusted-gross-income-agi\" title=\"Learn about adjusted gross income (AGI), a number on your tax return that can help you calculate MAGI\" data-entity-type=\"node\" data-entity-uuid=\"d80ead09-50ec-40c9-b6da-0156feb285e5\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"34496\" data-internal-href=\"/glossary/adjusted-gross-income-agi/\">Learn about adjusted gross income (AGI), a number on your tax return that can help you calculate MAGI</a></li><li><a href=\"/income-and-household-information/income#magi\" data-entity-type=\"node\" data-entity-uuid=\"d3889157-706f-4681-aa40-5540b64d85f7\" data-entity-substitution=\"canonical\" data-entity-id=\"37426\" data-entity-bundle=\"article\" title=\"What to include as income\">Find what\u2019s included in MAGI and how to estimate it</a></li></ul>",
+  "url": "/glossary/modified-adjusted-gross-income-magi"
+}

@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "2021 taxes & the Health Insurance Marketplace\u00ae"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "No health coverage for 2021",
+  "main-title": null,
+  "meta-title": "If you had no health coverage in 2021",
+  "meta-description": "Learn if you must pay fee for 2021 taxes if no health insurance coverage. See if you\u2019re qualified for a tax exemption. What to do without form 1095-A.",
+  "title-short": "If you had job-based coverage for 2021",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "2021 taxes & the Health Insurance Marketplace\u00ae",
+  "page_name": "No health coverage for 2021",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "2021 taxes & the Health Insurance Marketplace\u00ae",
+  "date": null,
+  "slug": "no-health-coverage",
+  "tags": [],
+  "excerpt": "<p>Learn if you must pay fee for 2021 taxes if no health insurance coverage. See if you\u2019re qualified for a tax exemption. What to do without form 1095-A.</p>",
+  "content": "<p>Unlike in past tax years, if you didn\u2019t have coverage during 2021, the fee no longer applies. This means you don\u2019t need an <a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"502e1f0b-ce3d-4282-bb3f-1f8a098849bd\" data-internal-href href=\"/health-coverage-exemptions/exemptions-from-the-fee\" target title=\"Exemptions from the requirement to have health insurance\">exemption</a> in order to avoid the penalty.</p>\n\n<div class=\"box-content information-heavyweight\">\n<p><strong>Important: Some states have their own individual health insurance mandate</strong></p>\n\n<p>If you live in a state that requires you to have health coverage and you don\u2019t have coverage (or an exemption), you\u2019ll be charged a fee when you file your 2021 state taxes. Check with your state or tax preparer.</p>\n</div>\n\n<p><strong>You will NOT get Form 1095-A</strong> unless you or someone in your household had Marketplace coverage for all or part of 2021.</p>\n\n<h2>Tax forms and instructions</h2>\n\n<p><a data-entity-bundle data-entity-id data-internal-href href=\"https://www.irs.gov/pub/irs-prior/f1040--2021.pdf\" target>Form 1040, U.S. Individual Income Tax Return</a> (PDF, 150 KB) and <a data-entity-bundle data-entity-id data-internal-href href=\"https://www.irs.gov/pub/irs-prior/i1040gi--2021.pdf\" target>Form 1040 instructions</a> (PDF, 4.1 MB)</p>\n\n<h2>More than one coverage status?</h2>\n\n<p>If you were enrolled in a Marketplace plan without premium tax credits for only part of 2021, or other household members had different coverage, visit these pages for enrollment in:</p>\n\n<ul><li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"e8cde760-f87b-4c28-adfe-044be4fa8b1d\" data-internal-href href=\"/taxes-2021/marketplace-plan-with-savings\" target title=\"2021 Marketplace plan with premium tax credits\">Marketplace plan with premium tax credits</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"12921b84-310f-4268-b85a-bf9e4ee8bbcf\" data-internal-href href=\"/taxes-2021/marketplace-plan-without-savings\" target title=\"2021 Marketplace plan without premium tax credits\">Marketplace plan without premium tax credits</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"deba7422-edef-44a7-a83d-c24883542e86\" data-internal-href href=\"/taxes-2021/job-based-coverage\" target title=\" Job-based coverage for 2021\">Job-based coverage</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"97b2cd8e-278d-4d54-af25-07187e96c86a\" data-internal-href href=\"/taxes-2021/other-health-coverage\" target title=\" Other health coverage for 2021\">Other coverage</a></li>\n</ul>",
+  "url": "/taxes-2021/no-health-coverage"
+}

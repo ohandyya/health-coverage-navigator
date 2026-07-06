@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "Special enrollment opportunities"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": "Get or change coverage outside of Open Enrollment",
+  "main-title": null,
+  "meta-title": "Get or change coverage outside of Open Enrollment",
+  "meta-description": "Outside of the annual Open Enrollment Period, you can enroll in Marketplace insurance only if you have certain life events that qualify you a Special Enrollment Period.",
+  "title-short": "Your options to get health coverage outside Open Enrollment",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "Special enrollment opportunities",
+  "page_name": "Get or change coverage outside of Open Enrollment",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "Special enrollment opportunities",
+  "date": "2023-10-26 00:00:00 +0000",
+  "slug": "your-options",
+  "tags": [],
+  "excerpt": "<p>Outside of the annual Open Enrollment Period, you can enroll in Marketplace insurance only if you have certain life events that qualify you a Special Enrollment Period.</p>",
+  "content": "<p>If you missed <a class=\"ck ck-tooltip\" href=\"/node/39941\" data-entity-type=\"node\" data-entity-uuid=\"8a787967-e6e5-40a1-8b23-db24c283dd34\" data-entity-substitution=\"canonical\" data-entity-id=\"39941\" data-entity-bundle=\"brief\" title=\"Open Enrollment (term tooltip)\">Open Enrollment</a>, you may still be able to get health coverage if you qualify for a <a href=\"/glossary/special-enrollment-period\" data-entity-type=\"node\" data-entity-uuid=\"8770c400-8e37-4ab5-aab0-4dae913960ea\" data-entity-substitution=\"canonical\" data-entity-id=\"35051\" data-entity-bundle=\"glossary\" title=\"Special Enrollment Period (SEP)\">Special Enrollment Period</a> or apply for coverage through <a href=\"/glossary/medicaid\" data-entity-type=\"node\" data-entity-uuid=\"13c0081d-9e96-420a-a724-6e81e89d20c1\" data-entity-substitution=\"canonical\" data-entity-id=\"35311\" data-entity-bundle=\"glossary\" title=\"Medicaid\">Medicaid</a> or the <a href=\"/glossary/childrens-health-insurance-program-chip\" data-entity-type=\"node\" data-entity-uuid=\"87f4b3ac-b0c4-45b7-a691-d5b2cc35aac3\" data-entity-substitution=\"canonical\" data-entity-id=\"35631\" data-entity-bundle=\"glossary\" title=\"Children's Health Insurance Program (CHIP)\">Children's Health Insurance Program (CHIP)</a>.</p><p><a class=\"ds-c-button ds-c-button--solid\" href=\"/screener\" data-link-button-type=\"74921\">Check if you qualify</a></p><h2>Qualify for a Special Enrollment Period</h2><p>You may qualify for a Special Enrollment Period due to a&nbsp;<a href=\"/glossary/qualifying-life-event\" data-entity-type=\"node\" data-entity-uuid=\"e5dd709b-8a7b-4251-b104-f3db15b40ed8\" data-entity-substitution=\"canonical\" data-entity-bundle=\"glossary\" data-entity-id=\"34726\" data-internal-href=\"/node/34726\" title=\"Qualifying life event (QLE)\">life event</a>, like losing other coverage, getting married, having a baby, or based on estimated household income.</p><p>To get coverage, you need to apply. <a href=\"/create-account\" data-entity-bundle data-entity-id data-internal-href target>Create a Marketplace account</a> (or <a href=\"/login\" data-entity-bundle data-entity-id data-internal-href target>log into your existing one</a>) to start your application. Before you apply, you can <a href=\"/see-plans/#/?year=2024\" title=\"Preview 2023 plans and prices\">preview plans and prices</a>.</p><p>If you already have Marketplace coverage, <a href=\"/reporting-changes/how-to-report-changes\" data-entity-type=\"node\" data-entity-uuid=\"1fc76093-b6e3-4264-beb9-0c66e430c157\" data-entity-substitution=\"canonical\" data-entity-id=\"37436\" data-entity-bundle=\"article\" title=\"How to report changes to the Marketplace\">learn how to report a change</a>. Once you update your application, your Eligibility Results will tell you if you qualify for a Special Enrollment Period to switch plans.</p><p><a href=\"/coverage-outside-open-enrollment/special-enrollment-period\" data-entity-type=\"node\" data-entity-uuid=\"6d0c88c0-b2fd-4690-a0cf-93c8856af3f5\" data-entity-substitution=\"canonical\" data-entity-bundle=\"article\" data-entity-id=\"37296\" data-internal-href=\"/node/37296\" target title=\"Special Enrollment Periods\">Learn about Special Enrollment Periods.</a></p><h2>Apply for Medicaid or the Children\u2019s Health Insurance Program (CHIP)</h2><p>You can apply for free or low-cost coverage through Medicaid and CHIP any time, all year. If you qualify, you can enroll immediately.</p><p><a href=\"/medicaid-chip\" data-entity-type=\"node\" data-entity-uuid=\"bd54f2a2-5856-487e-8f38-fc28ec82444d\" data-entity-substitution=\"canonical\" data-entity-id=\"37836\" data-entity-bundle=\"explainer\" data-internal-href=\"/medicaid-chip/\" title=\"Medicaid &amp; CHIP\">Learn how to apply for Medicaid and CHIP.</a></p>",
+  "url": "/coverage-outside-open-enrollment/your-options"
+}

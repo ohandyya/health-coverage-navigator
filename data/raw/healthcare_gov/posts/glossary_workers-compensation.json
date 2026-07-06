@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about worker's compensation by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Worker's compensation",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "workers-compensation",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>An insurance plan that employers are required to have to cover employees who get sick or injured on the job.</p>",
+  "meta-title": "Worker's compensation - Glossary",
+  "layout": null,
+  "page_name": "Worker's compensation",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>An insurance plan that employers are required to have to cover employees who get sick or injured on the job.</p>",
+  "url": "/glossary/workers-compensation"
+}

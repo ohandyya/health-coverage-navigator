@@ -1,0 +1,25 @@
+{
+  "draft": false,
+  "categories": [
+    "glossary"
+  ],
+  "experience": "learn",
+  "type": "glossary",
+  "lang": "en",
+  "meta-description": "Learn about Social Security by reviewing the definition in the HealthCare.gov Glossary.",
+  "title": "Social Security",
+  "date": "2013-06-05 00:00:00 +0000",
+  "slug": "social-security",
+  "ext": ".md",
+  "tags": [
+    "glossary"
+  ],
+  "excerpt": "<p>A system that distributes financial benefits to retired or disabled people, their spouses, and their dependent children based on their reported earnings. While you work, you may pay taxes into the Social Security system. When you retire or become disabled, you, your spouse, and your dependent children may get monthly benefits that are based on your reported earnings. Your survivors may be able to collect Social Security benefits if you die.</p>",
+  "meta-title": "Social Security - Glossary",
+  "layout": null,
+  "page_name": "Social Security",
+  "page_topic": "help",
+  "page_lifecycle": "all",
+  "content": "<p>A system that distributes financial benefits to retired or disabled people, their spouses, and their dependent children based on their reported earnings. While you work, you may pay taxes into the Social Security system. When you retire or become disabled, you, your spouse, and your dependent children may get monthly benefits that are based on your reported earnings. Your survivors may be able to collect Social Security benefits if you die.</p>",
+  "url": "/glossary/social-security"
+}

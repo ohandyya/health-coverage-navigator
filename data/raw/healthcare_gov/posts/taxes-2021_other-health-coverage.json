@@ -1,0 +1,29 @@
+{
+  "draft": false,
+  "categories": [
+    "2021 taxes & the Health Insurance Marketplace\u00ae"
+  ],
+  "experience": "learn",
+  "type": "explainer",
+  "title": " Other health coverage for 2021",
+  "main-title": null,
+  "meta-title": "Other health coverage for 2021",
+  "meta-description": "Get 2021 federal tax info for Medicare, Medicaid, Children's Health Insurance Program (CHIP), other coverage. Form 1095-B, 1095-C, more.",
+  "title-short": "If you had job-based coverage for 2021",
+  "lang": "en",
+  "layout": null,
+  "order": 1,
+  "explainertopic": "2021 taxes & the Health Insurance Marketplace\u00ae",
+  "page_name": " Other health coverage for 2021",
+  "page_type": "explainer",
+  "page_topic": "",
+  "page_lifecycle": "education",
+  "page_audience": "individuals",
+  "page_category": "2021 taxes & the Health Insurance Marketplace\u00ae",
+  "date": null,
+  "slug": "other-health-coverage",
+  "tags": [],
+  "excerpt": "<p>Get 2021 federal tax info for Medicare, Medicaid, Children's Health Insurance Program (CHIP), other coverage. Form 1095-B, 1095-C, more.</p>",
+  "content": "<p>If you had coverage through Medicare, Medicaid, the Children\u2019s Health Insurance Program (CHIP), or another source, depending on the coverage you had, you may get Form 1095-B, Health Coverage, to help you complete your taxes.</p>\n\n<h2>If you got a Form 1095-B</h2>\n\n<p>Read Parts III and IV to find information about:</p>\n\n<ul><li>Your 2021 insurance coverage</li>\n\t<li>Covered individuals and the months they had coverage</li>\n</ul><h2>Tax forms and instructions:</h2>\n\n<ul><li><a data-entity-bundle data-entity-id data-internal-href href=\"https://www.irs.gov/pub/irs-prior/f1040--2021.pdf\" target>Form 1040, U.S. Individual Income Tax Return</a> (PDF, 150 KB) and <a data-entity-bundle data-entity-id data-internal-href href=\"https://www.irs.gov/pub/irs-prior/i1040gi--2021.pdf\" target>Form 1040 instructions</a> (PDF, 4.1 MB)</li>\n\t<li><a data-entity-bundle data-entity-id data-internal-href href=\"https://www.irs.gov/Affordable-Care-Act/Questions-and-Answers-about-Health-Care-Information-Forms-for-Individuals\" target>Questions and answers about Forms 1095-B or 1095-C from the IRS</a></li>\n</ul><h2>More than one coverage status?</h2>\n\n<p>If you were enrolled in other health coverage for only part of 2021, or other household members had different coverage, visit these pages for enrollment in:</p>\n\n<ul><li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"e8cde760-f87b-4c28-adfe-044be4fa8b1d\" data-internal-href href=\"/taxes-2021/marketplace-plan-with-savings\" target title=\"2021 Marketplace plan with premium tax credits\">Marketplace plan WITH premium tax credits</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"12921b84-310f-4268-b85a-bf9e4ee8bbcf\" data-internal-href href=\"/taxes-2021/marketplace-plan-without-savings\" target title=\"2021 Marketplace plan without premium tax credits\">Marketplace plan WITHOUT premium tax credits</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"deba7422-edef-44a7-a83d-c24883542e86\" data-internal-href href=\"/taxes-2021/job-based-coverage\" target title=\" Job-based coverage for 2021\">Job-based coverage</a></li>\n\t<li><a data-entity-bundle data-entity-id data-entity-substitution=\"canonical\" data-entity-type=\"node\" data-entity-uuid=\"b235e0ad-2023-4bd4-a633-6d1e9427f116\" data-internal-href href=\"/taxes-2021/no-health-coverage\" target title=\"No health coverage for 2021\">Not having coverage</a></li>\n</ul>",
+  "url": "/taxes-2021/other-health-coverage"
+}
