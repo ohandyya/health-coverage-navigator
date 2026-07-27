@@ -47,22 +47,26 @@ page returns zero cards (currently page 4).
 structurally on the primary block is what keeps duplicates out of the corpus — much more
 reliable than filtering filenames.
 
-### The saved search pages are sanitized
+### The search pages are never saved to disk
 
-`raw/medicare_pubs/search/page-<N>.html` is committed as discovery provenance, but it is
-**not** a byte-for-byte copy of the response. medicare.gov's server-rendered HTML embeds
-third-party credentials that this repo must not re-publish — most importantly an inline
-`drupalSettings` blob with a `medicare_email_signup.api_keys` object holding live
-GovDelivery **production and staging** API keys (English and Spanish), plus an Akamai
-bot-sensor script at a per-session obfuscated path, Drupal per-request form tokens, and a
-Google Search Console verification token.
+Discovery parses each search page in memory and writes nothing. **Don't add a "save the
+raw HTML for provenance" step** — it looks like the right thing and it isn't, for two
+independent reasons:
 
-None of that has anything to do with the publication catalog: everything discovery needs is
-in the server-rendered `<article class="publication-card">` markup. So
-`sanitize_search_html()` drops every `<script>`/`<style>`, blanks the form tokens, and
-removes the verification meta — and the sanitized document is what gets **both parsed and
-written**, so the committed file is exactly the input the parser saw. If you re-add
-anything to this layer, re-run the scan in the **Licensing** section below first.
+1. **The pages carry third-party credentials.** medicare.gov's server-rendered HTML
+   embeds an inline `drupalSettings` blob with a `medicare_email_signup.api_keys` object
+   holding live GovDelivery **production and staging** API keys (English and Spanish),
+   plus an Akamai bot-sensor script at a per-session obfuscated path, per-request Drupal
+   form tokens, and a Google Search Console verification token. None of that may be
+   re-published from a public repo — see the guardrail in [`CLAUDE.md`](../CLAUDE.md).
+2. **They'd buy nothing.** Unlike the HealthCare.gov collection endpoints — which embed
+   each post's full `content`, and so genuinely back up that corpus — these pages contain
+   **no publication text at all**. They're a link index, and `catalog.json` already
+   records every field the parser extracts from them, for all 83 publications.
+
+If you need the markup to debug a parser break, re-run discovery: it's five requests.
+When test tooling lands, capture one page as a `parse_cards` fixture — sanitized, and
+under `tests/`, not `data/`.
 
 > ### ⚠️ Two caveats that affect correctness
 >
@@ -153,7 +157,6 @@ uv run python scripts/download_medicare_pubs.py --normalize-only
 ```
 data/
 ├── raw/medicare_pubs/
-│   ├── search/page-<N>.html   # raw discovery pages (provenance)
 │   ├── pdf/<filename>.pdf     # the untouched PDF downloads — GIT-IGNORED, see below
 │   ├── catalog.json           # per-file manifest: url, sha256, bytes, Last-Modified
 │   ├── _meta.json             # fetch provenance (timestamp, counts)
@@ -165,9 +168,9 @@ data/
 **The raw PDFs are the one part of `data/` that is *not* committed.** ~46 MB of binaries
 is not worth permanent git history when it is exactly reproducible: `catalog.json` records
 the URL, `sha256`, byte count, and `Last-Modified` of every file, so re-running the script
-rebuilds `raw/pdf/` identically. The search HTML, both manifests, and `corpus.jsonl` **are**
-committed. Those per-file hashes also double as the change-detector for the Phase 5
-"what changed this plan year" monitor.
+rebuilds `raw/pdf/` identically. Both manifests and `corpus.jsonl` **are** committed. Those
+per-file hashes also double as the change-detector for the Phase 5 "what changed this plan
+year" monitor.
 
 ### `corpus.jsonl` record schema
 
@@ -217,21 +220,22 @@ Re-run these before committing any change to this source (see the **Public-repo 
 guardrail** in [`CLAUDE.md`](../CLAUDE.md)):
 
 ```bash
+# Corpus content — proprietary code tables, copyright, PII.
 C=data/processed/medicare_pubs/corpus.jsonl
-grep -ncE '\b(CPT|CDT|HCPCS)\b' $C                     # proprietary code tables
+grep -ncE '\b(CPT|CDT|HCPCS)\b' $C
 grep -ncEi 'all rights reserved|American (Medical|Dental) Association' $C
-grep -ncE '[0-9]{3}-[0-9]{2}-[0-9]{4}' $C              # SSN-shaped PII
+grep -ncE '[0-9]{3}-[0-9]{2}-[0-9]{4}' $C                              # SSN-shaped
 
-# The discovery layer is the one that has actually carried secrets — see above.
-S=data/raw/medicare_pubs/search
-grep -c 'api_keys\|<script\|drupalSettings\|form_build_id' $S/*.html   # expect 0
-grep -ohE '\b[A-Za-z0-9+/_-]{32,}\b' $S/*.html | sort -u | less        # eyeball the rest
+# Secrets, across every committed data file — expect no output at all.
+# (--exclude='*.md' skips the READMEs, which discuss these terms in prose.)
+grep -rlE 'api_keys|drupalSettings|BEGIN [A-Z ]*PRIVATE KEY' --exclude='*.md' data/
+git ls-files data/ ':!*.md' | xargs grep -lohE '\b[A-Za-z0-9+/_-]{40,}\b' 2>/dev/null
 ```
 
-Known-benign high-entropy strings that survive in the search HTML: Drupal
-`js-view-dom-id-<sha256>` identifiers (deterministic hashes of a view's config) and a
-zlib+base64 `?include=eJy…` CSS-aggregation query listing asset library names. Neither is
-a credential.
+The second block is the one that matters: this source's discovery pages carry live
+third-party API keys, which is why they are parsed in memory and never written to disk
+(see [The search pages are never saved to disk](#the-search-pages-are-never-saved-to-disk)).
+If a future change starts persisting any HTML from medicare.gov, run these first.
 
 ## Reference
 

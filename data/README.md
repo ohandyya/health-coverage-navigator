@@ -116,7 +116,6 @@ The download is idempotent/resumable and re-parseable via `--normalize-only`.
 
 ```
 raw/medicare_pubs/
-├── search/page-<N>.html   # discovery pages used to enumerate the catalog — SANITIZED, see below
 ├── pdf/<filename>.pdf     # the untouched PDF downloads — GIT-IGNORED (see Layout above)
 ├── catalog.json           # per-file manifest: url, sha256, bytes, Last-Modified, title
 └── _meta.json             # fetch provenance: timestamp, counts, tool
@@ -147,13 +146,12 @@ so a later cross-source chunker can treat both corpora uniformly.
 | `section` | Breadcrumb from the PDF bookmark outline, or `null` — best-effort, see below. |
 | `text` | The page's text, unwrapped from the PDF's visual line breaks — the RAG payload. |
 
-**The saved search pages are sanitized, not byte-for-byte.** medicare.gov's HTML embeds an
-inline `drupalSettings` blob containing live GovDelivery **prod and stage API keys**, plus
-an Akamai bot-sensor script, Drupal form tokens, and a Google site-verification token —
-none of which may be re-published from a public repo. `sanitize_search_html()` strips every
-`<script>`/`<style>` and blanks those tokens, then writes *and* parses that same sanitized
-document, so the committed file is exactly what discovery consumed. The publication cards
-we actually parse are untouched.
+**The discovery pages are parsed in memory and never saved.** Don't add a "keep the raw
+HTML for provenance" step here: medicare.gov's HTML embeds an inline `drupalSettings` blob
+containing live GovDelivery **prod and stage API keys**, plus an Akamai bot-sensor script
+and Drupal form tokens, none of which may be re-published from a public repo. Saving them
+would also gain nothing — unlike `healthcare_gov`'s collection endpoints, these pages carry
+no publication text, and `catalog.json` already records every field the parser extracts.
 
 Two more things to know before trusting this data — both documented at length in
 [`docs/medicare_pubs_data.md`](../docs/medicare_pubs_data.md):

@@ -17,13 +17,15 @@ We take the PDF in the card's `formats-list--primary` block — the "Standard Pr
 edition — which structurally excludes the large-print, epub, mobi, audio, and braille
 alternates for the same publication. Layers written to disk:
 
-  <out>/raw/medicare_pubs/search/page-<N>.html  raw discovery pages (provenance)
   <out>/raw/medicare_pubs/pdf/<filename>.pdf    the untouched PDF downloads
   <out>/raw/medicare_pubs/catalog.json          per-file manifest (url, sha256, ...)
   <out>/raw/medicare_pubs/_meta.json            fetch provenance (timestamp, counts)
   <out>/processed/medicare_pubs/corpus.jsonl    normalized one-record-per-page corpus
 
-Note the PDFs under raw/pdf/ are **git-ignored** — ~44 MB of binaries is not worth
+The search pages themselves are parsed in memory and never persisted — see discover()
+for why re-adding them would be a mistake. catalog.json is the discovery record.
+
+Note the PDFs under raw/pdf/ are **git-ignored** — ~46 MB of binaries is not worth
 permanent git history. catalog.json records each file's url + sha256 + Last-Modified,
 so a plain re-run reproduces the raw layer exactly. Everything else here is committed.
 
@@ -122,37 +124,6 @@ def fetch(session: requests.Session, url: str, retries: int, backoff: float) -> 
 # --------------------------------------------------------------------------- #
 # Discovery
 # --------------------------------------------------------------------------- #
-def sanitize_search_html(page_html: str) -> str:
-    """Strip scripts, styles, and per-request form tokens from a search page.
-
-    This repo is public, and the raw search pages are committed as discovery
-    provenance — but medicare.gov's server-rendered HTML embeds third-party
-    credentials that must not be re-published from here. Concretely, its inline
-    drupalSettings blob carries a `medicare_email_signup.api_keys` object with live
-    GovDelivery **prod and stage** API keys, and the page ends with an Akamai bot-sensor
-    script at a per-session obfuscated path. Neither has anything to do with the
-    publication catalog.
-
-    Everything discovery needs lives in the server-rendered
-    <article class="publication-card"> markup, so dropping every <script>/<style> and
-    blanking Drupal's per-request form tokens costs us nothing. The sanitized document
-    is what gets both parsed and written to disk, so the committed provenance layer is
-    exactly the input the parser saw.
-    """
-    soup = BeautifulSoup(page_html, "html.parser")
-    for tag in soup(["script", "style"]):
-        tag.decompose()
-    for field in soup.select('input[name="form_build_id"], input[name="form_token"]'):
-        field["value"] = ""
-        # data-drupal-selector mirrors the same token, so blank it too.
-        field.attrs.pop("data-drupal-selector", None)
-    # Google Search Console site-verification token — public by design, but it is still a
-    # verification token and it is meaningless outside medicare.gov's own domain.
-    for meta in soup.select('meta[name="google"]'):
-        meta.decompose()
-    return str(soup)
-
-
 def parse_cards(page_html: str) -> list[dict[str, Any]]:
     """Extract one record per publication card that offers a standard-print PDF.
 
@@ -198,21 +169,24 @@ def parse_cards(page_html: str) -> list[dict[str, Any]]:
     return pubs
 
 
-def discover(session: requests.Session, raw_dir: Path, args: argparse.Namespace) -> list[dict]:
-    """Walk the paginated publications search until a page yields no publications."""
-    search_dir = raw_dir / "search"
-    search_dir.mkdir(parents=True, exist_ok=True)
+def discover(session: requests.Session, args: argparse.Namespace) -> list[dict]:
+    """Walk the paginated publications search until a page yields no publications.
 
+    The fetched pages are parsed in memory and deliberately **not** written to disk.
+    Don't "restore" that as provenance: medicare.gov's server-rendered HTML embeds an
+    inline drupalSettings blob carrying live GovDelivery **prod and stage** API keys,
+    plus an Akamai bot-sensor script and per-request Drupal form tokens — none of which
+    may be re-published from a public repo (see the guardrail in CLAUDE.md). Saving
+    these pages would also buy nothing: unlike the HealthCare.gov collection endpoints,
+    they contain no publication text at all, and catalog.json already records every
+    field parse_cards extracts from them. If you need the markup to debug a parser
+    break, re-run discovery — it's five cheap requests.
+    """
     seen: dict[str, dict] = {}  # url -> pub record (dedupe, keep first)
     for page in range(args.max_pages):
         url = SEARCH_URL.format(page=page)
         resp = fetch(session, url, args.retries, args.backoff)
-        # Sanitize before both writing and parsing - the committed provenance layer must
-        # not carry medicare.gov's embedded third-party API keys. See sanitize_search_html.
-        page_html = sanitize_search_html(resp.text)
-        (search_dir / f"page-{page}.html").write_text(page_html, encoding="utf-8")
-
-        pubs = parse_cards(page_html)
+        pubs = parse_cards(resp.text)
         new = 0
         for pub in pubs:
             if pub["url"] not in seen:
@@ -239,7 +213,7 @@ def download(session: requests.Session, raw_dir: Path, args: argparse.Namespace)
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
     print("Discovering publications from the search pages:")
-    pubs = discover(session, raw_dir, args)
+    pubs = discover(session, args)
     if args.limit:
         pubs = pubs[: args.limit]
     print(f"\nDiscovered {len(pubs)} publications with a standard-print PDF.\n")
