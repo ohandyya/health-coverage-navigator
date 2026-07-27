@@ -1,0 +1,10 @@
+{
+  "fetched_at": "2026-07-27T14:43:32.472864+00:00",
+  "source_url": "https://www.medicare.gov/publications/search?keywords=&page=0",
+  "discovered_count": 83,
+  "fetched": 0,
+  "skipped_existing": 83,
+  "failed": 0,
+  "catalog_size": 83,
+  "tool": "health-coverage-navigator/0.1 (+open-source RAG corpus builder)"
+}

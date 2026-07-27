@@ -37,6 +37,12 @@ htmlcov/
 .chroma/
 .lancedb/
 
+# Raw Medicare publication PDFs (~44 MB of binaries) — the one exception to the rule
+# above. data/raw/medicare_pubs/catalog.json records the url, sha256, and Last-Modified
+# of every file, so `uv run python scripts/download_medicare_pubs.py` reproduces this
+# directory exactly. The manifest and the processed text corpus ARE committed.
+data/raw/medicare_pubs/pdf/
+
 # Logs
 *.log
 
