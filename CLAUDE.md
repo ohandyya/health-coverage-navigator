@@ -4,7 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is at the scaffolding stage: a `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12, no dependencies yet) plus [docs/plan.md](docs/plan.md), the design document. No agent/RAG code, tests, or dependencies have been added yet — those come in with Phase 0.
+Mid–Phase 0. A `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12) plus [docs/plan.md](docs/plan.md), the design document.
+
+**Done — corpus ingestion.** Two of Phase 0's reference sources are downloaded and normalized into `data/`, each by a standalone script in `scripts/` (argparse CLI, `raw/` → `processed/` split, idempotent, `--normalize-only` re-parse):
+
+- [scripts/download_healthcare_gov.py](scripts/download_healthcare_gov.py) → `data/{raw,processed}/healthcare_gov/` — 803 HealthCare.gov articles/glossary/state pages. Guide: [docs/health_care_data.md](docs/health_care_data.md).
+- [scripts/download_medicare_pubs.py](scripts/download_medicare_pubs.py) → `data/{raw,processed}/medicare_pubs/` — 83 medicare.gov publications (Medicare & You + related CMS guides), 964 pages. Guide: [docs/medicare_pubs_data.md](docs/medicare_pubs_data.md).
+
+Both emit `processed/<source>/corpus.jsonl` with a shared field vocabulary (`id`, `source`, `url`, `title`, `bite`, `text`). See [data/README.md](data/README.md) for the directory conventions and per-source schemas.
+
+**Not done — the rest of Phase 0.** No chunking step, no gold eval set, no eval loader, no vector store. No agent/RAG code and no tests yet. Runtime dependencies so far are just `requests`, `beautifulsoup4`, and `pypdf`; there is no test tooling.
 
 ## Commands
 
