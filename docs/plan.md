@@ -157,6 +157,12 @@ the part that makes it an *agent* rather than a RAG bot.
       demos and evals never depend on live API availability or touch anything sensitive.
 - [ ] **Pin the plan year** in every query. CMS keeps multiple years live at once; mixing them
       silently is the most common correctness bug in this domain.
+- [ ] **The UI tracks the phases, it doesn't lead them.** A FastAPI + web frontend is part of the
+      build from Phase 0 onward, but each phase only adds the surface for the capability that
+      phase ships. The API contract is fixed early (Phase 0) so that later phases add *values* to
+      existing fields rather than reshaping the response. **All frontend design decisions,
+      stack choices, API schemas, and UI specifics live in [frontend_plan.md](frontend_plan.md)
+      — this document records only *when* each piece lands.**
 
 ## Architecture phases
 
@@ -168,18 +174,29 @@ vector store yet. In parallel, build a tiny gold eval set of ~30 questions with 
 known correct source-type. This pays off immediately: you want the corpus and the harness before
 the agent, not after.
 
+This is also where the **frontend groundwork** happens: freeze the API contract and stand up a
+web UI against a stubbed answer endpoint. Doing it now — before there's an agent — means the
+whole interface is proven while the stakes are zero, and Phase 1a only has to swap the stub for
+a real agent. See [frontend_plan.md](frontend_plan.md) (Phase F0) for the stack, contract, and
+layout; none of it is repeated here.
+
 **Milestone / acceptance test:** you can run the ingestion pipeline and get a clean, chunked
-corpus on disk, plus a gold eval set you can load and inspect.
+corpus on disk, plus a gold eval set you can load and inspect — and a local web UI that renders
+a stubbed answer end to end.
 
 **User-facing capability**
 - [ ] Run the ingestion pipeline and get a clean, chunked corpus written to `data/processed`
 - [ ] Load and inspect the gold eval set (question → expected source-type → expected answer)
+- [ ] Open the web UI locally and see a stubbed answer render with citations and a tool trace
 - *(The "user" here is you-as-developer preparing data — no retrieval or synthesized answers yet.)*
 
 **Software capability**
 - [ ] Ingestion pipeline (download → parse → chunk → store to `data/processed`) that is idempotent and re-runnable
 - [ ] Gold eval set (~30 questions), each tagged with expected source and answer
 - [ ] Eval dataset loader / schema (so later phases can attach retrieval, answer, and routing metrics)
+- [ ] **Frozen API contract** — request/response models carrying answer, citations, source-type, and abstention as first-class fields
+- [ ] FastAPI app skeleton with a stubbed answer endpoint returning canned data
+- [ ] Web UI scaffolded and rendering that stub
 
 ### Phase 1 — RAG-only MVP
 
@@ -195,13 +212,19 @@ lexical search — **no vector database and no embeddings**. The point is to sta
 agent → retrieve → cite → abstain loop against the simplest retrieval backend, and to have a
 lexical baseline you can later compare the vector approach against.
 
-**Milestone / acceptance test:** you can ask a coverage/terminology question and get a cited
-answer sourced from full-text search over `data/processed`, and it abstains when the question is
-out of corpus.
+**Milestone / acceptance test:** you can ask a coverage/terminology question **in the browser**
+and get a cited answer sourced from full-text search over `data/processed`, and it abstains when
+the question is out of corpus.
+
+This is where the Phase 0 stub gets replaced by the real agent — the UI itself barely changes,
+which is the point of having frozen the contract first. Frontend detail:
+[frontend_plan.md](frontend_plan.md) (Phase F1).
 
 **User-facing capability**
 - [ ] Ask natural-language questions (*"what's a deductible?"*, *"does Medicare cover X?"*) and get a synthesized answer with citations to source documents
 - [ ] Get an honest *"not in my reference material"* when the question is out of corpus — no hallucinated answer
+- [ ] Do all of the above from the web UI, with the answer streaming in as it's generated
+- [ ] Expand any citation to see the retrieved text behind it
 
 **Software capability**
 - [ ] PydanticAI agent with a single `retrieve` tool backed by full-text search (grep / lexical / BM25) over `data/processed` — no vector DB, no embeddings
@@ -209,6 +232,8 @@ out of corpus.
 - [ ] Chunk → source provenance plumbing
 - [ ] Grounding guardrail: answer only from retrieved context
 - [ ] Eval set extended from retrieval-only to **answer correctness** and **faithfulness/groundedness**
+- [ ] Stub endpoint replaced by the real agent; streaming response wired through to the UI
+- [ ] Eval dashboard in the UI over real eval runs
 
 #### Phase 1-b — RAG with a vector database
 
@@ -228,6 +253,7 @@ can compare retrieval/answer quality against the Phase 1-a full-text baseline.
 - [ ] Vector database wired up (Chroma / LanceDB / pgvector), populated from `data/processed`
 - [ ] `retrieve` tool re-backed by vector search behind the same interface
 - [ ] Eval comparison: vector vs. full-text baseline on the same gold set (recall@k, MRR, answer correctness)
+- [ ] Eval dashboard gains a **run-comparison view** so the vector-vs-lexical call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
 
 ### Phase 2 — Add the web-search tool
 
@@ -248,6 +274,7 @@ web-sourced answer — and the system chose the right lane on its own.
 - [ ] Source-type tagging in the output
 - [ ] New eval slice measuring **routing correctness** (did it pick the right lane?), separate from answer correctness
 - [ ] Basic web-result hygiene (dedupe, source filtering)
+- [ ] UI: the `web` source badge goes live alongside `reference`, and routing accuracy joins the eval dashboard — see [frontend_plan.md](frontend_plan.md) (Phase F2)
 
 ### Phase 3 — Add structured-API tools
 
@@ -273,6 +300,7 @@ provider and get a deterministic answer, not prose from a document.
 - [ ] Synthetic fixtures so tests/evals don't depend on live APIs
 - [ ] Tri-modal routing (reference vs. structured-API vs. web) with an eval slice for it
 - [ ] Schema validation on every API response
+- [ ] UI: the `structured-API` badge goes live, completing the three-lane vocabulary; plan-year selector wired to every request — see [frontend_plan.md](frontend_plan.md) (Phase F2)
 
 ### Phase 4 — Multi-step agent + provenance
 
@@ -297,6 +325,7 @@ get one synthesized answer where every claim is traceable.
 - [ ] Observability / tracing (Logfire or similar): tool calls, latencies, token usage
 - [ ] Multi-hop correctness and citation-accuracy evals
 - [ ] Loop safety: cycle detection + hop ceiling
+- [ ] UI: trace panel handles nested multi-hop steps; hovering a claim highlights exactly the sources behind it — see [frontend_plan.md](frontend_plan.md) (Phase F3)
 
 ### Phase 5 — Growth surface
 
@@ -320,20 +349,24 @@ comparisons, cost breakdowns, and scheduled monitoring.
 - [ ] Comparison / aggregation logic
 - [ ] Scheduler for monitoring runs + state persistence to diff against
 - [ ] Alert / output channel
-- [ ] UI beyond the CLI
+- [ ] UI: comparison tables, cost breakdowns, and a "what changed" view — the first phase whose UI is more than chat + provenance — see [frontend_plan.md](frontend_plan.md) (Phase F4)
 - [ ] Regression eval suite that grows with each capability so earlier phases don't silently break
 
 ## Suggested build order recap
 
 ```
-Phase 0  →  downloaded + chunked corpus, gold eval set
-Phase 1a →  cited answers via full-text search (no vector DB)  [SHIPPABLE MVP]
-Phase 1b →  cited answers via vector retrieval
-Phase 2  →  RAG-vs-web routing
-Phase 3  →  exact lookups via typed API tools         [tri-modal core complete]
-Phase 4  →  multi-hop reasoning + full provenance
-Phase 5  →  comparisons, cost, monitoring             [product, not bot]
+           backend                              frontend
+Phase 0    corpus + gold eval set               API contract frozen, UI on a stub
+Phase 1a   cited answers, full-text search      stub → real agent    [SHIPPABLE MVP]
+Phase 1b   cited answers, vector retrieval      eval run comparison
+Phase 2    RAG-vs-web routing                   web badge + routing metrics
+Phase 3    typed API tools                      API badge    [tri-modal core complete]
+Phase 4    multi-hop + full provenance          multi-hop trace, per-claim highlight
+Phase 5    comparisons, cost, monitoring        tables + monitor    [product, not bot]
 ```
 
 The tri-modal core is complete at the end of Phase 3 — everything after that is additive and
 should not disturb the core.
+
+The frontend column is a schedule, not a spec. Stack, API schemas, UI layout, and the
+corresponding F0–F4 checklists live in [frontend_plan.md](frontend_plan.md).

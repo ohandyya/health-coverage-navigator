@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Mid–Phase 0. A `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12) plus [docs/plan.md](docs/plan.md), the design document.
+Mid–Phase 0. A `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12) plus two design documents: [docs/plan.md](docs/plan.md) (the roadmap) and [docs/frontend_plan.md](docs/frontend_plan.md) (the web UI design).
 
 **Done — corpus ingestion.** Two of Phase 0's reference sources are downloaded and normalized into `data/`, each by a standalone script in `scripts/` (argparse CLI, `raw/` → `processed/` split, idempotent, `--normalize-only` re-parse):
 
@@ -14,6 +14,8 @@ Mid–Phase 0. A `uv`-managed Python project (src layout, package `health_covera
 Both emit `processed/<source>/corpus.jsonl` with a shared field vocabulary (`id`, `source`, `url`, `title`, `bite`, `text`). See [data/README.md](data/README.md) for the directory conventions and per-source schemas.
 
 **Not done — the rest of Phase 0.** No chunking step, no gold eval set, no eval loader, no vector store. No agent/RAG code and no tests yet. Runtime dependencies so far are just `requests`, `beautifulsoup4`, and `pypdf`; there is no test tooling.
+
+**Not done — the frontend.** Designed but not built: no `src/health_coverage_navigator/api/`, no `frontend/` directory, no FastAPI or Node dependencies. [docs/frontend_plan.md](docs/frontend_plan.md) is design-only and is the single source of truth for it.
 
 ## Commands
 
@@ -27,6 +29,8 @@ Both emit `processed/<source>/corpus.jsonl` with a shared field vocabulary (`id`
 
 Ruff is configured as a dev dependency (see `[tool.ruff]` in `pyproject.toml`); no test tooling is configured yet — add it as a `--dev` dependency when Phase 0 work begins, and update this section accordingly.
 
+A `Makefile` wraps the lint/format/typecheck commands (`make help` lists them). Server and frontend targets (`make dev`, `make types`, `make ui-build`, …) do not exist yet — the intended set is specified in [docs/frontend_plan.md](docs/frontend_plan.md) §7.
+
 ## What this project is
 
 Health Coverage Navigator: an agent that answers health-insurance questions ("is this treatment typically covered?", "what plans cover my doctor?", "what changed for this plan year?") by routing each sub-question to the right source type rather than relying on a single RAG pipeline. The core engineering problem is **tool routing**, not retrieval alone — every question decomposes into one of three lanes:
@@ -36,6 +40,17 @@ Health Coverage Navigator: an agent that answers health-insurance questions ("is
 3. **"What's happening now / not in my corpus"** → general web search
 
 Getting the agent to classify a sub-question into the correct lane (and combine lanes for compound questions) is the central thing being built and evaluated.
+
+## Frontend (see docs/frontend_plan.md — do not re-derive these decisions)
+
+The agent is fronted by a local web UI. **[docs/frontend_plan.md](docs/frontend_plan.md) is authoritative** for stack, API schemas, repo layout, UI specifics, and the F0–F4 build phases; read it before touching anything under `src/health_coverage_navigator/api/` or `frontend/`. Settled decisions, so they aren't relitigated:
+
+- **Stack**: FastAPI backend + React / Vite / TypeScript / Tailwind / shadcn-ui frontend in a top-level `frontend/` directory. No state-management library, no data-fetching library, `npm` as the package manager.
+- **Topology**: Vite dev server proxies `/api` to `uvicorn` in development (so **no CORS config anywhere**); FastAPI serves the built `frontend/dist` as static files otherwise. Localhost, single user, no auth.
+- **The API contract is frozen in Phase 0 and is load-bearing.** Answers are structured, not strings: `source_type` (reference / structured_api / web), `citations`, `claims`, `trace`, and `abstained` as a **first-class boolean** — never inferred by pattern-matching the answer text. Later phases add *values* to these fields; they do not reshape them. Changing the contract is a deliberate act, not a convenience.
+- **Types cross the boundary via codegen**: TypeScript types are generated from FastAPI's OpenAPI schema (`make types` → `frontend/src/api/schema.d.ts`). Never hand-edit the generated file; never hand-write a duplicate TS interface for a Pydantic model.
+- **Streaming is SSE** consumed via `fetch` + a stream reader — *not* `EventSource`, which cannot send a POST body.
+- **Secrets never reach the frontend.** API keys live in `.env` and are read server-side only. Anything in a `VITE_*` env var or the built bundle is public. Bind to `127.0.0.1`, never `0.0.0.0`.
 
 ## Data sources (see docs/plan.md for full details and links)
 
@@ -74,14 +89,14 @@ Getting the agent to classify a sub-question into the correct lane (and combine 
 
 ## Architecture phases
 
-The plan is staged so each phase ships something usable before adding complexity. Do not jump ahead of the current phase's scope unless asked.
+The plan is staged so each phase ships something usable before adding complexity. Do not jump ahead of the current phase's scope unless asked. Each phase's *frontend* slice is noted below; the corresponding F-phase in [docs/frontend_plan.md](docs/frontend_plan.md) §6 has the detail.
 
-- **Phase 0 — Corpus + eval scaffold.** Ingestion pipeline (download → parse → chunk → embed → store) into a local vector DB (Chroma/LanceDB/pgvector), plus a ~30-question gold eval set (question, expected source-type, expected answer) and an eval runner reporting recall@k/MRR. Build the harness before the agent.
-- **Phase 1 — RAG-only MVP.** Single `retrieve(query)` tool. Agent answers with citations, abstains when out-of-corpus. Extend eval to answer correctness + groundedness/faithfulness.
-- **Phase 2 — Add web search.** Agent now chooses between RAG and web. Add a routing-correctness eval slice, separate from answer correctness. Tag each answer with its source type.
-- **Phase 3 — Add structured-API tools.** Typed (Pydantic) wrappers for Marketplace API, openFDA, NPPES. Needs API-key/secrets management, rate-limit/retry handling, response caching, and synthetic fixtures so tests/evals don't depend on live APIs. Tri-modal routing eval (reference vs. API vs. web).
-- **Phase 4 — Multi-step agent + provenance.** Plan → act → observe → synthesize loop with decomposition of compound questions, per-claim source-type tagging (indexed-reference / structured-API / web) with the retrieval chunk or URL behind each claim, observability/tracing (Logfire or similar), multi-hop correctness evals, and a hop ceiling / cycle detection for loop safety.
-- **Phase 5 — Growth surface.** Plan comparison across the PUFs, formulary/drug-cost lookup, provider-network checks, No Surprises Act appeals guidance, and a scheduled "what changed this plan year" monitor. Needs a structured backend (DuckDB/SQLite) over the PUFs and a regression eval suite so later phases don't silently break earlier ones.
+- **Phase 0 — Corpus + eval scaffold.** Ingestion pipeline (download → parse → chunk → store to `data/processed`; **no embeddings, no vector store yet** — that's Phase 1b), plus a ~30-question gold eval set (question, expected source-type, expected answer) and an eval runner reporting recall@k/MRR. Build the harness before the agent. *Frontend (F0): freeze the API contract, FastAPI skeleton with a stubbed answer endpoint, UI scaffolded and rendering that stub — the whole interface proven before an agent exists.*
+- **Phase 1 — RAG-only MVP.** Single `retrieve(query)` tool. Agent answers with citations, abstains when out-of-corpus. Extend eval to answer correctness + groundedness/faithfulness. Split into **1a** (lexical/full-text retrieval, no vector DB) and **1b** (embeddings + vector store behind the same `retrieve` interface, compared against the 1a baseline). *Frontend (F1): the Phase 0 stub is swapped for the real agent, streaming wired up, eval dashboard over real runs. 1b adds only an eval run-comparison view — the chat UI is untouched by design.*
+- **Phase 2 — Add web search.** Agent now chooses between RAG and web. Add a routing-correctness eval slice, separate from answer correctness. Tag each answer with its source type. *Frontend (F2): the `web` source badge goes live; routing accuracy joins the eval dashboard.*
+- **Phase 3 — Add structured-API tools.** Typed (Pydantic) wrappers for Marketplace API, openFDA, NPPES. Needs API-key/secrets management, rate-limit/retry handling, response caching, and synthetic fixtures so tests/evals don't depend on live APIs. Tri-modal routing eval (reference vs. API vs. web). *Frontend (F2): the `structured_api` badge goes live, completing the three-lane vocabulary.*
+- **Phase 4 — Multi-step agent + provenance.** Plan → act → observe → synthesize loop with decomposition of compound questions, per-claim source-type tagging (indexed-reference / structured-API / web) with the retrieval chunk or URL behind each claim, observability/tracing (Logfire or similar), multi-hop correctness evals, and a hop ceiling / cycle detection for loop safety. *Frontend (F3): trace panel handles nested multi-hop steps; per-claim provenance highlighting.*
+- **Phase 5 — Growth surface.** Plan comparison across the PUFs, formulary/drug-cost lookup, provider-network checks, No Surprises Act appeals guidance, and a scheduled "what changed this plan year" monitor. Needs a structured backend (DuckDB/SQLite) over the PUFs and a regression eval suite so later phases don't silently break earlier ones. *Frontend (F4): comparison tables, cost breakdowns, and a "what changed" view — the first UI work that is more than chat + provenance.*
 
 ## Working conventions implied by the plan
 
@@ -89,3 +104,5 @@ The plan is staged so each phase ships something usable before adding complexity
 - **Provenance is not optional**: every synthesized claim must be traceable to a source type (indexed-reference, structured-API, or web) and the specific chunk/URL behind it. This is a hard requirement for a health-coverage tool, not polish to defer.
 - **Grounding guardrail**: the RAG agent must answer only from retrieved context and explicitly abstain ("not in my reference material") rather than hallucinate when a question falls outside the corpus.
 - **Fixtures over live calls in tests**: Phase 3+ structured-API tools should have synthetic fixtures so tests and evals don't depend on live, rate-limited, key-gated APIs.
+- **The UI tracks the phases, it doesn't lead them**: build only the frontend surface for the capability the current phase ships. The contract is frozen early precisely so later phases add values to existing fields instead of reshaping the response — don't add UI for a lane or a metric that doesn't exist yet.
+- **`docs/plan.md` says *when*, `docs/frontend_plan.md` says *how***: keep frontend stack/schema/layout detail out of `plan.md`, and keep phase scheduling out of `frontend_plan.md`. When something changes, update the one that owns it.
