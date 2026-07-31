@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Read [docs/progress.md](docs/progress.md) before doing anything else in a session.** It is the single source of truth for what is built, what is next, and why past decisions went the way they did.
 
-Do not record status in this file. `CLAUDE.md` holds conventions that apply regardless of how far along the build is; `docs/progress.md` holds everything that changes as work happens. Three docs, three jobs: [docs/plan.md](docs/plan.md) says *what to build and when*, [docs/frontend_plan.md](docs/frontend_plan.md) says *how the web UI works*, [docs/progress.md](docs/progress.md) says *what is actually built*. The plans never record completion; progress never records design.
+Do not record status in this file. `CLAUDE.md` holds conventions that apply regardless of how far along the build is; `docs/progress.md` holds everything that changes as work happens. Three docs, three jobs: [docs/plan.md](docs/plan.md) says *what to build and when*, [docs/frontend_plan.md](docs/frontend_plan.md) says *how the web UI works*, [docs/progress.md](docs/progress.md) says *what is actually built*. The plans never record completion; progress never records design. [docs/glossary.md](docs/glossary.md) sits orthogonal to that split — it says *what the words mean*, and records neither schedule, design, nor status.
 
 A `uv`-managed Python project: src layout, package `health_coverage_navigator`, Python 3.12.
 
@@ -63,6 +63,19 @@ The agent is fronted by a local web UI. **[docs/frontend_plan.md](docs/frontend_
 - HealthCare.gov Content API — same content as the bulk JSON, usable live; CORS-enabled.
 
 **Licensing caveat:** CPT/procedure codes are AMA/ADA-copyrighted — keep the public corpus/repo limited to NCDs, not LCDs or coding Articles.
+
+## Glossary (KEEP CURRENT — this is a standing rule, not a one-time task)
+
+[docs/glossary.md](docs/glossary.md) defines every health-insurance, medical, and US-regulatory term this repo uses. Read it when an unfamiliar acronym appears rather than re-deriving the meaning, and treat its entries as the repo's settled usage — if a doc and the glossary disagree, that is a bug in one of them, not a matter of taste.
+
+**When a change introduces a domain term the glossary does not already carry, add the entry in the same change — not later, not in a follow-up.** This applies equally to docs, code, comments, commit messages, and new data sources. A new source in particular almost always drags in several terms at once (its publisher, its file format, its identifiers); glossing them is part of adding the source, not a separate chore.
+
+- **What qualifies:** health, medical, insurance, pharmacy, and US-healthcare-regulatory vocabulary — agencies, programs, coverage vehicles, code systems, benefit-design concepts, dataset and identifier names, clinical service categories.
+- **What does not:** general software terms, library and framework names, and project-internal jargon that [docs/plan.md](docs/plan.md) or [docs/frontend_plan.md](docs/frontend_plan.md) already owns. Don't grow the glossary into a second copy of those docs.
+- **What an entry must contain:** the expansion, and — the load-bearing part — what the term means *in this repo*: its licensing status, which routing lane it belongs to, which schema field or dataset column it maps to, or the correctness rule it carries. A bare dictionary expansion is not a useful entry.
+- **What not to duplicate:** the 256 official HealthCare.gov consumer definitions vendored under `data/raw/healthcare_gov/posts/glossary_*.json`. The glossary points at them; it does not restate them.
+
+Terms that gate what may be committed — CPT, CDT, HCPCS, ICD, NCD, LCD, PII, PHI — are glossed with their consequence spelled out. Keep it that way: a glossary that softens the blocklist below is worse than no glossary.
 
 ## Public-repo data guardrail (ACTION REQUIRED before committing data)
 

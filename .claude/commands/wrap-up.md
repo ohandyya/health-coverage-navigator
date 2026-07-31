@@ -51,3 +51,5 @@ Overwrite `## Current state` in place:
 Report what you wrote in two or three lines. Do not commit unless asked.
 
 If the session changed something that `CLAUDE.md`, `docs/plan.md`, or `docs/frontend_plan.md` owns — a new convention, a scope change, a design decision that supersedes what is written there — say so and ask whether to update it. Do not fold that content into `progress.md`; each doc owns its own material.
+
+If the session introduced health, medical, insurance, or regulatory terminology that [docs/glossary.md](docs/glossary.md) does not already carry, add it there now — same rule, same reason. This is the sweep that catches what the in-the-moment convention missed.
