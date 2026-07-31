@@ -4,18 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Mid–Phase 0. A `uv`-managed Python project (src layout, package `health_coverage_navigator`, Python 3.12) plus two design documents: [docs/plan.md](docs/plan.md) (the roadmap) and [docs/frontend_plan.md](docs/frontend_plan.md) (the web UI design).
+**Read [docs/progress.md](docs/progress.md) before doing anything else in a session.** It is the single source of truth for what is built, what is next, and why past decisions went the way they did.
 
-**Done — corpus ingestion.** Two of Phase 0's reference sources are downloaded and normalized into `data/`, each by a standalone script in `scripts/` (argparse CLI, `raw/` → `processed/` split, idempotent, `--normalize-only` re-parse):
+Do not record status in this file. `CLAUDE.md` holds conventions that apply regardless of how far along the build is; `docs/progress.md` holds everything that changes as work happens. Three docs, three jobs: [docs/plan.md](docs/plan.md) says *what to build and when*, [docs/frontend_plan.md](docs/frontend_plan.md) says *how the web UI works*, [docs/progress.md](docs/progress.md) says *what is actually built*. The plans never record completion; progress never records design.
 
-- [scripts/download_healthcare_gov.py](scripts/download_healthcare_gov.py) → `data/{raw,processed}/healthcare_gov/` — 803 HealthCare.gov articles/glossary/state pages. Guide: [docs/health_care_data.md](docs/health_care_data.md).
-- [scripts/download_medicare_pubs.py](scripts/download_medicare_pubs.py) → `data/{raw,processed}/medicare_pubs/` — 83 medicare.gov publications (Medicare & You + related CMS guides), 964 pages. Guide: [docs/medicare_pubs_data.md](docs/medicare_pubs_data.md).
-
-Both emit `processed/<source>/corpus.jsonl` with a shared field vocabulary (`id`, `source`, `url`, `title`, `bite`, `text`). See [data/README.md](data/README.md) for the directory conventions and per-source schemas.
-
-**Not done — the rest of Phase 0.** No chunking step, no gold eval set, no eval loader, no vector store. No agent/RAG code and no tests yet. Runtime dependencies so far are just `requests`, `beautifulsoup4`, and `pypdf`; there is no test tooling.
-
-**Not done — the frontend.** Designed but not built: no `src/health_coverage_navigator/api/`, no `frontend/` directory, no FastAPI or Node dependencies. [docs/frontend_plan.md](docs/frontend_plan.md) is design-only and is the single source of truth for it.
+A `uv`-managed Python project: src layout, package `health_coverage_navigator`, Python 3.12.
 
 ## Commands
 
