@@ -19,19 +19,31 @@ data/
   provenance record (fetch timestamp, counts, tool). Never hand-edited. Kept so the
   processed layer can be **rebuilt without re-downloading** (e.g. to change cleaning
   or add fields).
-- **`processed/<source>/`** — the cleaned artifact the application actually consumes
-  (chunk → embed for RAG, or load into a structured DB). Regenerable from `raw/`.
+- **`processed/<source>/`** — the derived artifact built from `raw/`, regenerable at will.
+  It comes in two kinds, and which one a source produces is a property of the source, not
+  a formatting choice:
+  - **app-ready** — the cleaned form the application reads directly (chunk → embed for
+    RAG). `healthcare_gov`, `medicare_pubs`, and `medicare_ncd` all emit this, as
+    `corpus.jsonl`.
+  - **lossless mirror** — a faithful, queryable re-encoding that changes *format* but not
+    *content*; still requires a modeling/typing layer above it before an application can
+    read a value out of it. `exchange_puf` is the one source of this kind today: every
+    column lands as `VARCHAR`, publisher-formatted text unchanged (`'$450 '`, `'Not
+    Applicable'`, `'70.88%'`), because picking types — and which of a 36-column MOOP grid
+    is "the" answer — is a Phase 5 modeling decision, not an ingestion one. See
+    [`docs/exchange_puf_data.md`](../docs/exchange_puf_data.md#why-the-processed-layer-is-a-mirror-not-a-model).
 
 **Rule of thumb:** `raw/` is the source of truth for *what was fetched*; `processed/` is
-the source of truth for *what the app reads*. If they disagree, re-run the source's
-parse step to rebuild `processed/`.
+the source of truth for *what the app reads* — except for a lossless-mirror source, where
+`processed/` is the source of truth for *what a later typed layer reads*. If `raw/` and
+`processed/` disagree, re-run the source's parse step to rebuild `processed/`.
 
 > **One exception to "raw is committed":** `raw/medicare_pubs/pdf/` is git-ignored —
 > ~46 MB of binary PDFs is not worth permanent git history when
 > `raw/medicare_pubs/catalog.json` records each file's URL, `sha256`, and `Last-Modified`,
 > making the directory exactly reproducible by re-running its fetcher. Every other file in
-> `raw/`, including that manifest, is committed. Bulk binary sources added later
-> (Exchange PUFs, the 4 GB NPPES file) should follow the same manifest-not-blob pattern.
+> `raw/`, including that manifest, is committed. `exchange_puf` is the second instance of
+> this pattern (see below); the 4 GB NPPES file will likely be a third.
 
 ## Source catalog
 
@@ -40,16 +52,18 @@ parse step to rebuild `processed/`.
 | `healthcare_gov` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_healthcare_gov.py`](../scripts/download_healthcare_gov.py) | ✅ active |
 | `medicare_pubs` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_pubs.py`](../scripts/download_medicare_pubs.py) | ✅ active |
 | `medicare_ncd` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_ncd.py`](../scripts/download_medicare_ncd.py) | ✅ active |
+| `exchange_puf` | `raw/`, `processed/` | Structured plan data (lossless mirror) | [`scripts/download_exchange_puf.py`](../scripts/download_exchange_puf.py) | ✅ active |
 | _(future)_ | | | | planned |
 
-Together these cover the reference lane from both directions. `healthcare_gov` is the
-ACA/Marketplace side and `medicare_pubs` the Medicare side — both *consumer explanations* of
-coverage. `medicare_ncd` is the other kind of source entirely: the **operative coverage
-rules** themselves, with effective dates and statutory benefit categories.
+`healthcare_gov`, `medicare_pubs`, and `medicare_ncd` cover the reference lane from both
+directions — `healthcare_gov` the ACA/Marketplace side and `medicare_pubs` the Medicare side,
+both *consumer explanations* of coverage; `medicare_ncd` is the **operative coverage rules**
+themselves, with effective dates and statutory benefit categories. `exchange_puf` is a
+different kind of source altogether: not prose to retrieve but per-plan facts to query — the
+backing data for Phase 3's plan/drug lookups and Phase 5's plan comparison.
 
-Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Exchange PUFs
-(Benefits/Cost-Sharing, Plan Attributes), Medicare Part D formulary files, NPPES provider
-registry, openFDA drug labels.
+Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Medicare Part D formulary
+files, NPPES provider registry, openFDA drug labels.
 
 ---
 
@@ -243,6 +257,58 @@ Two things to know before trusting this data — both covered at length in
 
 ---
 
+## `exchange_puf`
+
+**Source:** CMS CCIIO's **Health Insurance Exchange Public Use Files** —
+`https://download.cms.gov/marketplace-puf/<year>/<table>-puf.zip` — the bulk plan-level data
+behind the ACA Marketplace, covering every plan sold on the federally-facilitated Exchange.
+See [`docs/exchange_puf_data.md`](../docs/exchange_puf_data.md) for the full data guide.
+
+**How it was fetched:** `uv run python scripts/download_exchange_puf.py`. No discovery step —
+the download URLs are a fixed pattern per (year, table). Idempotent via real conditional GETs
+(`If-None-Match`/`If-Modified-Since` against `download.cms.gov`'s ETag/Last-Modified, which
+answers **304** when nothing changed) and re-parseable via `--normalize-only`.
+
+**Three tables, not all nine CMS publishes:** Plan Attributes, Benefits & Cost Sharing, and
+Service Area — the last included specifically because Plan Attributes' `ServiceAreaId` has no
+meaning without it (it's what maps a ZIP/county to available plans). Rate, Network, Business
+Rules, Plan ID Crosswalk, Machine Readable URL, and Transparency in Coverage PUFs are not
+fetched; see the data guide for how to add one.
+
+### Files
+
+```
+raw/exchange_puf/
+├── catalog.json                    # per-(year, table) manifest: url, etag, row/column counts
+├── _meta.json                      # fetch provenance
+└── <year>/<slug>-puf.zip, *.csv    # GIT-IGNORED — see Layout above
+
+processed/exchange_puf/
+├── <year>/<table>.parquet          # GIT-IGNORED — the lossless mirror, see Layout above
+└── sample/<table>_<state>_<year>.csv   # one state's full-column slice, regenerated + re-scanned
+                                         #   for licensing markers on every normalize() run
+```
+
+This is the source `raw/`-is-committed makes its second exception for (after
+`medicare_pubs/pdf/`): plan year 2026 alone is a 375 MB CSV (Benefits & Cost Sharing) plus a
+32 MB CSV (Plan Attributes). `catalog.json` records enough (`url`, `etag`, `last_modified`,
+`row_count`, `column_count`, ...) to reproduce the git-ignored files exactly by re-running the
+downloader.
+
+### Why `processed/` is a mirror here, not `corpus.jsonl`
+
+This is a structured-data source, not RAG text — there is no `corpus.jsonl`. And unlike the
+three text corpora, its Parquet output is not yet "the cleaned artifact the application
+consumes": every column (deductibles, MOOP, actuarial value, yes/no flags) is publisher
+-formatted text (`'$450 '` with a trailing space, `'Not Applicable'`, `'70.88%'`), written to
+Parquet as `VARCHAR` with nothing trimmed or coerced. Typing it — and choosing which of the
+36 MOOP columns is "the" answer for a plan — needs real query requirements and is deferred to
+Phase 5. See [Layout](#layout) above and
+[`docs/exchange_puf_data.md`](../docs/exchange_puf_data.md#why-the-processed-layer-is-a-mirror-not-a-model)
+for the full reasoning.
+
+---
+
 ## Adding a new data source
 
 To keep this directory legible as it grows, follow the same convention for every source:
@@ -284,6 +350,15 @@ revision histories ("Corrected CPT and ICD-9-CM codes"), along with a few indivi
 Level II identifiers. Those are prose references in a government document, not a redistributed
 code table, so the scan reports them for review instead of failing on them. Don't "fix" that
 to zero; read [`docs/medicare_ncd_data.md`](../docs/medicare_ncd_data.md#licensing) first.
+
+`exchange_puf` is **public domain** (CMS Exchange PUF Disclaimer-User Agreement; no
+redistribution restriction — see [`docs/exchange_puf_data.md`](../docs/exchange_puf_data.md#licensing)
+for the full text). The agreement's one real obligation is that altered/derived data not be
+presented as CMS data, which is why the Parquet mirror is documented throughout as *derived*,
+never as the CMS file itself. The full PUFs (never committed) contain issuer-authored free
+text that names CPT/CDT codes narratively — an issuer describing their own plan's exclusions,
+not a redistributed code table — but that question is moot for what's actually vendored: the
+committed sample slice is re-scanned on every `normalize()` run and has zero blocking hits.
 
 ⚠️ **Before adding any new source, confirm it is cleared for public distribution.** This
 repo is public. Notably, **do not** vendor Medicare Coverage Database **LCDs or

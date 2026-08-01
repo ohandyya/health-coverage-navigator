@@ -74,6 +74,27 @@ match = "*@adsmovil.com"
 reason = "Role mailbox in HealthCare.gov Spanish-language outreach content."
 added = "2026-07-31"
 
+# Not an e-mail address at all — an issuer's InstaMed payment-portal account identifier,
+# formatted like one, embedded in the Plan Attributes PUF's URLForEnrollmentPayment column
+# for AK plans. Listed as the literal value rather than an `*@instamed.net`-style wildcard,
+# per this file's stated convention that a new third-party domain should surface as drift
+# and get looked at, not be pre-cleared. (The literal below necessarily makes this entry
+# itself e-mail-shaped, hence the second allow entry right after it — same self-reference
+# the scanner's own canary exemptions below already handle.)
+[[allow]]
+marker = "pii:email"
+match = "PREMERA.BLUE.CROSS@INSTAMED.NET"
+path = "data/processed/exchange_puf/sample/*"
+reason = "Issuer InstaMed payment-portal account identifier published by CMS in the Plan Attributes PUF's URLForEnrollmentPayment column, not a person's address."
+added = "2026-08-01"
+
+[[allow]]
+marker = "pii:email"
+match = "PREMERA.BLUE.CROSS@INSTAMED.NET"
+path = "scripts/sensitive_baseline.toml"
+reason = "The match value of the allowlist entry directly above — this file quoting its own literal, not a real address appearing in scanned content."
+added = "2026-08-01"
+
 # Toll-free numbers are, by definition, published business lines — a personal phone number
 # cannot have an 8xx toll-free area code. Suppressing them on that principle keeps the
 # reviewable remainder small (39 geographic numbers, baselined below) instead of drowning a

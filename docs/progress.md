@@ -17,24 +17,26 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-07-31.*
+*Updated 2026-08-01.*
 
-- **Phase:** 0 — corpus + eval scaffold. All three bulk sources are ingested and the public-repo
-  guardrail is now enforced by `make scan` rather than by hand; nothing else in Phase 0 started.
-- **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks). It is the
-  last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
-  looks like. All three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
+- **Phase:** 0 — corpus + eval scaffold. Ingestion is done for all four bulk sources (three RAG
+  corpora + the structured `exchange_puf` mirror) and the public-repo guardrail is enforced by
+  `make scan`; chunking and the eval scaffold have not started.
+- **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks) — the three
+  **text** corpora only; `exchange_puf` is structured data and is not chunked or embedded. It is
+  the last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
+  looks like. The three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
   vocabulary specifically so one chunker can span them — but they do not chunk alike: a
   HealthCare.gov article is short prose, a `medicare_pubs` record is one PDF page, and an NCD
   is a whole document with `## ` section headings written into `text` so they can be split on
   and kept as citation labels ("NCD 30.3, *Indications and Limitations of Coverage*").
 - **Open questions:**
-  - `plan.md` still names the MCD bulk-ZIP Downloads page as the NCD route. The build uses the
-    Coverage API instead, for licensing reasons ([log](#log), 2026-07-31). `plan.md` owns that
-    text and has not been corrected — decide whether to update it or leave it as the original
-    survey.
   - [frontend_plan.md](frontend_plan.md) §10 — eval runs from the browser (read-only dashboard
     vs. HTTP-triggered runs) is marked "decide at F0" and is still undecided.
+  - `plan.md`'s Exchange PUF paragraph still describes two tables as the ones that matter; the
+    build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
+    is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
+    ever touched for another reason.
 
 ### Phase 0 checklist
 
@@ -43,8 +45,9 @@ Backend (plan.md, Phase 0):
 - [x] HealthCare.gov ingestion — 803 docs
 - [x] Medicare publications ingestion — 83 pubs / 964 pages
 - [x] Medicare NCD ingestion — 345 determinations
+- [x] Exchange PUF ingestion — 3 tables, plan year 2026 (structured mirror, not a text corpus)
 - [x] Public-repo guardrail enforced in code — `make scan` (secrets / PII / licensing)
-- [ ] Chunking step → chunked corpus in `data/processed`
+- [ ] Chunking step → chunked corpus in `data/processed` (the three text corpora only)
 - [ ] Gold eval set, ~30 questions (question → expected source-type → expected answer)
 - [ ] Eval dataset loader / schema
 - [ ] Test tooling (no pytest configured yet)
@@ -61,6 +64,57 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-08-01 — Exchange PUFs + vector-backend choice
+
+**Did:** added the fourth bulk source — the Exchange PUFs (Plan Attributes, Benefits & Cost
+Sharing, Service Area for plan year 2026) — with a guide in [exchange_puf_data.md](exchange_puf_data.md).
+Chose LanceDB for Phase 1-b and wrote the reasoning down in [lancedb.md](lancedb.md) before any
+code exists. Promoted `/wrap-up` from a command to a skill so it can trigger on intent, not only
+on the slash form. Closed out two long-standing drifts in `plan.md`: it now names the MCD
+Coverage API as the NCD route (superseding the bulk ZIPs it had described since the original
+survey) and LanceDB as the settled Phase 1-b store.
+
+**Decided:** `processed/` no longer means one thing. The three text corpora emit an app-ready
+`corpus.jsonl`; `exchange_puf` emits a **lossless mirror** — every column `VARCHAR`, values
+byte-for-byte, no trimming, no type coercion. [data/README.md](../data/README.md) now names both
+kinds rather than letting this source quietly stretch the old definition. The reason is that
+every "numeric" column here is publisher-formatted text (`'$450 '`, `'70.88%'`, `'Not
+Applicable'` beside an empty field, which mean *different* things), and that Plan Attributes
+carries **36 max-out-of-pocket columns** — choosing which one is "the" MOOP needs real query
+requirements from Phase 3/5, and guessing once at ingestion is worse than not guessing. DuckDB's
+CSV reader would have collapsed the empty-vs-`Not Applicable` distinction by mapping empty
+fields to `NULL`, so `nullstr` is overridden to a string that cannot occur in a CMS PUF.
+
+Service Area is fetched even though `plan.md` names only two PUFs: without the ZIP-to-area
+mapping, `ServiceAreaId` cannot answer the plan's own canonical structured-lookup example
+("plans in ZIP 30076"), and the table is 44 KB.
+
+Committed a one-state (AK) full-column sample instead of the real files — Benefits & Cost
+Sharing alone is a 375 MB CSV — extending the manifest-not-blob bargain `medicare_pubs` already
+made. The sample is **regenerated and re-scanned on every `normalize()`**, never hand-curated,
+so a future plan year that introduces code-bearing text into Alaska's data fails the run rather
+than resting in a stale fixture nobody re-checks. The full PUFs do contain CPT/CDT numbers in
+issuer-authored free text (249 lines) — narrative reference, not a redistributed code table, and
+git-ignored regardless; the only question that mattered was the sample, which is clean.
+
+For Phase 1-b: **LanceDB**, on two grounds that outrank raw scale at a few thousand chunks —
+it holds vector *and* BM25 search in one table, so the 1-a lexical baseline and the 1-b vector
+run share a store instead of the comparison straddling two systems; and its versioned writes let
+an eval score be pinned to the corpus/embedding snapshot it was measured against. Embeddings are
+computed by us and handed over as plain vectors (LanceDB's registry never calls OpenAI on our
+behalf), which keeps bulk ingestion eligible for the Batch API discount.
+
+**Rejected:** Chroma — comparable setup cost, but in-memory-first and weaker on the
+eval-reproducibility angle. pgvector — the better long-term fit *if* Phase 5 puts the PUFs in
+Postgres rather than DuckDB, but not worth operating a server in Phase 1-b. Qdrant/Weaviate/
+Pinecone — a server before we need one, or a managed service that reopens the BAA question,
+which is the same reason OpenRouter was ruled out earlier: health-domain data should not leave
+the machine. Also not fetched: the Rate PUF and five other tables (Phase 5 territory; the URL
+pattern is uniform, so adding one is a dict entry).
+
+**Commits:** `a0b6147`, `813123c`, `5afcbdd` (the `plan.md` and `glossary.md` corrections above
+are uncommitted)
 
 ### 2026-07-31 — sensitive-data scanner
 
