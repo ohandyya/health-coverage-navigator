@@ -291,3 +291,13 @@ Billing/Coding Articles** (they embed AMA/ADA-copyrighted CPT/CDT codes) — ind
 only** — and never commit PII/PHI, secrets, or API keys. See the
 **"Public-repo data guardrail"** section in [`CLAUDE.md`](../CLAUDE.md) for the full
 checklist.
+
+Run **`make scan`** before committing anything here.
+[`scripts/scan_sensitive.py`](../scripts/scan_sensitive.py) checks all three halves of that
+guardrail — credentials, PII/PHI, and licence-restricted content — across every file that is
+or would become public, not just the source being added. It exits non-zero on a blocking hit,
+and compares the expected-but-benign findings (narrative `CPT` mentions, published agency
+phone numbers) against a recorded baseline in `scripts/sensitive_baseline.toml`, so a *jump*
+is reported rather than a nonzero. Note that its licensing markers cover
+`data/raw/**` and `data/processed/**` only: prose *about* the guardrail, including this file,
+must not trip it.
