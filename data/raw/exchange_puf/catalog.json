@@ -1,0 +1,41 @@
+[
+  {
+    "year": 2026,
+    "table": "benefits-and-cost-sharing",
+    "url": "https://download.cms.gov/marketplace-puf/2026/benefits-and-cost-sharing-puf.zip",
+    "csv_filename": "Benefits_Cost_Sharing_PUF.csv",
+    "etag": "\"45daead4e4a61724cbe49eb9a1685ca1:1777919800.212622\"",
+    "last_modified": "Mon, 04 May 2026 18:36:40 GMT",
+    "zip_bytes": 12450638,
+    "csv_bytes": 375326808,
+    "row_count": 1457952,
+    "column_count": 24,
+    "fetched_at": "2026-08-01T12:39:13.394257+00:00"
+  },
+  {
+    "year": 2026,
+    "table": "plan-attributes",
+    "url": "https://download.cms.gov/marketplace-puf/2026/plan-attributes-puf.zip",
+    "csv_filename": "Plan_Attributes_PUF.csv",
+    "etag": "\"3ee3efeb38762cbff23ec784eb6563dc:1777919869.923926\"",
+    "last_modified": "Mon, 04 May 2026 18:37:49 GMT",
+    "zip_bytes": 1001042,
+    "csv_bytes": 32140587,
+    "row_count": 22059,
+    "column_count": 151,
+    "fetched_at": "2026-08-01T12:39:14.037036+00:00"
+  },
+  {
+    "year": 2026,
+    "table": "service-area",
+    "url": "https://download.cms.gov/marketplace-puf/2026/service-area-puf.zip",
+    "csv_filename": "Service_Area_PUF.csv",
+    "etag": "\"f05be3bd46a6fa26d86c7c76d8789a2c:1777919965.478674\"",
+    "last_modified": "Mon, 04 May 2026 18:39:25 GMT",
+    "zip_bytes": 44461,
+    "csv_bytes": 798274,
+    "row_count": 8820,
+    "column_count": 14,
+    "fetched_at": "2026-08-01T12:39:14.572609+00:00"
+  }
+]

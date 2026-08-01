@@ -43,6 +43,16 @@ htmlcov/
 # directory exactly. The manifest and the processed text corpus ARE committed.
 data/raw/medicare_pubs/pdf/
 
+# Exchange PUF zips/CSVs (~410 MB for plan year 2026 alone — Benefits & Cost Sharing is a
+# 375 MB CSV) and the derived Parquet mirror. data/raw/exchange_puf/catalog.json records
+# each file's url, ETag, Last-Modified, sha256, and row/column counts, so
+# `uv run python scripts/download_exchange_puf.py` reproduces both directories exactly.
+# The manifest and the small per-state sample under processed/exchange_puf/sample/ ARE
+# committed.
+data/raw/exchange_puf/*/*.zip
+data/raw/exchange_puf/*/*.csv
+data/processed/exchange_puf/*/*.parquet
+
 # Logs
 *.log
 

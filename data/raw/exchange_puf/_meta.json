@@ -1,0 +1,17 @@
+{
+  "fetched_at": "2026-08-01T12:39:32.515173+00:00",
+  "source_url": "https://download.cms.gov/marketplace-puf",
+  "years": [
+    2026
+  ],
+  "tables": [
+    "benefits-and-cost-sharing",
+    "plan-attributes",
+    "service-area"
+  ],
+  "fetched": 0,
+  "skipped_existing": 3,
+  "failed": 0,
+  "tool": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 health-coverage-navigator/0.1 (+open-source RAG corpus builder)",
+  "license_note": "Public domain (CMS Exchange PUF Disclaimer-User Agreement). No redistribution restriction. The agreement requires that altered/derived data not be presented as CMS data \u2014 the Parquet mirror under processed/ is documented as derived, not as the CMS file itself."
+}

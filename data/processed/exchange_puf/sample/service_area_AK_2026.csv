@@ -1,0 +1,44 @@
+BusinessYear,StateCode,IssuerId,SourceName,ImportDate,ServiceAreaId,ServiceAreaName,CoverEntireState,County,PartialCounty,ZipCodes,PartialCountyJustification,MarketCoverage,DentalOnlyPlan
+2026,AK,21989,HIOS,2025-10-15,AKS001,Alaska Premier,Yes,"","","","",SHOP (Small Group),Yes
+2026,AK,21989,HIOS,2025-10-15,AKS002,Alaska PPO,No,02170,No,"","",SHOP (Small Group),Yes
+2026,AK,21989,HIOS,2025-10-15,AKS002,Alaska PPO,No,02090,No,"","",SHOP (Small Group),Yes
+2026,AK,21989,HIOS,2025-10-15,AKS002,Alaska PPO,No,02020,No,"","",SHOP (Small Group),Yes
+2026,AK,21989,HIOS,2025-10-15,AKS003,Alaska Premier - Individual,Yes,"","","","",Individual,Yes
+2026,AK,21989,HIOS,2025-10-15,AKS004,Alaska PPO - Individual,No,02020,No,"","",Individual,Yes
+2026,AK,21989,HIOS,2025-10-15,AKS004,Alaska PPO - Individual,No,02170,No,"","",Individual,Yes
+2026,AK,21989,HIOS,2025-10-15,AKS004,Alaska PPO - Individual,No,02090,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS001,PBCBSAK Individual Legacy,Yes,"","","","",Individual,No
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02195,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02090,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02230,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02220,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02188,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02100,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02122,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02158,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02020,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02150,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02110,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02130,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02050,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02198,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02068,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02070,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02170,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02063,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02282,No,"","",Individual,Yes
+2026,AK,38344,HIOS,2026-04-14,AKS003,Dental Select,No,02275,No,"","",Individual,Yes
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02230,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02198,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02100,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02130,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02122,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02195,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02220,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02105,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02090,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02110,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02020,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02170,No,"","",Individual,No
+2026,AK,73836,HIOS,2025-10-15,AKS002,Moda Select - individual,No,02275,No,"","",Individual,No
+2026,AK,74819,HIOS,2025-11-10,AKS001,BEST Life Alaska,Yes,"","","","",Individual,Yes
