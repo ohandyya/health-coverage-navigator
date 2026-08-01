@@ -1,0 +1,140 @@
+# Allowlist and advisory baseline for scripts/scan_sensitive.py.
+#
+# This file is what makes the scan cumulative rather than something re-derived from scratch
+# every time: triage decisions live here, so a finding that has already been judged benign
+# does not have to be re-judged.
+#
+# Two mechanisms, and they are NOT interchangeable:
+#
+#   [[allow]]   suppresses specific findings that are genuinely cleared.
+#   [baseline]  records how many advisory hits are expected, so the scan reports a *jump*
+#               rather than a nonzero. Advisory markers exist precisely because this corpus
+#               legitimately contains what they match.
+#
+# WHEN NOT TO USE THIS FILE: if a finding is a *regex bug* — the pattern matching something
+# it was never meant to match — fix the pattern in scan_sensitive.py instead. Allowlisting a
+# regex bug hides the next true positive that shares its shape. The worked example is in
+# that script's docstring: a bare `sk-` prefix once matched inside the URL slug
+# "ask-about-preventive-services". The fix was a tighter pattern, not an entry here.
+
+[meta]
+updated = "2026-07-31"
+note = "Advisory counts are a baseline, not a target. Investigate a jump, not a nonzero."
+
+# --------------------------------------------------------------------------- #
+# Allowlist. Every entry needs a `reason` — the script refuses to load one without.
+# An allowlist without reasons decays into a mute button.
+#
+#   marker       the detector key (e.g. "pii:email"), or "*" for any
+#   match        glob against the matched text
+#   match_regex  regex against the matched text, for what a glob cannot anchor
+#   path         glob against the file path
+# At least one of match/match_regex/path is required — an entry naming only a marker would
+# mute a whole detector, which is what the baseline mechanism is for. If several are given,
+# all must hold.
+# --------------------------------------------------------------------------- #
+
+[[allow]]
+marker = "pii:email"
+match = "*@*.gov"
+reason = "US government institutional mailbox published in the source content itself (cms.hhs.gov clinical-study notification, healthcare.gov account support, irs.gov phishing reports). A .gov address in a government publication is a contact point, not personal PII."
+added = "2026-07-31"
+
+# The four non-government domains, listed individually rather than as one wildcard so that
+# a new third-party domain appearing in the corpus shows up as drift and gets looked at.
+# All are role mailboxes (support@, contacto@, ferp@, chcmc@, NAHU-FFM@) — verified: not one
+# address in this corpus is a personal name.
+[[allow]]
+marker = "pii:email"
+match = "*@nahu.org"
+reason = "Role mailbox for the National Association of Health Underwriters, published in HealthCare.gov agent/broker content."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:email"
+match = "*@ahipinsuranceeducation.org"
+reason = "Role mailbox for AHIP's agent/broker training programme, published in HealthCare.gov content."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:email"
+match = "*@maximus.com"
+reason = "Role mailbox for a CMS contractor (Marketplace eligibility appeals), published in HealthCare.gov content."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:email"
+match = "*@pticom.com"
+reason = "Role mailbox for a CMS contractor, published in HealthCare.gov content."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:email"
+match = "*@adsmovil.com"
+reason = "Role mailbox in HealthCare.gov Spanish-language outreach content."
+added = "2026-07-31"
+
+# Toll-free numbers are, by definition, published business lines — a personal phone number
+# cannot have an 8xx toll-free area code. Suppressing them on that principle keeps the
+# reviewable remainder small (39 geographic numbers, baselined below) instead of drowning a
+# future real leak in 1,400 helpline hits. Anchored to the area-code position: a geographic
+# number that merely contains "800" in its exchange is not covered.
+# The scanner's own canaries. Its credential canaries are built by string concatenation
+# ("AKIA" + "IOSFOD…") specifically so the literal never appears and no credential marker
+# is exempted here — that file is exactly where someone could hide a key, so it stays fully
+# scanned for secrets. What concatenation cannot prevent is one marker matching *another*
+# marker's canary: the URL-credentials canary contains a valid e-mail address, and the NPI
+# canary necessarily puts the label next to the digits. Hence two narrow, advisory-only
+# exemptions, scoped to that one file.
+[[allow]]
+marker = "pii:email"
+path = "scripts/scan_sensitive.py"
+reason = "Synthetic canary inside the scanner's own detector definitions, not a real address."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:npi"
+path = "scripts/scan_sensitive.py"
+reason = "Synthetic canary inside the scanner's own detector definitions, not a real identifier."
+added = "2026-07-31"
+
+[[allow]]
+marker = "pii:phone"
+match_regex = '^(?:\+?1[ .-])?\(?(?:800|833|844|855|866|877|888)\)?[ .-]'
+reason = "Toll-free area code — a published business or agency line by definition, never a personal number. Overwhelmingly the HealthCare.gov Marketplace helpline (1-800-318-2596)."
+added = "2026-07-31"
+
+# --------------------------------------------------------------------------- #
+# Advisory baselines. Counts are *occurrences across all scanned files*, so a record
+# appearing in both data/raw and data/processed is counted twice — the raw and processed
+# layers hold the same text by design.
+#
+# Update deliberately, with the reason in the commit message. A count that only ever
+# ratchets upward without anyone looking is the failure mode this whole tier exists to
+# avoid.
+# --------------------------------------------------------------------------- #
+
+[baseline]
+# Narrative code mentions in NCD prose ("corrected CPT and ICD-9-CM codes", "add HCPCS
+# code G0465"), nearly all inside revision histories. Prose references in a US-government
+# work are not a redistributed code table — see docs/medicare_ncd_data.md#licensing.
+"licensing:cpt" = 42
+"licensing:hcpcs" = 26
+"licensing:hcpcs-shaped" = 20
+
+# After allowlisting, every remaining e-mail address should be a new domain nobody has
+# looked at yet — hence zero. A nonzero here is a genuine "go read it" signal.
+"pii:email" = 0
+
+# The 39 geographic (non-toll-free) numbers left after the toll-free allowlist. All are
+# federal, state, and territory agency lines published in HealthCare.gov's state-resource
+# pages — DC/Rockville federal offices, and insurance departments in the Virgin Islands,
+# Guam, the Northern Marianas, Rhode Island, Oklahoma, Washington and others. Reviewed
+# 2026-07-31: no personal numbers.
+"pii:phone" = 39
+
+# Zero today: the marker now requires the identifier to be *labelled* NPI, so the corpus's
+# coincidentally-Luhn-valid digit runs no longer count. Expected to rise when NPPES lands in
+# Phase 3 — provider NPIs are FOIA-disclosable and cleared to vendor (see docs/glossary.md),
+# so that rise is a baseline update, not a violation.
+"pii:npi" = 0

@@ -1,0 +1,21 @@
+{
+  "document_id": "116",
+  "document_version": 1,
+  "document_display_id": "100.13",
+  "title": "Laparoscopic Cholecystectomy",
+  "publication_number": "100-3",
+  "effective_date": "11/18/1991",
+  "effective_end_date": "N/A",
+  "implementation_date": "",
+  "qr_modifier_date": "",
+  "benefit_category": "Inpatient Hospital Services, Outpatient Hospital Services Incident to a Physician's Service, Physicians' Services",
+  "item_service_description": "",
+  "indications_limitations": "&lt;p&gt;Laparoscopic cholecystectomy is a covered surgical procedure in which a diseased gall bladder is removed through the use of instruments introduced via cannulae, with vision of the operative field maintained by use of a high-resolution television camera-monitor system (video laparoscope). For inpatient claims, report the diagnosis code for laparoscopic cholecystectomy. For all other claims, report the appropriate CPT code for laparoscopy, surgical; cholecystectomy (any method), and the appropriate CPT code for laparoscopy, surgical: cholecystectomy with cholangiography.&lt;&sol;p&gt;",
+  "cross_reference": "",
+  "transmittal_number": "58",
+  "transmittal_url": "",
+  "revision_history": "&lt;p&gt; 04&sol;1992 - Corrected CPT and ICD-9-CM codes.  Effective date 11&sol;18&sol;1991. (TN 58)&lt;&sol;p&gt;\n\n&lt;p&gt; 11&sol;1991 - Provided coverage for removal of gall bladder. Effective date 11&sol;18&sol;1991. (TN 54)&lt;&sol;p&gt;",
+  "other_text": "",
+  "ama_statement": "",
+  "reasons_for_denial": ""
+}

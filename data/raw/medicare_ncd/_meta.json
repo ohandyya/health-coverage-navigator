@@ -1,0 +1,10 @@
+{
+  "fetched_at": "2026-08-01T00:20:22.272264+00:00",
+  "source_url": "https://api.coverage.cms.gov/v1/reports/national-coverage-ncd/",
+  "discovered_count": 345,
+  "fetched": 345,
+  "skipped_existing": 0,
+  "failed": 0,
+  "tool": "health-coverage-navigator/0.1 (+open-source RAG corpus builder)",
+  "license_note": "NCDs only. LCD and Billing/Coding Article endpoints require an AMA/ADA/AHA license token and are blocked from this public repo; no token was requested."
+}

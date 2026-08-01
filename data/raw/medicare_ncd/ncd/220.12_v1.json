@@ -1,0 +1,21 @@
+{
+  "document_id": "271",
+  "document_version": 1,
+  "document_display_id": "220.12",
+  "title": "Single Photon Emission Computed Tomography  (SPECT)",
+  "publication_number": "100-3",
+  "effective_date": "10/01/2002",
+  "effective_end_date": "N/A",
+  "implementation_date": "10/01/2002",
+  "qr_modifier_date": "",
+  "benefit_category": "Diagnostic Tests (other)",
+  "item_service_description": "&lt;p&gt;  The single photon emission computed tomograph (SPECT) acquires information on the concentration of radionuclides introduced into the patient&#39;s body. It is useful in the diagnosis of several clinical conditions including:&lt;&sol;p&gt;\r\n\r\n&lt;ul&gt;    \r\n&lt;li&gt;    stress fracture.&lt;&sol;li&gt;\r\n\r\n&lt;li&gt;    spondylosis.&lt;&sol;li&gt;\r\n\r\n&lt;li&gt;    infection (e.g., discitis).&lt;&sol;li&gt;\r\n\r\n&lt;li&gt;    tumor (e.g., osteoid osteoma).&lt;&sol;li&gt;\r\n\r\n&lt;li&gt;    analyze blood flow to an organ, as in the case of myocardial viability.&lt;&sol;li&gt;\r\n\r\n&lt;li&gt;    differentiate ischemic heart disease from dilated cardiomyopathy.&lt;&sol;li&gt;\r\n&lt;&sol;ul&gt;",
+  "indications_limitations": "&lt;p&gt; Frequency limitations: Medicare Administrative Contractor discretion.&lt;&sol;p&gt;\r\n\r\n&lt;p&gt;In the case of myocardial viability, FDG positron emission tomography (PET) may be used following a SPECT that was found to be inconclusive. However, SPECT may not be used following an inconclusive FDG PET performed to evaluate myocardial viability.&lt;&sol;p&gt;",
+  "cross_reference": "See NCD on &lt;a href=&quot;https:&sol;&sol;www.cms.gov&sol;medicare-coverage-database&sol;details&sol;ncd-details.aspx?NCDId=211&amp;ncdver=5&quot;&gt;Positron Emission Tomography (PET) Scans&lt;&sol;a&gt;.",
+  "transmittal_number": "156",
+  "transmittal_url": "https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R156CIM.pdf",
+  "revision_history": "&lt;p&gt;  05&sol;2002 - Added NCD as part of determination&amp;#160;regarding myocardial viability.&amp;#160;Effective and implementation dates 07&sol;01&sol;2002. (&lt;a href=&quot;https:&sol;&sol;www.cms.gov&sol;Regulations-and-Guidance&sol;Guidance&sol;Transmittals&sol;Downloads&sol;R156CIM.pdf&quot;&gt;TN 156&lt;&sol;a&gt;) (CR 2138)&lt;&sol;p&gt;",
+  "other_text": "",
+  "ama_statement": "",
+  "reasons_for_denial": ""
+}
