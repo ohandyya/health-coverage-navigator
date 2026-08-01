@@ -58,14 +58,21 @@ clean, unambiguously reusable, and written at exactly the "explain coverage to a
 (public domain), distributed as PDF. Great for the Medicare side of the domain. Pair it with the
 HealthCare.gov glossary for terminology grounding.
 
-**Medicare Coverage Database — National Coverage Determinations (NCDs).** The MCD offers bulk ZIP
-downloads of the full NCD, LCD, and Article datasets, refreshed weekly. The Downloads page
-provides data sets containing Local Coverage data (Articles and LCDs) or National Coverage data
-(NCDs), with "All" or "Current" options for local coverage. **Licensing caveat:** stick to NCDs
+**Medicare Coverage Database — National Coverage Determinations (NCDs).** Fetch these from the
+**MCD Coverage API**, not the MCD Downloads page's bulk ZIPs. **Licensing caveat:** stick to NCDs
 for your public corpus. NCDs don't contain procedure codes. The LCDs and Billing/Coding Articles
 do — and CPT codes and similar are copyrighted by the AMA and ADA, with use restricted under
 license. So the local-coverage code tables are the one thing you should *not* vendor into a public
-GitHub repo. [CMS](https://www.cms.gov/medicare-coverage-database/downloads/downloads.aspx)
+GitHub repo. The API is what makes that rule self-enforcing: its auth boundary falls exactly on
+the licensing boundary — National coverage endpoints answer without a key, LCD and Article
+endpoints return `401` — so "NCDs only" becomes the set of endpoints that respond at all rather
+than a rule the ingestion script has to police. The bulk ZIPs are the wrong route on both counts:
+they 403 non-browser clients, and their single license click covers the AMA/ADA/AHA terms for
+Local coverage data sitting beside the National data, which is precisely the conflation the
+guardrail exists to prevent. See [medicare_ncd_data.md](medicare_ncd_data.md) for the endpoints,
+the record schema, and the other license-clean National document types (NCAs, CALs, MEDCAC
+materials, Technology Assessments) that are deliberately *not* vendored.
+[CMS](https://www.cms.gov/medicare-coverage-database/downloads/downloads.aspx)
 [Noridian](https://med.noridianmedicare.com/web/jea/policies/ncd)
 
 **Health Insurance Exchange Public Use Files (the structured plan corpus).** These are the bulk
@@ -238,9 +245,13 @@ which is the point of having frozen the contract first. Frontend detail:
 #### Phase 1-b — RAG with a vector database
 
 Swap the retrieval backend behind the same `retrieve` interface for embeddings + a local vector
-store (Chroma / LanceDB / pgvector). Reuse the Phase 1-a agent, provenance, and eval set — only
-the retrieval implementation changes — so you can measure semantic vs. lexical retrieval on the
-same gold questions.
+store — **LanceDB**, embedded and on-disk, with embeddings computed by us and handed over as
+plain vectors. Reuse the Phase 1-a agent, provenance, and eval set — only the retrieval
+implementation changes — so you can measure semantic vs. lexical retrieval on the same gold
+questions. LanceDB holds vector *and* BM25 search in one table, so the 1-a lexical baseline and
+the 1-b vector run can share a store instead of the comparison straddling two systems. See
+[lancedb.md](lancedb.md) for the full rationale, the rejected alternatives (Chroma, pgvector,
+managed cloud services), and the ingestion/query usage pattern.
 
 **Milestone / acceptance test:** the same questions now route through vector retrieval, and you
 can compare retrieval/answer quality against the Phase 1-a full-text baseline.
@@ -249,8 +260,8 @@ can compare retrieval/answer quality against the Phase 1-a full-text baseline.
 - [ ] Same Q&A experience as Phase 1-a, now answering from semantic (vector) retrieval
 
 **Software capability**
-- [ ] Embedding model configured
-- [ ] Vector database wired up (Chroma / LanceDB / pgvector), populated from `data/processed`
+- [ ] Embedding model configured — same model for documents and queries, fixed dimensionality
+- [ ] LanceDB wired up, populated from `data/processed`
 - [ ] `retrieve` tool re-backed by vector search behind the same interface
 - [ ] Eval comparison: vector vs. full-text baseline on the same gold set (recall@k, MRR, answer correctness)
 - [ ] Eval dashboard gains a **run-comparison view** so the vector-vs-lexical call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
