@@ -19,13 +19,22 @@ mid-stream.
 
 *Updated 2026-07-31.*
 
-- **Phase:** 0 — corpus + eval scaffold. Corpus ingestion done; nothing else in Phase 0 started.
+- **Phase:** 0 — corpus + eval scaffold. All three bulk sources are ingested; nothing else in
+  Phase 0 started.
 - **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks). It is the
   last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
-  looks like.
-- **Open questions blocking nothing yet:** see [frontend_plan.md](frontend_plan.md) §10 — the
-  eval-runs-from-the-browser question (read-only dashboard vs. HTTP-triggered runs) is marked
-  "decide at F0" and is still undecided.
+  looks like. All three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
+  vocabulary specifically so one chunker can span them — but they do not chunk alike: a
+  HealthCare.gov article is short prose, a `medicare_pubs` record is one PDF page, and an NCD
+  is a whole document with `## ` section headings written into `text` so they can be split on
+  and kept as citation labels ("NCD 30.3, *Indications and Limitations of Coverage*").
+- **Open questions:**
+  - `plan.md` still names the MCD bulk-ZIP Downloads page as the NCD route. The build uses the
+    Coverage API instead, for licensing reasons ([log](#log), 2026-07-31). `plan.md` owns that
+    text and has not been corrected — decide whether to update it or leave it as the original
+    survey.
+  - [frontend_plan.md](frontend_plan.md) §10 — eval runs from the browser (read-only dashboard
+    vs. HTTP-triggered runs) is marked "decide at F0" and is still undecided.
 
 ### Phase 0 checklist
 
@@ -33,6 +42,7 @@ Backend (plan.md, Phase 0):
 
 - [x] HealthCare.gov ingestion — 803 docs
 - [x] Medicare publications ingestion — 83 pubs / 964 pages
+- [x] Medicare NCD ingestion — 345 determinations
 - [ ] Chunking step → chunked corpus in `data/processed`
 - [ ] Gold eval set, ~30 questions (question → expected source-type → expected answer)
 - [ ] Eval dataset loader / schema
@@ -50,6 +60,45 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-07-31 — Medicare NCD corpus + glossary
+
+**Did:** added the third and last Phase 0 bulk source — Medicare Coverage Database NCDs, 345
+determinations — and [glossary.md](glossary.md), with a standing "keep it current" rule in
+`CLAUDE.md` and a matching sweep step in `/wrap-up`.
+
+**Decided:** fetch NCDs from the **MCD Coverage API**, not the bulk ZIPs `plan.md` points at.
+The API's auth boundary falls exactly on this repo's licensing boundary — National coverage
+endpoints answer keyless, LCD and Article endpoints `401` — so "NCDs only" stops being a rule
+the script has to police and becomes the set of endpoints that answer at all. The fetcher
+therefore never requests a license token, and `fetch_json()` treats `401` as fatal rather than
+retryable so a mistake is loud.
+
+The licensing scan **reports** `CPT`/`HCPCS` hits instead of failing on them. `medicare_pubs`
+can claim zero occurrences; this corpus cannot — 22 records mention codes narratively in
+revision histories. A scan that failed on those would have been switched off within a week, so
+it distinguishes blocking markers (`©`, `CDT`, AMA/ADA notices — all zero) from advisory ones.
+
+`effective_date` is `null` for the 75 longstanding NCDs, with CMS's explanatory sentence moved
+to `effective_date_note`, rather than storing prose in a date field. `null` means "in force,
+date unknown". `revision_history` is kept as a record field but excluded from `text` — it is
+retrieval noise that would match date and number queries without answering them.
+
+The glossary was scoped to *domain* vocabulary only, with each entry required to say what the
+term means **in this repo** (licensing status, routing lane, schema field, correctness rule).
+A bare dictionary expansion is not a useful entry, and the 256 vendored HealthCare.gov consumer
+definitions are pointed at, not restated.
+
+**Rejected:** the MCD Downloads-page ZIPs — 403 to non-browser clients, and their single
+license click covers the AMA/ADA/AHA terms for Local coverage data sitting beside the National
+data, which is precisely the conflation the guardrail exists to prevent. Also skipped the other
+license-clean National document types the API serves (NCAs, CALs, MEDCAC materials, Technology
+Assessments): they are the *process* behind a decision, and Phase 0 wants the rule.
+
+**Stopped at:** clean. `plan.md` still describes the bulk ZIPs as the NCD route, which this
+session superseded — see *Open questions*.
+
+**Commits:** `58ed14a`, `d0b861c`
 
 ### 2026-07-31 — progress tracking
 

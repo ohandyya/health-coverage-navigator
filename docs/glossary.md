@@ -28,6 +28,7 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 | **MAC** | Medicare Administrative Contractor | A regional private contractor that processes Medicare claims for its jurisdiction and issues **LCDs** where no NCD governs. Why coverage can differ by geography. `Noridian`, linked from [`plan.md`](plan.md), is one. |
 | **AMA** | American Medical Association | Owns and copyrights **CPT**. The reason LCDs and Billing/Coding Articles are blocked from this public repo. |
 | **ADA** | American Dental Association | Owns and copyrights **CDT**, the dental code set. Blocked for the same reason as CPT. |
+| **AHA** | American Hospital Association | The third party in the AMA/ADA/**AHA** license the Coverage API demands for LCD and Article endpoints; it owns the ICD coding-advice material bundled into that agreement. Named here so the license triple reads as three distinct owners rather than boilerplate. |
 | **FDA** | (US) Food and Drug Administration | Drug and device regulator. Reached through **openFDA**, never scraped. |
 | **openFDA** | — | FDA's public API and bulk-download service at `https://api.fda.gov/`. Keyless, no registration. Supplies drug labels, recalls, and shortages in the `structured_api` lane. Always written lowercase-o, camel — `openFDA`, not `OpenFDA`. |
 | **NCHS** | National Center for Health Statistics | The CDC unit that maintains **ICD-10-CM** for the United States under WHO authorization. |
@@ -167,6 +168,8 @@ publication titles in `data/raw/medicare_pubs/catalog.json`.
 | **ALJ** | Administrative Law Judge | The third level of Medicare appeals. Appears in the corpus as a form title. |
 | **Ombudsman** | Medicare Beneficiary Ombudsman | The office that helps beneficiaries with complaints and appeals. |
 | **late enrollment penalty** | — | A permanent premium surcharge for enrolling in Part B or Part D after first eligibility without other creditable coverage. |
+| **SAD** | Self-Administered Drug | A drug a patient normally takes without clinical help, therefore excluded from Part B in the outpatient setting and pushed to Part D. MACs publish SAD exclusion lists as **Articles** — so despite being a coverage question, SAD lists sit on the blocked side of the licensing line and are not in this repo's corpus. |
+| **laboratory test** | — | A determination covering a lab service. Flagged as `is_lab` on `medicare_ncd` records (23 of 345) — CMS tracks labs separately because they run through their own analysis track (**CAL**) and their own coding rules. |
 
 ---
 
