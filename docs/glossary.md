@@ -70,10 +70,16 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 
 | Term | Expansion | What it means in this repo |
 |---|---|---|
-| **MCD** | Medicare Coverage Database | CMS's database of coverage policy. **Partly clean**: NCDs are cleared to vendor, LCDs and Billing/Coding Articles are not. The canonical example of "vendor only the cleared subset". |
-| **NCD** | National Coverage Determination | A nationwide CMS decision on whether Medicare covers a service. Binds every MAC. Contains **no procedure codes**, so it is **cleared for the public repo**. |
-| **LCD** | Local Coverage Determination | A MAC's coverage decision for its own jurisdiction, issued where no NCD applies. Embeds AMA CPT/HCPCS and ADA CDT codes — **blocked from the public repo**. |
+| **MCD** | Medicare Coverage Database | CMS's database of coverage policy. **Partly clean**: NCDs are cleared to vendor, LCDs and Billing/Coding Articles are not. The canonical example of "vendor only the cleared subset". Vendored as the `medicare_ncd` source; see [`medicare_ncd_data.md`](medicare_ncd_data.md). |
+| **NCD** | National Coverage Determination | A nationwide CMS decision on whether Medicare covers a service. Binds every MAC. Contains **no procedure-code tables**, so it is **cleared for the public repo** — note the precision: NCD prose does occasionally *mention* a CPT or HCPCS code in a revision history, which is a narrative reference in a government work, not a redistributed code set. A stray `CPT` match in this corpus is expected, not a violation. |
+| **LCD** | Local Coverage Determination | A MAC's coverage decision for its own jurisdiction, issued where no NCD applies. Embeds AMA CPT/HCPCS and ADA CDT **code tables** — **blocked from the public repo**. |
 | **Billing/Coding Article** | — | MCD companion documents listing the codes that bill against a policy. Blocked for the same reason as LCDs. |
+| **Coverage API** | MCD Coverage API | CMS's keyless JSON API at `api.coverage.cms.gov/v1/`, the route this repo uses for NCDs instead of the MCD bulk ZIPs. Load-bearing property: it gates endpoints on exactly our licensing line — National coverage answers without auth, LCD and Article endpoints return `401`. |
+| **license agreement token** | — | The AMA/ADA/AHA bearer token the Coverage API issues from `/v1/metadata/license-agreement/`, valid one hour, that unlocks LCD and Article data. **Never request one.** The data behind it is blocked from this repo, so not holding a token is a safety property, not a limitation. |
+| **NCD section number** | — | The number an NCD is cited by (`30.3` = Acupuncture), grouped into chapters by body system. The corpus's `section_number` field and the basis of its record `id` and raw filenames — not the API's internal `document_id`. |
+| **Publication 100-3** | Medicare National Coverage Determinations Manual | The CMS manual NCDs live in; every NCD record's `publication_number`. Its sibling **100-04** (Claims Processing Manual) is where the billing instructions — and therefore the codes — live, which is a compact way to remember why NCDs are clean. |
+| **transmittal** | — | A numbered CMS change instruction that puts a policy revision into effect. `transmittal_number` / `transmittal_url` on each NCD record are the provenance link from a determination back to the document that changed it. Often paired with a **CR (Change Request)** number in revision histories. |
+| **NCA** | National Coverage Analysis | The evidence review CMS runs before opening or revising an NCD, published with a decision memo. License-free on the Coverage API but **not** vendored: it is the process behind a decision, not the coverage rule. Same for **CAL** (Coding Analysis for Labs), **MEDCAC** (Medicare Evidence Development & Coverage Advisory Committee) meeting materials, and **TA** (Technology Assessment). |
 | **PUF** | Public Use File | CMS's bulk CSV/ZIP data dumps. Public-domain, safe to vendor, and large enough to need DuckDB or SQLite rather than a spreadsheet. |
 | **Benefits and Cost Sharing PUF** | — | Per-plan benefit and cost-sharing detail for Marketplace QHPs. The Phase 5 plan-comparison backbone. |
 | **Plan Attributes PUF** | — | Plan-level data: max out-of-pocket, deductibles, cost sharing, HSA eligibility, formulary ID. |
@@ -123,6 +129,8 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 |---|---|---|
 | **plan year** | — | The 12-month period a plan's benefits and prices apply to. **The repo's most-emphasized correctness rule**: CMS keeps multiple years live at once, so every query pins a year — a 2025 answer to a 2026 question is wrong, not merely stale. Surfaces as `plan_year` in the API contract and in `corpus.jsonl` records. |
 | **benefit year / policy year** | — | Near-synonyms for plan year; a policy year tracks the policy's own effective date rather than the calendar year, so deductibles can reset off-cycle. |
+| **effective date / implementation date** | — | **The NCD analogue of the plan-year rule, and the exception to it.** An NCD applies from its effective date until superseded, cutting across plan years — so `medicare_ncd` records carry `effective_date`, not `plan_year`, and pinning a year against them is the wrong comparison. The implementation date is the later deadline by which MACs had to have the change in place. Caveat that bites: 75 of the 345 NCDs are *longstanding* determinations with no posted effective date, so `effective_date` is `null` there — meaning "in force, date unknown", never "not in force". |
+| **benefit category** | — | The statutory bucket a service must fall into before Medicare can cover it at all (Physicians' Services, Inpatient Hospital Services, DME, …). Distinct from *whether it is medically reasonable and necessary* — a service can fail either test. Every `medicare_ncd` record carries one. |
 | **premium** | — | The recurring amount paid to keep coverage, whether or not care is used. |
 | **deductible** | — | What the member pays before the plan starts paying. The repo's canonical demo question — *"What is a deductible?"* — and the standing example of a `reference`-lane question. |
 | **copayment (copay)** | — | A fixed dollar amount per service. |
@@ -206,6 +214,8 @@ the schema.
 - [`plan.md`](plan.md) — the routing lanes, the source catalog, and the phase schedule.
 - [`health_care_data.md`](health_care_data.md) — the HealthCare.gov Content API source guide.
 - [`medicare_pubs_data.md`](medicare_pubs_data.md) — the medicare.gov publications source guide.
+- [`medicare_ncd_data.md`](medicare_ncd_data.md) — the Medicare Coverage Database NCD source
+  guide, including why the Coverage API's auth boundary *is* the licensing boundary.
 - `data/raw/healthcare_gov/posts/glossary_*.json` — 256 official HealthCare.gov consumer
   definitions, already vendored. The authoritative source for benefit vocabulary this file
   does not cover.

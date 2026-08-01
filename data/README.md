@@ -39,14 +39,17 @@ parse step to rebuild `processed/`.
 | --- | --- | --- | --- | --- |
 | `healthcare_gov` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_healthcare_gov.py`](../scripts/download_healthcare_gov.py) | ✅ active |
 | `medicare_pubs` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_pubs.py`](../scripts/download_medicare_pubs.py) | ✅ active |
+| `medicare_ncd` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_ncd.py`](../scripts/download_medicare_ncd.py) | ✅ active |
 | _(future)_ | | | | planned |
 
-Together these cover the two halves of the reference lane: `healthcare_gov` is the
-ACA/Marketplace side, `medicare_pubs` the Medicare side.
+Together these cover the reference lane from both directions. `healthcare_gov` is the
+ACA/Marketplace side and `medicare_pubs` the Medicare side — both *consumer explanations* of
+coverage. `medicare_ncd` is the other kind of source entirely: the **operative coverage
+rules** themselves, with effective dates and statutory benefit categories.
 
-Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Medicare Coverage Database
-**NCDs only**, Exchange PUFs (Benefits/Cost-Sharing, Plan Attributes), Medicare Part D
-formulary files, NPPES provider registry, openFDA drug labels.
+Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Exchange PUFs
+(Benefits/Cost-Sharing, Plan Attributes), Medicare Part D formulary files, NPPES provider
+registry, openFDA drug labels.
 
 ---
 
@@ -168,6 +171,78 @@ has slightly fewer records than `page_count`; page numbers stay absolute.
 
 ---
 
+## `medicare_ncd`
+
+**Source:** the **Medicare Coverage Database**'s National Coverage Determinations, via the MCD
+**Coverage API** (`https://api.coverage.cms.gov/v1/`) — **345 NCDs**, ~950 KB of policy text
+across 29 chapters. An NCD is CMS's nationwide decision on whether Medicare covers an item or
+service; it binds every MAC. Where the other two corpora *explain* coverage, this one *is* the
+rule. See [`docs/medicare_ncd_data.md`](../docs/medicare_ncd_data.md) for the full data guide.
+
+**How it was fetched:** `uv run python scripts/download_medicare_ncd.py`. Discovery reads the
+National Coverage NCD report, then fetches each NCD's detail record. Keyless — CMS dropped the
+API-key requirement in February 2024. Idempotent/resumable and re-parseable via
+`--normalize-only`.
+
+**The bulk ZIPs on the MCD Downloads page are deliberately not used.** That page 403s
+non-browser clients, and its license-acceptance click covers the AMA/ADA/AHA terms for Local
+coverage data sitting in the same place as the National data. The API avoids that entirely —
+and enforces the split for us (see [Licensing](#licensing)).
+
+### Files
+
+```
+raw/medicare_ncd/
+├── report.json              # the National Coverage NCD report — the discovery index
+├── ncd/<section>_v<n>.json  # one untouched API response per NCD, e.g. 30.3_v2.json
+└── _meta.json               # fetch provenance: timestamp, counts, tool, license note
+
+processed/medicare_ncd/
+└── corpus.jsonl             # one normalized record per NCD — the RAG input
+```
+
+Raw files are named by **section number** (`30.3`), not the API's internal document ID,
+because the section number is what a citation names. Nothing here is git-ignored — 2.6 MB raw
+plus 1.8 MB processed, so the manifest-not-blob tradeoff `medicare_pubs` makes doesn't apply.
+
+### `corpus.jsonl` record schema
+
+One JSON object per **NCD** (they are short — median 1,540 characters). `id`, `source`, `url`,
+`title`, `bite`, and `text` match the other two corpora's names so a cross-source chunker can
+treat all three uniformly.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | `ncd_<section>_v<version>`, e.g. `ncd_30.3_v2`. |
+| `source` | Origin tag — `"medicare_ncd"`. |
+| `url` | The human-facing MCD page. **Not** the API path the report returns in its own `url` field. |
+| `title` | NCD title (e.g. `Acupuncture`). |
+| `bite` | **Always empty** — NCDs carry no editorial summary. Kept so every corpus has one shape. |
+| `section_number` / `chapter` | The citable NCD number (`30.3`) and its chapter (`30`). |
+| `ncd_id` / `ncd_version` | The API's identity for the document — what you need to re-fetch it. |
+| `publication_number` | `100-3`, the Medicare NCD Manual. |
+| `benefit_category` | The statutory benefit category the item falls under. |
+| `effective_date` | `MM/DD/YYYY`, or `null` for a longstanding NCD (see below). |
+| `effective_date_note` | CMS's explanation, non-empty only when `effective_date` is `null`. |
+| `effective_end_date` / `implementation_date` / `last_updated` | Dates; `null` when absent. |
+| `is_lab` | Whether the determination covers a laboratory test (23 of 345). |
+| `transmittal_number` / `transmittal_url` | The CMS change instruction that implemented this version. |
+| `revision_history` | Change history, HTML-stripped — **deliberately not part of `text`**. |
+| `text` | The policy sections under `## ` headings — the RAG payload. |
+
+Two things to know before trusting this data — both covered at length in
+[`docs/medicare_ncd_data.md`](../docs/medicare_ncd_data.md):
+
+- **`effective_date` is `null` for 75 of the 345.** They are longstanding determinations
+  predating CMS's posting practice, and the API returns a *sentence* where the date belongs.
+  That prose goes into `effective_date_note` rather than polluting a date field. Any date
+  filter must handle `null` — which here means "in force, date unknown", not "not in force".
+  NCDs are scoped by effective date, **not** by plan year; there is no `plan_year` field.
+- **`revision_history` is excluded from `text` on purpose.** It is retrieval noise
+  (transmittal numbers, rescinded-and-replaced chains). It stays as its own field.
+
+---
+
 ## Adding a new data source
 
 To keep this directory legible as it grows, follow the same convention for every source:
@@ -192,6 +267,23 @@ third-party reuse) — safe to vendor and index.
 booklets rather than coverage policy, so they carry no AMA/ADA CPT/CDT code tables —
 verified, not assumed: the corpus has zero occurrences of `CPT`, `CDT`, `HCPCS`, `©`, or
 "all rights reserved".
+
+`medicare_ncd` is the repo's **one partly-clean source**, and the reason the guardrail is
+written the way it is. The MCD holds NCDs (cleared) directly alongside LCDs and Billing/Coding
+Articles (blocked — they embed AMA CPT and ADA CDT code tables). We vendor only the cleared
+subset, and **the API enforces that boundary for us**: every `/data/ncd/` and
+`/reports/national-coverage-*` endpoint answers keyless, while every `/data/lcd/` and
+`/data/article/` endpoint returns `401` demanding an AMA/ADA/AHA license token. The fetcher
+never requests such a token — not holding one is its second line of defence.
+
+That clearance is re-verified on every run rather than assumed: the corpus has zero
+occurrences of `©`, "all rights reserved", `CDT`, or an AMA/ADA copyright notice, and the
+API's `ama_statement` field is empty in all 345 NCDs. **Unlike `medicare_pubs`, it does not
+have zero occurrences of `CPT`/`HCPCS`** — 22 records contain narrative mentions inside
+revision histories ("Corrected CPT and ICD-9-CM codes"), along with a few individual HCPCS
+Level II identifiers. Those are prose references in a government document, not a redistributed
+code table, so the scan reports them for review instead of failing on them. Don't "fix" that
+to zero; read [`docs/medicare_ncd_data.md`](../docs/medicare_ncd_data.md#licensing) first.
 
 ⚠️ **Before adding any new source, confirm it is cleared for public distribution.** This
 repo is public. Notably, **do not** vendor Medicare Coverage Database **LCDs or
