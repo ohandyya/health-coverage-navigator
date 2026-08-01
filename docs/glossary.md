@@ -36,6 +36,8 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 | **NBER** | National Bureau of Economic Research | Hosts a trimmed "core" mirror of the NPPES bulk file — the practical dev fixture, since the full download is 4 GB+. |
 | **ResDAC** | Research Data Assistance Center | CMS-funded resource that helps researchers use CMS data; linked from [`plan.md`](plan.md) for its NPPES downloadable-file overview. |
 | **FOIA** | Freedom of Information Act | NPPES provider data is FOIA-disclosable, which is *why* it is safe to vendor despite naming real practitioners. |
+| **AHIP** | America's Health Insurance Plans | The health-insurer trade association. Runs the annual training and certification that agents and brokers must complete to sell Marketplace plans; its training-programme role mailbox appears in the HealthCare.gov agent/broker corpus and is allowlisted in `scripts/sensitive_baseline.toml`. |
+| **NAHU** | National Association of Health Underwriters | The agent/broker professional association named alongside AHIP in the same HealthCare.gov content, with the same allowlisted role mailbox. (Now trading as NABIP; the corpus predates the rename, so `nahu.org` is what the data actually contains.) |
 
 ---
 
@@ -180,7 +182,7 @@ publication titles in `data/raw/medicare_pubs/catalog.json`.
 | **PII** | Personally Identifiable Information | Data identifying a specific person. **Never committed**, in any form, under any directory. |
 | **PHI** | Protected Health Information | Individually identifiable health information — health status, care received, or payment for care, tied to a person. HIPAA-regulated and the most sensitive category this project could touch. **Never committed.** The project handles population-level and policy-level data only; it never ingests a real person's records. |
 | **HIPAA** | Health Insurance Portability and Accountability Act | The law governing PHI. Not a compliance obligation we take on — the design avoids PHI entirely — but the reason the PHI line is absolute. |
-| **SSN** | Social Security Number | The specific PII the corpus verification greps scan for, via the `[0-9]{3}-[0-9]{2}-[0-9]{4}` pattern. |
+| **SSN** | Social Security Number | The one PII shape that is **blocking** rather than advisory in `scripts/scan_sensitive.py` (marker `pii:ssn`) — there is no benign reason for anything matching `\d{3}-\d{2}-\d{4}` to appear in this corpus, so it needs no judgement call. (Write the *pattern*, never an example — a literal nine-digit specimen in prose trips the scanner, exactly as it should.) Contrast e-mail, phone, and NPI, which this repo legitimately carries and which are therefore advisory. |
 | **public-domain / U.S.-government work** | — | Works authored by the federal government carry no copyright and are safe to vendor. The clearing test for most sources here — but verify per source, since a government publisher can still embed third-party copyrighted tables. |
 | **synthetic fixture** | — | Fake people, plans, drugs, and ZIP codes used in tests and evals. Exists so nothing sensitive is touched and so tests never depend on live, key-gated APIs. |
 

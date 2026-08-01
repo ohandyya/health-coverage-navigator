@@ -19,8 +19,8 @@ mid-stream.
 
 *Updated 2026-07-31.*
 
-- **Phase:** 0 — corpus + eval scaffold. All three bulk sources are ingested; nothing else in
-  Phase 0 started.
+- **Phase:** 0 — corpus + eval scaffold. All three bulk sources are ingested and the public-repo
+  guardrail is now enforced by `make scan` rather than by hand; nothing else in Phase 0 started.
 - **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks). It is the
   last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
   looks like. All three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
@@ -43,6 +43,7 @@ Backend (plan.md, Phase 0):
 - [x] HealthCare.gov ingestion — 803 docs
 - [x] Medicare publications ingestion — 83 pubs / 964 pages
 - [x] Medicare NCD ingestion — 345 determinations
+- [x] Public-repo guardrail enforced in code — `make scan` (secrets / PII / licensing)
 - [ ] Chunking step → chunked corpus in `data/processed`
 - [ ] Gold eval set, ~30 questions (question → expected source-type → expected answer)
 - [ ] Eval dataset loader / schema
@@ -60,6 +61,62 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-07-31 — sensitive-data scanner
+
+**Did:** replaced the ad-hoc, per-source licensing check with one scanner
+(`scripts/scan_sensitive.py` + a `scan-sensitive` skill) covering all three halves of the
+public-repo guardrail — credentials, PII/PHI, licence-restricted content — across every file
+that is or would become public. Runs clean today; baselines recorded.
+
+**Decided:** three severities, not two. The NCD session had already established that a check
+which fails on legitimate narrative `CPT` mentions "would just get switched off"; that lesson is
+now the scanner's architecture rather than one function's local behaviour. **Blocking** exits 1
+with no judgement call available, **advisory** compares against a recorded count so a *jump* is
+reported rather than a nonzero, **allowlisted** suppresses but still names and counts the
+suppression. The advisory tier is not a softer blocking tier — it exists because this corpus
+genuinely contains code mentions and agency contact details, and because Phase 3's NPPES data
+will genuinely contain real provider names and NPIs that are FOIA-disclosable.
+
+The scan is deliberately **not** part of `make check-all`. `check-all` is the fast inner-loop
+command; scanning the whole corpus is a pre-publish gate you invoke on purpose, and burying a
+slow check inside a fast one is how the fast one stops getting run.
+
+Licensing markers are scoped to `data/raw/**` and `data/processed/**` rather than the whole
+repo, because `data/README.md`, `docs/glossary.md`, and the scanner itself all discuss CPT, CDT
+and the AMA by name. **Prose about the guardrail must not trip the guardrail** — the risk being
+detected is a code table inside ingested data, not the word.
+
+Baselines are whole-repo totals, so `--staged` / `--unstaged` / `--paths` runs list advisory
+hits without comparing them and cannot exit 2. Comparing a whole-repo baseline against a subset
+would report every marker as "below baseline" and advise lowering it, which is actively wrong.
+
+Allowlist entries are principled classes, not enumerations, where a principle exists: `*@*.gov`
+is a government contact point by definition, and a toll-free area code cannot be a personal
+number — that one suppresses 1,429 helpline hits so the reviewable remainder is 39 numbers
+rather than a haystack. The four non-government domains are listed individually on purpose, so
+a *new* third-party domain surfaces as drift instead of being absorbed by a wildcard.
+
+**Rejected:** a date-of-birth detector. In a corpus built on effective dates, transmittal dates
+and revision histories it is pure noise, and would teach everyone to ignore the PII layer
+wholesale. A DOB here would arrive attached to a name, which the e-mail/phone/NPI markers
+already catch. Also rejected importing the licensing markers from `download_medicare_ncd.py`:
+`scripts/` is not a package and that module pulls in `requests`/`bs4`, so they are duplicated
+with a "change one, change the other" note — a dependency-free scanner was worth the copy.
+
+**Dead end:** two regex shapes that had to be tightened rather than allowlisted, both now
+pinned as anti-canaries. A bare `sk-[A-Za-z0-9_-]{20,}` matched inside the ordinary URL slug
+`ask-about-preventive-services`; fixed by anchoring to real vendor prefixes plus a lookbehind.
+`pii:npi` as "any Luhn-valid 10-digit run" reported a UUID fragment, a vendor PDF filename and
+an IRS publink anchor — Luhn alone rejects only ~90% of arbitrary digit runs — so the
+identifier must now also be *labelled* NPI. The general rule this establishes: allowlisting a
+regex bug hides the next true positive that shares its shape.
+
+The scanner then caught a live one during this session's own glossary edit: an illustrative
+SSN written out in the `SSN` entry blocked the scan. Fixed by writing the *pattern* instead of
+a specimen — the standing convention for documenting any blocking shape.
+
+**Commits:** `699fdf3`
 
 ### 2026-07-31 — Medicare NCD corpus + glossary
 
