@@ -43,7 +43,11 @@ the source of truth for *what the app reads* — except for a lossless-mirror so
 > `raw/medicare_pubs/catalog.json` records each file's URL, `sha256`, and `Last-Modified`,
 > making the directory exactly reproducible by re-running its fetcher. Every other file in
 > `raw/`, including that manifest, is committed. `exchange_puf` is the second instance of
-> this pattern (see below); the 4 GB NPPES file will likely be a third.
+> this pattern and `part_d_spuf` the third (both below), and they are likely the last — the
+> other 4 GB-scale candidate, NPPES, is queried live rather than downloaded at all. By
+> `part_d_spuf` the bargain has teeth: its manifest records each member's byte
+> offset and CRC32 inside the published container, so "reproducible" is checkable rather
+> than asserted.
 
 ## Source catalog
 
@@ -53,6 +57,7 @@ the source of truth for *what the app reads* — except for a lossless-mirror so
 | `medicare_pubs` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_pubs.py`](../scripts/download_medicare_pubs.py) | ✅ active |
 | `medicare_ncd` | `raw/`, `processed/` | RAG text corpus | [`scripts/download_medicare_ncd.py`](../scripts/download_medicare_ncd.py) | ✅ active |
 | `exchange_puf` | `raw/`, `processed/` | Structured plan data (lossless mirror) | [`scripts/download_exchange_puf.py`](../scripts/download_exchange_puf.py) | ✅ active |
+| `part_d_spuf` | `raw/`, `processed/` | Structured plan data (lossless mirror) | [`scripts/download_part_d_spuf.py`](../scripts/download_part_d_spuf.py) | ✅ active |
 | _(future)_ | | | | planned |
 
 `healthcare_gov`, `medicare_pubs`, and `medicare_ncd` cover the reference lane from both
@@ -62,8 +67,9 @@ themselves, with effective dates and statutory benefit categories. `exchange_puf
 different kind of source altogether: not prose to retrieve but per-plan facts to query — the
 backing data for Phase 3's plan/drug lookups and Phase 5's plan comparison.
 
-Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Medicare Part D formulary
-files, NPPES provider registry, openFDA drug labels.
+All five bulk sources named in [`docs/plan.md`](../docs/plan.md) are now vendored. **NPPES and
+openFDA are deliberately not among them** — both are queried live through their APIs rather
+than downloaded, so no provider-level data ever lands in this directory.
 
 ---
 
@@ -309,6 +315,74 @@ for the full reasoning.
 
 ---
 
+## `part_d_spuf`
+
+**Source:** CMS's **Quarterly Prescription Drug Plan Formulary, Pharmacy Network, and Pricing
+Information Public Use File** — the Medicare Part D counterpart to `exchange_puf`, rebuilt each
+quarter from the Medicare Plan Finder. It answers which drug (by NDC) a Part D plan covers, on
+what cost-share tier, and with what prior-authorization / step-therapy / quantity-limit strings
+attached. See [`docs/part_d_spuf_data.md`](../docs/part_d_spuf_data.md) for the full data guide.
+
+**How it was fetched:** `uv run python scripts/download_part_d_spuf.py`. The download URL
+embeds a rotating UUID and so **is** discovered — from CMS's DCAT catalog at
+`https://data.cms.gov/data.json`, which is also where the licensing metadata comes from.
+Idempotent via conditional GET (`If-Modified-Since`; this host sends `Last-Modified` but no
+ETag) and re-parseable via `--normalize-only`.
+
+**Seven files, not all ten CMS publishes** — and, unusually, **without downloading the
+container.** The published quarterly zip is **2.49 GB**, but it is a container of 15 nested
+per-file zips, and the six-part pharmacy-network file is 92% of that weight. The downloader
+reads the zip's central directory over HTTP and range-fetches only the members it wants,
+transferring **9.4 MB instead of 2.49 GB**, with every member verified against its recorded
+CRC32 before it is written. Pharmacy Network is not wired up (Phase 5 territory); Pricing
+(191 MB) is defined but opt-in via `--file pricing`.
+
+### Files
+
+```
+raw/part_d_spuf/
+├── catalog.json                    # per-(quarter, file) manifest: url, byte offset/length,
+│                                   #   crc32, sha256, row/column counts
+├── _meta.json                      # fetch provenance + the resolved sample anchor contracts
+└── <quarter>/<stem>.txt            # GIT-IGNORED — pipe-delimited, Latin-1, ~86 MB/quarter
+
+processed/part_d_spuf/
+├── <quarter>/<stem>.parquet        # GIT-IGNORED — the lossless mirror, see Layout above
+└── sample/<stem>_<quarter>.csv     # a few contracts' full-column slice, regenerated +
+                                    #   re-scanned for licensing markers on every normalize()
+```
+
+Third exception to `raw/`-is-committed, on the same manifest-not-blob terms as
+`medicare_pubs/pdf/` and `exchange_puf`: one quarter is ~86 MB of text, 58 MB of it the
+formulary file's 1.12M rows. Here `catalog.json` additionally records each member's **byte
+offset and CRC32 inside the container**, which makes the reproducibility claim checkable rather
+than merely asserted.
+
+### Three things to know before trusting this data
+
+- **`STATE` is populated only for Medicare Advantage rows.** Every standalone PDP row leaves it
+  (and `COUNTY_CODE`) blank and is located by `PDP_REGION_CODE` instead. Filtering this source
+  by state silently drops every standalone drug plan — and Alaska, `exchange_puf`'s default
+  sample state, has **zero** rows here. This is why the committed sample is anchored on
+  `CONTRACT_ID`, taking one PDP and one MA contract so both plan shapes appear.
+- **The files are Latin-1, not UTF-8**, and CMS's record layout never says so. Only three
+  Spanish plan names in Plan Information exercise it, but that is enough to make a strict UTF-8
+  read raise. The other six files are pure ASCII.
+- **Suppressed plans appear in Plan Information only**, flagged `PLAN_SUPPRESSED_YN = "Y"`, so
+  a formulary join legitimately finds nothing for them.
+
+### Why `processed/` is a mirror here, not `corpus.jsonl`
+
+Structured data, same as `exchange_puf` — no `corpus.jsonl`, not chunked, not embedded. Every
+column is publisher-formatted text (`PREMIUM` is `'35.60'`, `MA_REGION_CODE` is a single space
+for every PDP row, and the insulin copay columns use blank and `'0.00'` to mean different
+things), written to Parquet as `VARCHAR` with nothing trimmed or coerced. The one
+transformation applied is a character-set transcode from Latin-1 to UTF-8, which changes bytes
+but not characters. See
+[`docs/part_d_spuf_data.md`](../docs/part_d_spuf_data.md#why-the-processed-layer-is-a-mirror-not-a-model).
+
+---
+
 ## Adding a new data source
 
 To keep this directory legible as it grows, follow the same convention for every source:
@@ -359,6 +433,23 @@ never as the CMS file itself. The full PUFs (never committed) contain issuer-aut
 text that names CPT/CDT codes narratively — an issuer describing their own plan's exclusions,
 not a redistributed code table — but that question is moot for what's actually vendored: the
 committed sample slice is re-scanned on every `normalize()` run and has zero blocking hits.
+
+`part_d_spuf` is **public domain** and the cleanest of the five on this axis. CMS's own DCAT
+catalog records `license: https://www.usa.gov/government-works`, `accessLevel: public`, and no
+rights statement; there is no key, no registration, and no click-through agreement. It clears
+the guardrail for two independent reasons: drugs are identified only by **NDC** and **RxCUI**,
+so no AMA/ADA code table is anywhere in the container (this is drug coverage, not procedure
+coding — the licensing line `medicare_ncd` has to navigate is never approached); and every row
+is plan- or product-level, with no beneficiary data. The one identifier-shaped column in the
+whole container, `PHARMACY_NUMBER`, belongs to the pharmacy-network file, which is not fetched.
+
+One scanner interaction is worth knowing about, because it looks alarming and isn't: a Medicare
+`CONTRACT_ID` is a letter plus four digits (`H1671`, `S5743`) — **exactly** the shape of an
+HCPCS Level II code, and `H`/`R`/`S` are all real HCPCS letters. The `licensing:hcpcs-shaped`
+detector therefore fires on all 1,099 of them in the sample. That is not a regex bug and the
+pattern is deliberately left alone (tightening it globally would hide real `G0465`-style tokens
+in the other corpora); it is handled by a narrow, path-scoped allowlist entry in
+`scripts/sensitive_baseline.toml`. Any *other* letter appearing in these files still fires.
 
 ⚠️ **Before adding any new source, confirm it is cleared for public distribution.** This
 repo is public. Notably, **do not** vendor Medicare Coverage Database **LCDs or

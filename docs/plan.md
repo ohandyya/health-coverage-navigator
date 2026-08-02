@@ -44,7 +44,11 @@ guidance under the No Surprises Act.
 
 ## Data sources (verified live; see licensing note)
 
-### Bulk-downloadable RAG corpus
+### Bulk-downloadable corpus (vendored into the repo)
+
+Two kinds live here, and the difference matters: the **text corpora** get chunked and embedded
+for RAG, while the **structured** sources land as a lossless columnar mirror that a later typed
+layer queries — never chunked, never embedded.
 
 **HealthCare.gov consumer-education content (the cleanest starting corpus).** HealthCare.gov
 publishes every article and glossary term as machine-readable JSON, explicitly for third-party
@@ -86,22 +90,38 @@ tool to open — good, because loading them into DuckDB/SQLite is exactly the ki
 structured-tool backend you want to practice against.
 [CMS](https://www.cms.gov/marketplace/resources/data/public-use-files)
 
-**Medicare Part D formulary files (bulk drug coverage).** If you go deeper on the drug-cost angle,
-CMS publishes quarterly formulary/pharmacy/pricing files. The Quarterly Prescription Drug Plan
-Formulary, Pharmacy Network, and Pricing files contain formulary details including NDCs,
-cost-share tier, and indicators for step therapy, quantity limits, and prior authorization.
+**Medicare Part D formulary files (the Part D structured corpus).** CMS publishes quarterly
+formulary/pharmacy/pricing files. The Quarterly Prescription Drug Plan Formulary, Pharmacy
+Network, and Pricing files contain formulary details including NDCs, cost-share tier, and
+indicators for step therapy, quantity limits, and prior authorization — the Medicare-side
+counterpart to the Exchange PUFs above, and the backing data for the drug-cost angle.
+
+Scope worth stating up front, because the published file's shape forces a choice: it ships as a
+2.49 GB container of ten nested per-file zips, of which the six-part pharmacy-network file is
+92%. Seven files — formulary, excluded drugs, indication-based coverage, beneficiary cost,
+insulin beneficiary cost, plan information, geographic locator — total 9.4 MB and cover every
+question above. Take those; leave pharmacy-network for the Phase 5 provider/network work that
+actually needs it, and pricing (191 MB) for when drug-cost estimates are on the table.
 [CMS Data](https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/quarterly-prescription-drug-plan-formulary-pharmacy-network-and-pricing-information)
 
-**NPPES provider registry (bulk).** For provider lookups you can download the whole thing: NPPES
-data is available as a downloadable file, updated weekly and monthly, with each file containing
-the most current information. Heads up on size — the data dissemination file exceeds 4 GB, so
-you'll want to reshape it (the NBER mirror offers a slimmer "core" version if you want a lighter
-dev fixture). [ResDAC](https://resdac.org/articles/overview-nppesnpi-downloadable-file)
-[CMS](https://www.cms.gov/medicare/regulations-guidance/administrative-simplification/data-dissemination)
+#### Deliberately *not* bulk-downloaded
 
-**openFDA bulk (optional).** Beyond the API, openFDA endpoint data can be downloaded as zipped
-JSON files in the same format as API responses — useful if you want drug labels in your index
-rather than hitting the API live. [Fda](https://open.fda.gov/apis/drug/label/download/)
+Two sources that have bulk downloads are **used live, through their APIs, and never vendored**.
+Recorded here so neither gets re-added on the reasoning that "the bulk file exists":
+
+- **NPPES provider registry.** The dissemination file exceeds 4 GB, and provider lookup is
+  inherently one-record-at-a-time — *"what is this NPI's specialty"*, not "scan every provider
+  in the country". A bulk mirror would be 4 GB of storage and a staleness problem in exchange
+  for nothing the [live registry API](#live-web--api-tools) doesn't already answer, faster and
+  fresher (it updates daily).
+- **openFDA drug labels.** Same reasoning: the questions this project asks openFDA — *has drug X
+  been recalled*, *what are its indications* — are per-drug lookups against a keyless API. Bulk
+  JSON would only pay off for offline whole-corpus indexing, which is not a capability any phase
+  plans.
+
+**This has a consequence worth stating:** no provider-level data is ever vendored into this
+repo, so the guardrail's PII surface stays limited to what the reference corpora happen to
+contain. Both sources reappear as typed tools in [Phase 3](#phase-3--add-structured-api-tools).
 
 ### Live Web / API tools
 
@@ -132,8 +152,8 @@ broken into sections like indications, adverse reactions, and drug interactions.
 [Fda](https://open.fda.gov/apis/drug/) [Fda](https://open.fda.gov/apis/drug/label/)
 
 **NPPES NPI Registry** — live provider lookup at `https://npiregistry.cms.hhs.gov/api/`
-(query-only, updated daily). Use this instead of the 4 GB bulk file when you just need one
-provider.
+(query-only, updated daily, no key). **This is the only route to provider data in this project**
+— the 4 GB bulk file is deliberately not downloaded, for the reasons above.
 
 **HealthCare.gov Content API** — doubles as a live tool: it's CORS-enabled and supports
 cross-domain requests, returning content objects, collections, and a site-wide index. Handy for
@@ -148,8 +168,10 @@ the part that makes it an *agent* rather than a RAG bot.
 > ### ⚠️ Licensing note (matters because this repo is public)
 > CMS **NCDs** and the **HealthCare.gov content** are freely reusable. But the Medicare Coverage
 > Database **LCDs and Billing/Coding Articles embed AMA CPT/HCPCS and ADA CDT codes, which are
-> copyrighted**. Keep those code tables **out** of the public repo — index NCDs only. openFDA,
-> the PUFs, and NPPES (FOIA-disclosable) are all safe to vendor.
+> copyrighted**. Keep those code tables **out** of the public repo — index NCDs only. The PUFs
+> (Exchange and Part D) are public-domain and safe to vendor. openFDA and NPPES data would also
+> be safe — NPPES is FOIA-disclosable even though it names real practitioners — but the question
+> is moot here, since both are used live rather than vendored.
 
 ## Cross-cutting principles (apply from day one)
 

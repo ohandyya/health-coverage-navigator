@@ -17,13 +17,13 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-01.*
+*Updated 2026-08-02.*
 
-- **Phase:** 0 — corpus + eval scaffold. Ingestion is done for all four bulk sources (three RAG
-  corpora + the structured `exchange_puf` mirror) and the public-repo guardrail is enforced by
-  `make scan`; chunking and the eval scaffold have not started.
+- **Phase:** 0 — corpus + eval scaffold. Ingestion is done for all five bulk sources (three RAG
+  corpora + two structured mirrors, `exchange_puf` and `part_d_spuf`) and the public-repo
+  guardrail is enforced by `make scan`; chunking and the eval scaffold have not started.
 - **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks) — the three
-  **text** corpora only; `exchange_puf` is structured data and is not chunked or embedded. It is
+  **text** corpora only; the two structured mirrors are not chunked or embedded. It is
   the last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
   looks like. The three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
   vocabulary specifically so one chunker can span them — but they do not chunk alike: a
@@ -37,6 +37,9 @@ mid-stream.
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
     ever touched for another reason.
+  - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
+    it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
+    re-plan the ingestion, only the modelling layer on top of the mirror.
 
 ### Phase 0 checklist
 
@@ -46,6 +49,7 @@ Backend (plan.md, Phase 0):
 - [x] Medicare publications ingestion — 83 pubs / 964 pages
 - [x] Medicare NCD ingestion — 345 determinations
 - [x] Exchange PUF ingestion — 3 tables, plan year 2026 (structured mirror, not a text corpus)
+- [x] Part D SPUF ingestion — 7 files, 2026Q2 (structured mirror; Phase 5 source, built early)
 - [x] Public-repo guardrail enforced in code — `make scan` (secrets / PII / licensing)
 - [ ] Chunking step → chunked corpus in `data/processed` (the three text corpora only)
 - [ ] Gold eval set, ~30 questions (question → expected source-type → expected answer)
@@ -64,6 +68,95 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-08-02 — NPPES and openFDA are API-only; no bulk downloads
+
+**Did:** recorded the decision not to bulk-download NPPES or openFDA, and swept the docs and the
+scanner for claims that assumed otherwise.
+
+**Decided:** both are used live through their APIs and **never vendored**. Provider lookup and
+drug-label lookup are inherently one record at a time, so a 4 GB NPPES mirror (or the openFDA
+label dump) would buy storage cost and a staleness problem in exchange for nothing the API
+doesn't answer fresher. This closes the bulk-source list at five.
+
+**Decided:** the consequential downstream effect is on the guardrail, not the ingestion. The
+`pii:npi` baseline in `sensitive_baseline.toml` was annotated "expected to rise when NPPES lands
+in Phase 3 — provider NPIs are FOIA-disclosable and cleared to vendor", and `scan_sensitive.py`
+justified its whole advisory PII tier partly on that. Neither is true now: **no provider-level
+data will ever reach a scanned file**, so `pii:npi` is expected to stay at zero permanently and
+a nonzero is a genuine "go and look" rather than a baseline to ratchet up. That is a
+strengthening of the guardrail and is now written down as such — it would have been easy to
+leave the old note in place and quietly accept a future ratchet.
+
+**Rejected:** keeping a trimmed NBER "core" NPPES mirror as a dev fixture. With no bulk
+ingestion at all there is nothing for it to be a fixture *of*; Phase 3's synthetic fixtures
+cover the testing need without vendoring real practitioner names. The **NBER** glossary entry
+was removed rather than corrected, since the term no longer appears anywhere in the repo.
+
+### 2026-08-02 — Part D SPUF, fetched by byte range
+
+**Did:** added the fifth bulk source, `part_d_spuf` — the quarterly Part D formulary files —
+with a guide in [part_d_spuf_data.md](part_d_spuf_data.md). Requested explicitly, ahead of the
+phase it belongs to.
+
+**Decided:** fetch **individual zip members over HTTP range requests** instead of downloading
+the published file. The container is 2.49 GB and holds ten nested per-file zips; the seven we
+want are 9.4 MB, and the pharmacy-network file we don't want is 92% of the weight. So the script
+reads the zip central directory over HTTP and pulls only the members it needs. This is a real
+departure from the other four downloaders and worth the ~90 lines because the alternative is a
+250x transfer cost on every refresh — the kind of thing that gets a pipeline run once and then
+quietly abandoned. What makes it trustworthy is the **CRC32 in the central directory**: every
+member is verified against it before being written, so a truncated or mis-offset range fails
+loudly rather than landing as plausible garbage. A range answered `200` instead of `206` is a
+hard error, never a fallback — silently streaming 2.49 GB is the exact failure this avoids.
+
+**Decided:** the committed sample is anchored on `CONTRACT_ID` by a **seed + top-up** rule, not
+by a single filter. `exchange_puf`'s "one state" approach cannot transfer: `STATE` is populated
+only for Medicare Advantage rows, every standalone PDP leaves it blank (they are region-coded),
+and Alaska — that source's default — has zero rows here. Seed takes the smallest PDP and
+smallest MA contract so both plan shapes appear; top-up then adds the smallest contributor for
+any file the seed would leave empty. The top-up is not tidiness: indication-based coverage names
+only **three contracts nationally**, so no seed hits it by chance, and a 0-row fixture cannot
+test a join. The rule is computed each run rather than hardcoded, since a contract can stop
+being offered between quarters.
+
+**Decided:** treat the source as **Latin-1**. CMS documents these files nowhere as anything but
+text, and six of the seven are pure ASCII — but plan-information carries three Spanish plan
+names (`Óptimo Plus`, `Freedom Máximo`, `Community y Más`) that make a strict UTF-8 read raise.
+ASCII being a subset of Latin-1 means decoding all seven that way is exact, not merely tolerant;
+no `errors="replace"`, which would have silently corrupted those three names. The mirror is
+therefore lossless in content while transcoding to UTF-8, and that distinction is written down
+rather than left implicit.
+
+**Decided:** the `licensing:hcpcs-shaped` scanner hit is an allowlist case, not a regex fix. A
+Medicare `CONTRACT_ID` is a letter plus four digits (`H1671`), which is *exactly* an HCPCS
+Level II code — and `H`/`R`/`S` are all real HCPCS letters, so the two are indistinguishable by
+shape. Loosening the detector would hide real `G0465`-style tokens in the other corpora; what
+disambiguates is context, so the entry is scoped by path and any other letter still fires.
+
+**Rejected:** downloading the whole container and extracting locally — simpler and matches
+`download_exchange_puf.py`, but pays 2.49 GB to read 9 MB. Also rejected wiring up the
+pharmacy-network file (2.29 GB across six parts needing reassembly, and nothing before Phase 5
+reads it) and fetching pricing by default (191 MB); pricing is defined and opt-in via `--file`.
+
+**Dead end:** the first `_meta.json` `license_note` spelled out which code sets the source does
+*not* carry, and tripped the scanner's blocking `CDT` marker — prose about the guardrail,
+written into a committed file under `data/`, where the markers apply to the text itself. Reworded
+to describe the position without naming the code sets; the named version lives in the script
+docstring and the data guide, both outside `data/`. Worth remembering before writing any other
+explanatory string into a committed data file.
+
+**Dead end:** the first cut of the 304 short-circuit checked whether the extract existed *on
+disk*. A member that failed after extraction but before it was measured left a file behind that
+no catalog entry vouched for, so the next run's 304 skipped it permanently — the file was
+stranded and `normalize()` silently ignored it. Fixed twice over: "held" now means on disk **and**
+in `catalog.json`, and extraction writes to `.part` and renames only after measuring, so a
+failure leaves nothing a later run can trust.
+
+**Stopped at:** clean. Verified end to end by wiping `data/{raw,processed}/part_d_spuf` and
+rebuilding from nothing — all seven members reproduced with identical sha256, CRC32, byte
+offsets, and row counts, and byte-identical sample files. Nothing consumes this source yet, by
+design.
 
 ### 2026-08-01 — Exchange PUFs + vector-backend choice
 

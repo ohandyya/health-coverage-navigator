@@ -53,6 +53,15 @@ data/raw/exchange_puf/*/*.zip
 data/raw/exchange_puf/*/*.csv
 data/processed/exchange_puf/*/*.parquet
 
+# Part D SPUF extracts (~86 MB of pipe-delimited text per quarter, 58 MB of it the basic-drugs
+# formulary file's 1.12M rows) and the derived Parquet mirror. data/raw/part_d_spuf/catalog.json
+# records each member's url, byte offset and length inside the 2.49 GB container, CRC32, sha256,
+# and row/column counts, so `uv run python scripts/download_part_d_spuf.py` reproduces both
+# directories exactly. The manifest and the small contract-anchored sample under
+# processed/part_d_spuf/sample/ ARE committed.
+data/raw/part_d_spuf/*/*.txt
+data/processed/part_d_spuf/*/*.parquet
+
 # Logs
 *.log
 
