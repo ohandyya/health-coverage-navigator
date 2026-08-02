@@ -43,8 +43,9 @@ the source of truth for *what the app reads* — except for a lossless-mirror so
 > `raw/medicare_pubs/catalog.json` records each file's URL, `sha256`, and `Last-Modified`,
 > making the directory exactly reproducible by re-running its fetcher. Every other file in
 > `raw/`, including that manifest, is committed. `exchange_puf` is the second instance of
-> this pattern and `part_d_spuf` the third (both below); the 4 GB NPPES file will likely be
-> a fourth. By `part_d_spuf` the bargain has teeth: its manifest records each member's byte
+> this pattern and `part_d_spuf` the third (both below), and they are likely the last — the
+> other 4 GB-scale candidate, NPPES, is queried live rather than downloaded at all. By
+> `part_d_spuf` the bargain has teeth: its manifest records each member's byte
 > offset and CRC32 inside the published container, so "reproducible" is checkable rather
 > than asserted.
 
@@ -66,8 +67,9 @@ themselves, with effective dates and statutory benefit categories. `exchange_puf
 different kind of source altogether: not prose to retrieve but per-plan facts to query — the
 backing data for Phase 3's plan/drug lookups and Phase 5's plan comparison.
 
-Planned future sources (see [`docs/plan.md`](../docs/plan.md)): Medicare Part D formulary
-files, NPPES provider registry, openFDA drug labels.
+All five bulk sources named in [`docs/plan.md`](../docs/plan.md) are now vendored. **NPPES and
+openFDA are deliberately not among them** — both are queried live through their APIs rather
+than downloaded, so no provider-level data ever lands in this directory.
 
 ---
 

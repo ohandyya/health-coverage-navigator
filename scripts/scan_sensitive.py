@@ -30,10 +30,14 @@ build on legitimate narrative mentions of CPT "would just get switched off". So:
                   than silent. Every allowlist entry carries a reason.
 
 The advisory tier is not a softer blocking tier. It exists because this corpus legitimately
-contains code mentions ("changed CPT code", "add HCPCS code G0465") and CMS institutional
-e-mail addresses, and because from Phase 3 the NPPES data will legitimately contain real
-provider names and NPIs that are FOIA-disclosable (see docs/glossary.md). Making any of
+contains code mentions ("changed CPT code", "add HCPCS code G0465"), CMS institutional e-mail
+addresses, and Medicare contract IDs that are shape-identical to HCPCS codes. Making any of
 those blocking would guarantee this script gets disabled the week that data lands.
+
+Note that NPPES is *not* a reason for this tier any more: provider data is used live through
+the registry API and never vendored (see docs/plan.md), so no provider names or NPIs will ever
+reach a scanned file. That makes pii:npi strictly stronger than it was designed to be — a
+nonzero count is now a real "go and look", not an anticipated ratchet.
 
 SELF-TEST, AND WHY THE CANARIES ARE CONCATENATED
 ------------------------------------------------
@@ -249,8 +253,10 @@ CREDENTIAL_MARKERS = [
 
 # --------------------------------------------------------------------------- #
 # Layer 2 - PII / PHI. Only an SSN is blocking. Everything else is advisory
-# because this repo legitimately carries CMS institutional contact addresses, and
-# Phase 3's NPPES data legitimately names real practitioners (FOIA-disclosable).
+# because this repo legitimately carries CMS institutional contact addresses and
+# published agency phone lines. It is NOT advisory on account of provider data:
+# NPPES is queried live and never vendored, so no practitioner name or NPI reaches
+# a scanned file (see docs/plan.md).
 #
 # Deliberately absent: a date-of-birth detector. In a corpus whose whole point is
 # effective dates, transmittal dates and revision histories, a date-shaped matcher

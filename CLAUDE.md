@@ -57,15 +57,13 @@ The agent is fronted by a local web UI. **[docs/frontend_plan.md](docs/frontend_
 *Structured (never chunked or embedded):*
 - Health Insurance Exchange Public Use Files (Benefits and Cost Sharing PUF, Plan Attributes PUF) — large CSV/ZIP dumps, need DuckDB/SQLite rather than Excel.
 - Medicare Part D formulary/pharmacy/pricing files (quarterly) — the SPUF; see the cleared-list entry below for what to vendor and what to skip.
-- NPPES provider registry bulk file (4GB+; use the NBER "core" mirror for a dev fixture).
 
-*Lane not yet settled:*
-- openFDA bulk drug-label JSON (optional, for offline indexing) — labels are prose, so this could go either way; decide when it's actually built rather than assuming.
+**That list is closed for NPPES and openFDA.** Both publish bulk downloads; both are **deliberately used live via their APIs and never vendored** — provider and drug-label questions are per-record lookups, so a 4 GB mirror would buy staleness and storage in exchange for nothing. Do not add a bulk downloader for either. Consequence: **no provider-level data is ever vendored into this repo.** See [docs/plan.md](docs/plan.md) → *Deliberately not bulk-downloaded*.
 
 **Live APIs (structured lookups):**
 - Marketplace API (`https://marketplace.api.healthcare.gov/api/v1/`) — plan search, drug coverage checks, cost estimates. Requires an API key from the CMS developer portal; rate-limited.
-- openFDA (`https://api.fda.gov/`) — drug labels, recalls, shortages. No key needed.
-- NPPES NPI Registry (`https://npiregistry.cms.hhs.gov/api/`) — live provider lookup, no bulk download needed for single queries.
+- openFDA (`https://api.fda.gov/`) — drug labels, recalls, shortages. No key needed. **The only route to FDA data here** — the bulk drug-label JSON is not used.
+- NPPES NPI Registry (`https://npiregistry.cms.hhs.gov/api/`) — live provider lookup, no key. **The only route to provider data here** — the bulk dissemination file is not used.
 - HealthCare.gov Content API — same content as the bulk JSON, usable live; CORS-enabled.
 
 **Licensing caveat:** CPT/procedure codes are AMA/ADA-copyrighted — keep the public corpus/repo limited to NCDs, not LCDs or coding Articles.
@@ -96,7 +94,7 @@ Terms that gate what may be committed — CPT, CDT, HCPCS, ICD, NCD, LCD, PII, P
 - **HealthCare.gov** consumer-education content (Content API JSON) — published explicitly for third-party reuse.
 - **Medicare Coverage Database NCDs** (no procedure codes).
 - **Medicare Part D quarterly formulary files** (the SPUF) — public domain per CMS's own DCAT catalog; drugs are identified by NDC/RxCUI only, so no proprietary code tables, and no file is beneficiary-level. Vendor the seven small files; the pharmacy-network file is the only one carrying a provider-shaped identifier and is not fetched.
-- U.S.-government public-domain works (e.g. Medicare & You handbook, Exchange PUFs, openFDA, NPPES bulk files) — verify per-source before adding.
+- U.S.-government public-domain works (e.g. Medicare & You handbook, Exchange PUFs) — verify per-source before adding. (openFDA and NPPES bulk files would also clear, but are not vendored at all — see the data-sources note above.)
 
 **Check before adding a new data source:** (1) Is it a U.S.-government/public-domain work or explicitly licensed for reuse? (2) Does it embed AMA/ADA/other proprietary code tables? (3) Any PII/PHI/secrets? If (1) is not a clear yes, or (2)/(3) is a yes, stop and ask the user rather than committing it. When a source is only *partly* clean (e.g. MCD, which has both NCDs and LCDs), vendor only the cleared subset.
 

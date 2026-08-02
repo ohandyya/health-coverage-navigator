@@ -69,6 +69,30 @@ Frontend (frontend_plan.md, Phase F0):
 
 ## Log
 
+### 2026-08-02 — NPPES and openFDA are API-only; no bulk downloads
+
+**Did:** recorded the decision not to bulk-download NPPES or openFDA, and swept the docs and the
+scanner for claims that assumed otherwise.
+
+**Decided:** both are used live through their APIs and **never vendored**. Provider lookup and
+drug-label lookup are inherently one record at a time, so a 4 GB NPPES mirror (or the openFDA
+label dump) would buy storage cost and a staleness problem in exchange for nothing the API
+doesn't answer fresher. This closes the bulk-source list at five.
+
+**Decided:** the consequential downstream effect is on the guardrail, not the ingestion. The
+`pii:npi` baseline in `sensitive_baseline.toml` was annotated "expected to rise when NPPES lands
+in Phase 3 — provider NPIs are FOIA-disclosable and cleared to vendor", and `scan_sensitive.py`
+justified its whole advisory PII tier partly on that. Neither is true now: **no provider-level
+data will ever reach a scanned file**, so `pii:npi` is expected to stay at zero permanently and
+a nonzero is a genuine "go and look" rather than a baseline to ratchet up. That is a
+strengthening of the guardrail and is now written down as such — it would have been easy to
+leave the old note in place and quietly accept a future ratchet.
+
+**Rejected:** keeping a trimmed NBER "core" NPPES mirror as a dev fixture. With no bulk
+ingestion at all there is nothing for it to be a fixture *of*; Phase 3's synthetic fixtures
+cover the testing need without vendoring real practitioner names. The **NBER** glossary entry
+was removed rather than corrected, since the term no longer appears anywhere in the repo.
+
 ### 2026-08-02 — Part D SPUF, fetched by byte range
 
 **Did:** added the fifth bulk source, `part_d_spuf` — the quarterly Part D formulary files —

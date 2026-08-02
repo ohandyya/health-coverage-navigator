@@ -170,8 +170,10 @@ added = "2026-08-02"
 # 2026-07-31: no personal numbers.
 "pii:phone" = 39
 
-# Zero today: the marker now requires the identifier to be *labelled* NPI, so the corpus's
-# coincidentally-Luhn-valid digit runs no longer count. Expected to rise when NPPES lands in
-# Phase 3 — provider NPIs are FOIA-disclosable and cleared to vendor (see docs/glossary.md),
-# so that rise is a baseline update, not a violation.
+# Zero, and expected to stay zero permanently. The marker requires the identifier to be
+# *labelled* NPI, so the corpus's coincidentally-Luhn-valid digit runs don't count — and NPPES
+# is now queried live rather than vendored (see docs/plan.md), so no provider data will ever
+# land in a scanned file. This was previously annotated as "expected to rise in Phase 3"; that
+# is no longer true, and the difference matters: a nonzero here is a genuine "go and look",
+# never a baseline that should be ratcheted up to accommodate new data.
 "pii:npi" = 0
