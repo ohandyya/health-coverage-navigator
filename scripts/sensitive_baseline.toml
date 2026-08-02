@@ -125,6 +125,22 @@ match_regex = '^(?:\+?1[ .-])?\(?(?:800|833|844|855|866|877|888)\)?[ .-]'
 reason = "Toll-free area code — a published business or agency line by definition, never a personal number. Overwhelmingly the HealthCare.gov Marketplace helpline (1-800-318-2596)."
 added = "2026-07-31"
 
+# A Medicare CONTRACT_ID is a letter followed by four digits (H = local Medicare Advantage,
+# R = regional MA, S = standalone PDP), which is exactly the shape of an HCPCS Level II code —
+# and H, R and S are all real HCPCS Level II letters, so the two are genuinely
+# indistinguishable by shape. This is NOT a regex bug, so per this file's rule the pattern
+# stays as-is: it is doing its job, and tightening it globally would hide real G0465-style
+# tokens in the other corpora. What disambiguates here is context, not shape — the part_d_spuf
+# files carry no procedure codes at all (drugs are identified by NDC and RxCUI), so every
+# token of this shape in them is a contract ID. Hence a narrow, path-scoped entry: any OTHER
+# letter appearing in these files still fires, which is the drift signal worth keeping.
+[[allow]]
+marker = "licensing:hcpcs-shaped"
+match_regex = '^[HRS]\d{4}$'
+path = "data/*/part_d_spuf/*"
+reason = "Medicare contract ID (H/R/S + four digits) in the Part D SPUF sample and manifest — the plan identifier these files are keyed by, not an HCPCS Level II procedure code."
+added = "2026-08-02"
+
 # --------------------------------------------------------------------------- #
 # Advisory baselines. Counts are *occurrences across all scanned files*, so a record
 # appearing in both data/raw and data/processed is counted twice — the raw and processed

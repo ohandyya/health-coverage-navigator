@@ -86,10 +86,18 @@ tool to open — good, because loading them into DuckDB/SQLite is exactly the ki
 structured-tool backend you want to practice against.
 [CMS](https://www.cms.gov/marketplace/resources/data/public-use-files)
 
-**Medicare Part D formulary files (bulk drug coverage).** If you go deeper on the drug-cost angle,
-CMS publishes quarterly formulary/pharmacy/pricing files. The Quarterly Prescription Drug Plan
-Formulary, Pharmacy Network, and Pricing files contain formulary details including NDCs,
-cost-share tier, and indicators for step therapy, quantity limits, and prior authorization.
+**Medicare Part D formulary files (the Part D structured corpus).** CMS publishes quarterly
+formulary/pharmacy/pricing files. The Quarterly Prescription Drug Plan Formulary, Pharmacy
+Network, and Pricing files contain formulary details including NDCs, cost-share tier, and
+indicators for step therapy, quantity limits, and prior authorization — the Medicare-side
+counterpart to the Exchange PUFs above, and the backing data for the drug-cost angle.
+
+Scope worth stating up front, because the published file's shape forces a choice: it ships as a
+2.49 GB container of ten nested per-file zips, of which the six-part pharmacy-network file is
+92%. Seven files — formulary, excluded drugs, indication-based coverage, beneficiary cost,
+insulin beneficiary cost, plan information, geographic locator — total 9.4 MB and cover every
+question above. Take those; leave pharmacy-network for the Phase 5 provider/network work that
+actually needs it, and pricing (191 MB) for when drug-cost estimates are on the table.
 [CMS Data](https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/quarterly-prescription-drug-plan-formulary-pharmacy-network-and-pricing-information)
 
 **NPPES provider registry (bulk).** For provider lookups you can download the whole thing: NPPES

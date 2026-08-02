@@ -1,0 +1,32 @@
+{
+  "fetched_at": "2026-08-02T12:31:48.257690+00:00",
+  "source_url": "https://data.cms.gov/data.json",
+  "dataset": "Quarterly Prescription Drug Plan Formulary, Pharmacy Network, and Pricing Information",
+  "quarters": [
+    "2026Q2"
+  ],
+  "files": [
+    "basic-drugs-formulary",
+    "beneficiary-cost",
+    "excluded-drugs-formulary",
+    "geographic-locator",
+    "indication-based-coverage",
+    "insulin-beneficiary-cost",
+    "plan-information"
+  ],
+  "fetched": 7,
+  "skipped_existing": 0,
+  "failed": 0,
+  "bytes_over_the_wire": 9377646,
+  "tool": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 health-coverage-navigator/0.1 (+open-source RAG corpus builder)",
+  "license_note": "Public domain (https://www.usa.gov/government-works per CMS's DCAT catalog; accessLevel public, no rights statement). Drugs are identified only by NDC and RxCUI, so no proprietary procedure or dental code tables are carried, and no file fetched here holds beneficiary-level data. The pharmacy-network file, the only one with a provider-shaped identifier, is not fetched.",
+  "sample_anchor_rule": "smallest standalone-PDP (S) and local-MA (H) contract by plan-information row count, ties broken by CONTRACT_ID; override with --sample-contract",
+  "sample_contracts": {
+    "2026Q2": [
+      "H1671",
+      "H4057",
+      "H5050",
+      "S5743"
+    ]
+  }
+}
