@@ -73,6 +73,31 @@ Frontend (frontend_plan.md, Phase F0):
 
 ## Log
 
+### 2026-08-03 — pyright never actually checked `tests/`
+
+**Did:** added `"tests"` to `[tool.pyright]`'s `include` in `pyproject.toml`, fixed the two real
+type errors that surfaced once it did (both in `tests/test_gold_set.py`, both `CorpusName | None`
+/ `str | None` fields being indexed/passed as if narrowed to non-`None`), and made `make test` run
+`pytest -v` so per-test names show by default instead of dots.
+
+**Decided:** the fix for the type errors is `assert q.corpus is not None` / `assert
+q.expected_snippet is not None` right after entering each `gold.in_corpus()` loop, rather than
+loosening the `GoldQuestion` model. The fields are genuinely `Optional` — `None` for abstentions,
+required otherwise — and that's enforced at runtime by the model's validator, not by the static
+type, so pyright has no way to know a loop born from `in_corpus()` excludes the `None` case. The
+asserts double as a real guard (if the validator were ever bypassed via `model_construct`, this
+fails loudly instead of a confusing `KeyError`), not just a type-checker appeasement.
+
+**Dead end (a real gap, not just noise):** `make check-all`'s bare `uv run pyright` reported 0
+errors the whole time these bugs existed, because `pyright`'s project config only scanned
+`include = ["src"]` — 5 files, none in `tests/`. The bug was visible only because the file
+happened to be open in the IDE, which type-checks whatever's open regardless of project config.
+`check-all` is the command this repo trusts as its correctness gate; a silent blind spot in it
+is worse than a caught bug. Confirmed via `uv run pyright --stats` before (5 files checked) and
+after (6 files checked) the `include` change.
+
+**Stopped at:** clean. `make check-all` now checks 6 files, 0 errors; all 15 tests still pass.
+
 ### 2026-08-03 — Phase 0 gold eval set (35 questions) + eval package + pytest
 
 **Did:** authored `evals/gold/questions.yaml` — 10 questions per text corpus

@@ -16,13 +16,13 @@ A `uv`-managed Python project: src layout, package `health_coverage_navigator`, 
 - `uv run health-coverage-navigator` — run the CLI entry point (`src/health_coverage_navigator/__init__.py:main`).
 - `uv add <package>` — add a runtime dependency (updates `pyproject.toml` + `uv.lock`).
 - `uv add --dev <package>` — add a dev-only dependency (e.g. pytest, ruff).
-- `uv run pytest` — run the test suite (once a `tests/` dir and pytest are added).
+- `uv run pytest` — run the test suite (`tests/`, configured via `[tool.pytest.ini_options]` in `pyproject.toml`).
 - `uv run pytest path/to/test_file.py::test_name` — run a single test.
 - `uv run ruff check .` / `uv run ruff format .` — lint/format (ruff is configured in `pyproject.toml`).
 
-Ruff is configured as a dev dependency (see `[tool.ruff]` in `pyproject.toml`); no test tooling is configured yet — add it as a `--dev` dependency when Phase 0 work begins, and update this section accordingly.
+Ruff and pytest are both configured as dev dependencies (see `[tool.ruff]` and `[tool.pytest.ini_options]` in `pyproject.toml`). Pyright's `include` covers both `src` and `tests` — a bug in a test file is a real typecheck failure, not something that only shows up if the file happens to be open in an editor.
 
-A `Makefile` wraps the lint/format/typecheck commands (`make help` lists them). Server and frontend targets (`make dev`, `make types`, `make ui-build`, …) do not exist yet — the intended set is specified in [docs/frontend_plan.md](docs/frontend_plan.md) §7.
+A `Makefile` wraps the lint/format/typecheck/test commands (`make help` lists them; `make check-all` runs all four). Server and frontend targets (`make dev`, `make types`, `make ui-build`, …) do not exist yet — the intended set is specified in [docs/frontend_plan.md](docs/frontend_plan.md) §7.
 
 ## What this project is
 
