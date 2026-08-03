@@ -17,19 +17,22 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-02.*
+*Updated 2026-08-03.*
 
 - **Phase:** 0 — corpus + eval scaffold. Ingestion is done for all five bulk sources (three RAG
-  corpora + two structured mirrors, `exchange_puf` and `part_d_spuf`) and the public-repo
-  guardrail is enforced by `make scan`; chunking and the eval scaffold have not started.
+  corpora + two structured mirrors, `exchange_puf` and `part_d_spuf`), the public-repo
+  guardrail is enforced by `make scan`, and the gold eval set (35 questions) plus a pytest suite
+  and loader now exist. Chunking has not started; test tooling (pytest) is now configured.
 - **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks) — the three
-  **text** corpora only; the two structured mirrors are not chunked or embedded. It is
-  the last piece of the ingestion pipeline and the gold eval set depends on knowing what a chunk
-  looks like. The three corpora share the `id`/`source`/`url`/`title`/`bite`/`text` field
-  vocabulary specifically so one chunker can span them — but they do not chunk alike: a
-  HealthCare.gov article is short prose, a `medicare_pubs` record is one PDF page, and an NCD
-  is a whole document with `## ` section headings written into `text` so they can be split on
-  and kept as citation labels ("NCD 30.3, *Indications and Limitations of Coverage*").
+  **text** corpora only; the two structured mirrors are not chunked or embedded. It is the last
+  unbuilt piece of Phase 0. **The gold eval set did not need to wait on it** — see the log entry
+  below for why doc-id anchoring removes that dependency; this corrects the previous entry, which
+  asserted the eval set was blocked on chunking. The three corpora share the
+  `id`/`source`/`url`/`title`/`bite`/`text` field vocabulary specifically so one chunker can span
+  them — but they do not chunk alike: a HealthCare.gov article is short prose, a `medicare_pubs`
+  record is one PDF page, and an NCD is a whole document with `## ` section headings written into
+  `text` so they can be split on and kept as citation labels ("NCD 30.3, *Indications and
+  Limitations of Coverage*").
 - **Open questions:**
   - [frontend_plan.md](frontend_plan.md) §10 — eval runs from the browser (read-only dashboard
     vs. HTTP-triggered runs) is marked "decide at F0" and is still undecided.
@@ -52,9 +55,10 @@ Backend (plan.md, Phase 0):
 - [x] Part D SPUF ingestion — 7 files, 2026Q2 (structured mirror; Phase 5 source, built early)
 - [x] Public-repo guardrail enforced in code — `make scan` (secrets / PII / licensing)
 - [ ] Chunking step → chunked corpus in `data/processed` (the three text corpora only)
-- [ ] Gold eval set, ~30 questions (question → expected source-type → expected answer)
-- [ ] Eval dataset loader / schema
-- [ ] Test tooling (no pytest configured yet)
+- [x] Gold eval set, 35 questions (30 in-corpus + 5 abstention; question → expected source-type
+  → expected answer)
+- [x] Eval dataset loader / schema
+- [x] Test tooling (pytest, configured in `pyproject.toml`, wired into `make check-all`)
 
 Frontend (frontend_plan.md, Phase F0):
 
@@ -68,6 +72,81 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-08-03 — Phase 0 gold eval set (35 questions) + eval package + pytest
+
+**Did:** authored `evals/gold/questions.yaml` — 10 questions per text corpus
+(`healthcare_gov`/`medicare_ncd`/`medicare_pubs`) plus 5 out-of-corpus abstention cases, backed
+by `health_coverage_navigator.evals.{models,loader}` (Pydantic schema + YAML loader) and
+`tests/test_gold_set.py`. Also added `paths.py` (the package's first shared module besides
+`__init__.py`), pytest as the project's first configured test tool, and a `make test` target
+folded into `check-all`.
+
+**Decided:** gold labels anchor on `corpus.jsonl` **doc ids**, not chunk ids — `expected_doc_ids`
+plus a verbatim `expected_snippet` from the primary doc's `text`. This is what unblocks the eval
+set ahead of chunking (see the corrected *Next up* note above): doc ids are stable regardless of
+how chunking eventually splits a document, and the eval runner can map a retrieved chunk to its
+parent doc for `recall@k` today. When chunk-level scoring is wanted later, the snippet already
+pins the exact passage, so no relabeling pass is needed. The corpus-dependent invariants that
+matter — do these doc ids exist, is the snippet actually verbatim, is the target not a `RETIRED`
+NCD, do the distribution counts hold — are enforced by `tests/test_gold_set.py` against the live
+corpus rather than trusted by inspection; the structural invariants (abstention shape, required
+fields) are enforced by a pydantic `model_validator` in `evals/models.py` instead, since those
+hold independent of the corpus.
+
+**Decided:** `expected_doc_ids` is **any-of**, not all-of. The three corpora are genuinely
+redundant — the SNF days-21-100 coinsurance figure and the "homebound" definition each appear
+verbatim in multiple publications — and penalizing a retriever for finding the equally-correct
+one would measure nothing real. `recall@k` counts a hit if any listed doc lands in the top *k*;
+`MRR` uses the rank of the first hit. Questions that require **combining** two documents are
+Phase 4 multi-hop territory, out of scope here.
+
+**Decided:** add 5 abstention questions beyond the ~30 asked for. Phase 1a's acceptance test
+explicitly requires abstaining on out-of-corpus questions, and `abstained` is a first-class
+boolean in the frozen API contract specifically so this is gradeable without parsing answer text
+— an all-in-corpus gold set would leave that guardrail untested. Each abstention carries
+`becomes_answerable_at_phase` (provider lookups and formulary checks turn `3`; time-sensitive
+web-lane questions turn `2`; a future plan-year figure and an out-of-domain question stay `null`
+permanently) so a later phase's eval run doesn't score a now-correct answer as a false abstention.
+
+**Decided:** difficulty is graded and labeled (8 easy / 14 medium / 8 hard across the 30
+in-corpus questions) and is about the **phrasing gap** to the source wording, not about how
+counter-intuitive the correct answer is — two of the "easy" NCD questions (`ncd-09`, the insulin
+syringe rule; `ncd-10`, screening vs. diagnostic mammography) have surprising or easy-to-overclaim
+answers precisely so the set can catch an agent that pattern-matches to a plausible "yes" instead
+of grounding in what the source actually says.
+
+**Decided:** at most 6 of the 30 in-corpus questions may be `volatile: true` (year-specific dollar
+figures); only 2 are (`pub-02`'s SNF coinsurance, `pub-03`'s Part D late-enrollment penalty
+math), both pinned to `plan_year: 2026`. Preferring rule-shaped facts (a 6-month enrollment
+window, a homebound definition) over dollar amounts keeps the set from rotting when 2027 figures
+land.
+
+**Decided:** the file lives at `evals/gold/questions.yaml`, not under `data/`. `data/` is the
+vendored-corpus tree the licensing scanner's path-scoped markers apply to; this is hand-written
+prose *about* the corpus, and the `part_d_spuf` dead end (explanatory text written into a file
+under `data/` tripping a blocking marker) was reason enough not to repeat the pattern here. YAML
+over JSONL specifically for this file: it's hand-authored and human-reviewed, unlike the
+generated `corpus.jsonl` files, and comments plus readable multi-line blocks make a label change
+a reviewable diff instead of an escaped-`\n` blob.
+
+**Dead end (caught by the test suite, not by inspection):** the first draft of `hcg-05` cited
+`appeal-insurance-company-decision_external-review` for a sentence that actually lives in the
+sibling `appeal-insurance-company-decision_appeals` doc — an easy mistake with two docs this
+similarly named and titled. `test_expected_snippet_is_verbatim` caught it immediately. A second,
+subtler miss on `pub-03`: the snippet's leading "The" was typed lowercase against a doc that
+capitalizes it — same test, same immediate catch. Both are the reason the plan required this
+test rather than trusting hand-verification: a hallucinated citation is exactly what a language
+model (or a human skimming quickly) produces most confidently.
+
+**Glossary:** added `Medigap Open Enrollment Period`, `benefit period`, `grace period`,
+`homebound` (upgraded from a passing mention to a real entry), `national base beneficiary
+premium`, `creditable (prescription drug) coverage`, `LDCT`, `cLBP`, and `AHI / RDI` — every term
+the new questions introduce that the glossary didn't already carry.
+
+**Stopped at:** clean. `make check-all` (ruff, format-check, pyright, pytest — 15 tests) and
+`make scan` both pass with no new advisory hits; the loader's distribution summary matches the
+counts above.
 
 ### 2026-08-02 — NPPES and openFDA are API-only; no bulk downloads
 

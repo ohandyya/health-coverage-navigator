@@ -1,0 +1,658 @@
+# Phase 0 gold evaluation set.
+#
+# 35 hand-authored questions: 10 healthcare_gov / 10 medicare_ncd / 10 medicare_pubs (in-corpus),
+# plus 5 out-of-corpus questions the agent must abstain on. Loaded by
+# health_coverage_navigator.evals.loader.load_gold_set() into the GoldSet/GoldQuestion models in
+# health_coverage_navigator.evals.models — see that module's docstring for the schema.
+#
+# Anchoring: expected_doc_ids names corpus.jsonl `id`s, not chunk ids, so this file survives
+# re-chunking (docs/progress.md's chunking step postdates this file). It is an any-of list —
+# recall@k counts as a hit if ANY listed doc appears in the top k, and MRR uses the rank of the
+# first hit. expected_snippet is verbatim (whitespace-insensitive) text from expected_doc_ids[0]
+# and is checked against the live corpus by tests/test_gold_set.py, which is also where every
+# other corpus-dependent invariant (docs exist, no RETIRED targets, distribution counts) lives.
+# This file records only the question, its expected shape, and the human rationale (`notes`).
+#
+# difficulty is about the phrasing GAP between the question and the source wording, not about
+# how surprising or hard-won the correct answer is:
+#   easy   = question wording overlaps the doc's own wording
+#   medium = natural consumer paraphrase
+#   hard   = real vocabulary mismatch (a lay term for a clinical/regulatory one)
+
+questions:
+  # ============================================================ healthcare_gov (10) ==========
+  - id: hcg-01
+    question: "What exactly is a deductible?"
+    difficulty: easy
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [glossary_deductible]
+    expected_snippet: |
+      The amount you pay for covered health care services before your insurance plan starts to pay
+    expected_answer: >
+      The amount you pay for covered health care services before your insurance plan starts to
+      pay. After you meet it, you usually pay only a copayment or coinsurance, and the insurer
+      pays the rest — though some services (like preventive care) are covered before you meet it.
+    answer_key_facts:
+      - "the amount paid before the plan starts paying"
+      - "after the deductible, you typically pay copayment or coinsurance instead"
+      - "some preventive benefits are covered before the deductible is met"
+    volatile: false
+    notes: "Glossary entry, near-verbatim wording. One of at most 3 glossary targets in this slice."
+
+  - id: hcg-02
+    question: "Once I hit my out-of-pocket maximum, do I still have to pay my monthly premium?"
+    difficulty: medium
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [glossary_out-of-pocket-maximum-limit]
+    expected_snippet: |
+      The out-of-pocket limit doesn't include:
+      Your monthly
+      premiums
+    expected_answer: >
+      Yes. The out-of-pocket maximum caps what you pay for deductibles, copayments, and
+      coinsurance for in-network covered care — it does not include your monthly premium, which
+      keeps being owed regardless.
+    answer_key_facts:
+      - "premiums are not counted toward, or capped by, the out-of-pocket limit"
+      - "the limit covers deductibles, copayments, and coinsurance for in-network care"
+    volatile: false
+    notes: "A common misconception this glossary entry directly rules out."
+
+  - id: hcg-03
+    question: "I'm 26 and healthy — can I just buy one of those cheap catastrophic plans?"
+    difficulty: easy
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [glossary_catastrophic-health-plan]
+    expected_snippet: |
+      To qualify for a Catastrophic plan, you must be under 30 years old OR qualify for a
+      "hardship" or "affordability" exemption if you're over 30.
+    expected_answer: >
+      Yes — being under 30 is one of the two ways to qualify for a Catastrophic plan (the other
+      is a hardship or affordability exemption for people 30 or older).
+    answer_key_facts:
+      - "under-30 is sufficient on its own to qualify"
+      - "30-or-older requires a hardship or affordability exemption instead"
+    volatile: false
+    notes: "Age threshold is a stable eligibility rule, not a dollar figure."
+
+  - id: hcg-04
+    question: "I'm about to lose my job's health coverage — how long do I have to pick a Marketplace plan?"
+    difficulty: medium
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [coverage-outside-open-enrollment_special-enrollment-period]
+    expected_snippet: |
+      You may qualify for a Special Enrollment Period if you lose health coverage through your employer
+    expected_answer: >
+      Losing job-based coverage qualifies you for a Special Enrollment Period, which generally
+      gives you a 60-day window (before or after the loss) to pick a Marketplace plan outside the
+      normal Open Enrollment window.
+    answer_key_facts:
+      - "loss of job-based coverage triggers a Special Enrollment Period"
+      - "the window is 60 days"
+    volatile: false
+    notes: "Rule-shaped (60-day window), not a dollar amount — won't rot with the plan year."
+
+  - id: hcg-05
+    question: "If my insurance company won't budge on a denied claim, is there someone outside the company who can overrule them?"
+    difficulty: hard
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [appeal-insurance-company-decision_appeals]
+    expected_snippet: |
+      External review means that the insurance company no longer gets the final say over whether to pay a claim.
+    expected_answer: >
+      Yes — you can request an external review, in which an independent third party (not your
+      insurer) reviews the denial and the insurer no longer has the final say.
+    answer_key_facts:
+      - "external review is conducted by an independent third party"
+      - "the insurance company no longer has the final say once external review applies"
+    volatile: false
+    notes: >
+      Deliberately avoids the phrase "external review" so retrieval has to bridge to the
+      document's own term.
+
+  - id: hcg-06
+    question: "Do I really pay nothing for a screening test, or is that only in some plans?"
+    difficulty: easy
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [coverage_preventive-care-benefits]
+    expected_snippet: |
+      In most cases, you won't pay a copayment or coinsurance for certain preventive services like immunizations and screening tests, even if you haven't met your deductible.
+    expected_answer: >
+      Most health plans, including Marketplace plans, must cover a defined set of preventive
+      services — like screening tests and immunizations — at no cost when delivered in-network,
+      even before you've met your deductible. (Coverage can vary; $0 isn't guaranteed in every case.)
+    answer_key_facts:
+      - "preventive services are generally covered at no copay/coinsurance in-network"
+      - "this applies even if the deductible hasn't been met"
+      - "the page notes coverage may vary and $0 isn't guaranteed in all cases"
+    volatile: false
+    notes: "Tests whether the agent keeps the source's own hedge rather than overclaiming."
+
+  - id: hcg-07
+    question: "I have a health condition I was already being treated for before I signed up — can a Marketplace plan refuse to cover it?"
+    difficulty: medium
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [coverage_pre-existing-conditions]
+    expected_snippet: |
+      No insurance plan can reject you, charge you more, or refuse to pay for essential health benefits for any condition you had before your coverage started.
+    expected_answer: >
+      No. All Marketplace plans must cover treatment for pre-existing conditions — a plan can't
+      reject you, charge you more, or refuse to pay essential health benefits because of a
+      condition you had before coverage started.
+    answer_key_facts:
+      - "pre-existing conditions must be covered by all Marketplace plans"
+      - "a plan cannot reject, upcharge, or refuse essential-benefit payment for a prior condition"
+    volatile: false
+    notes: "A settled ACA rule, not a number — low volatility risk."
+
+  - id: hcg-08
+    question: "Do I have to buy a separate dental plan, or can my regular health plan include dental?"
+    difficulty: medium
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [coverage_dental-coverage]
+    expected_snippet: |
+      In the Marketplace, you can pick a health plan with or without dental benefits. If you pick a health plan without dental benefits, you can still get a separate dental plan.
+    expected_answer: >
+      Either way — some Marketplace health plans bundle dental coverage into one premium, or you
+      can buy a separate standalone dental plan alongside your health plan (with its own premium).
+      You can't buy a Marketplace dental plan without also buying a health plan.
+    answer_key_facts:
+      - "dental can be bundled into a health plan, or bought as a separate plan"
+      - "a standalone dental plan cannot be purchased without also buying a health plan"
+    volatile: false
+    notes: "Structural rule about how dental is sold, not a benefit amount."
+
+  - id: hcg-09
+    question: "What's actually different between a Bronze plan and a Gold plan — is Gold just better doctors?"
+    difficulty: medium
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [choose-a-plan_plans-categories]
+    expected_snippet: |
+      The categories have nothing to do with the quality of care you get in a plan.
+    expected_answer: >
+      No — the metal categories (Bronze, Silver, Gold, Platinum) have nothing to do with care
+      quality. They differ in how costs are split between the plan and you: generally, higher
+      metal tiers mean higher premiums but the plan covers a larger share of your costs.
+    answer_key_facts:
+      - "metal categories do not reflect quality of care"
+      - "the difference is the cost split between plan and enrollee"
+    volatile: false
+    notes: "Corrects a natural but wrong assumption ('Gold = better doctors')."
+
+  - id: hcg-10
+    question: "I fell behind on my premium payments — how long before my insurance actually gets cut off?"
+    difficulty: hard
+    corpus: healthcare_gov
+    expected_source_type: reference
+    expected_doc_ids: [apply-and-enroll_health-insurance-grace-period]
+    expected_snippet: |
+      The premium payment grace period is usually
+      3 months
+    expected_answer: >
+      You get a grace period before coverage ends — usually 3 months if you have a Marketplace
+      plan and use the premium tax credit and have already paid at least one full month's premium
+      that year. Without the premium tax credit, the grace period may be shorter, and varies by state.
+    answer_key_facts:
+      - "the grace period is usually 3 months with a premium tax credit"
+      - "at least one full month's premium must already have been paid that year"
+      - "without the premium tax credit the grace period can be different / shorter"
+    volatile: false
+    notes: "Never says 'grace period' in the question — tests the retriever's vocabulary bridge."
+
+  # ================================================================ medicare_ncd (10) ========
+  - id: ncd-01
+    question: "Medicare's paying for my acupuncture for back pain — is there a cap on how many visits I can get?"
+    difficulty: hard
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_30.3.3_v1]
+    expected_snippet: |
+      Up to 12 visits in 90 days are covered for Medicare beneficiaries under the following circumstance
+    expected_answer: >
+      Yes. For chronic low back pain (lasting 12+ weeks, with no identifiable systemic cause),
+      Medicare covers up to 12 acupuncture visits in 90 days, with 8 additional sessions if the
+      patient is improving — but no more than 20 treatments total in a year, and treatment must
+      stop if the patient isn't improving or is regressing.
+    answer_key_facts:
+      - "up to 12 visits in 90 days"
+      - "an additional 8 sessions are covered if the patient is improving"
+      - "no more than 20 acupuncture treatments may be given in a year"
+    volatile: false
+    notes: "Chapter 30. Numeric limits make this a precise groundedness target; question avoids 'chronic low back pain' phrasing."
+
+  - id: ncd-02
+    question: "I've smoked for decades — does Medicare pay for a CT scan to check my lungs for cancer before I have any symptoms?"
+    difficulty: medium
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_210.14_v2]
+    expected_snippet: |
+      Lung cancer is the third most common cancer and the leading cause of cancer deaths in the United States.
+    expected_answer: >
+      Yes — Medicare covers annual lung cancer screening with low-dose CT (LDCT) for eligible
+      beneficiaries, under the additional-preventive-services authority CMS used to add this NCD
+      (a USPSTF grade A/B recommendation).
+    answer_key_facts:
+      - "Medicare covers lung cancer screening with low dose CT (LDCT)"
+      - "added under CMS's §1861(ddd) additional preventive services authority"
+    volatile: false
+    notes: "Chapter 210. Full eligibility criteria (pack-year/age) live further in the doc; key-facts kept to what's asserted early."
+
+  - id: ncd-03
+    question: "My power wheelchair can't lift me up to counter height — is there a wheelchair feature that raises the seat that Medicare covers?"
+    difficulty: hard
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_280.16_v1]
+    expected_snippet: |
+      power seat elevation equipment is reasonable and necessary for individuals using complex rehabilitative power-driven wheelchairs
+    expected_answer: >
+      Yes, under specific conditions — power seat elevation equipment is covered for complex
+      rehabilitative power-driven wheelchair users who've had a specialty evaluation confirming
+      they can safely operate it, and who meet additional functional criteria (like performing
+      weight-bearing transfers in the home).
+    answer_key_facts:
+      - "power seat elevation equipment is covered for complex rehabilitative power wheelchairs"
+      - "a specialty evaluation confirming safe operation is required"
+    volatile: false
+    notes: "Chapter 280. Question never says 'seat elevation' — tests vocabulary bridging to the equipment's technical name."
+
+  - id: ncd-04
+    question: "My sleep study showed I stop breathing a lot at night — will Medicare help pay for a CPAP machine?"
+    difficulty: medium
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_240.4_v3]
+    expected_snippet: |
+      Continuous Positive Airway Pressure (CPAP) is a non-invasive technique for providing single levels of air pressure
+    expected_answer: >
+      Yes — CPAP therapy is covered for obstructive sleep apnea, based on an apnea-hypopnea index
+      (AHI) or respiratory disturbance index (RDI) measured by a facility-based sleep study or an
+      approved home sleep test.
+    answer_key_facts:
+      - "CPAP therapy is covered for obstructive sleep apnea (OSA)"
+      - "coverage depends on the AHI/RDI measured by polysomnography or a qualifying home sleep test"
+    volatile: false
+    notes: "Chapter 240."
+
+  - id: ncd-05
+    question: "I have diabetes and severe hypertension along with my obesity — could Medicare cover weight-loss surgery for me?"
+    difficulty: medium
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_100.1_v5]
+    expected_snippet: |
+      Bariatric surgery procedures are performed to treat comorbid conditions associ
+    expected_answer: >
+      Potentially yes — bariatric surgery is covered as a treatment for co-morbid conditions
+      related to morbid obesity (this NCD folded in the earlier, narrower obesity-treatment
+      sections 40.5, 100.8, and 100.11).
+    answer_key_facts:
+      - "bariatric surgery is covered for co-morbid conditions related to morbid obesity"
+      - "this determination absorbed the earlier sections 40.5, 100.8, and 100.11"
+    volatile: false
+    notes: "Chapter 100. Deliberately pairs with ncd-09 (ch. 40) since 40.5 now redirects here — a good pair to watch for citation drift."
+
+  - id: ncd-06
+    question: "Regular hearing aids don't help my hearing loss at all anymore — is a surgically implanted hearing device something Medicare covers?"
+    difficulty: medium
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_50.3_v3]
+    expected_snippet: |
+      cochlear implantation may be covered for treatment of bilateral pre- or post-linguistic, sensorineural, moderate-to-profound hearing loss in individuals who demonstrate limited benefit from amplification
+    expected_answer: >
+      Yes — cochlear implantation is covered for bilateral moderate-to-profound sensorineural
+      hearing loss when the patient demonstrates limited benefit from hearing aids, defined as
+      scoring 60% or less correct on open-set sentence recognition tests in the best-aided condition.
+    answer_key_facts:
+      - "cochlear implantation is covered for bilateral moderate-to-profound sensorineural hearing loss"
+      - "limited hearing-aid benefit is defined as ≤60% correct on open-set sentence recognition testing"
+    volatile: false
+    notes: "Chapter 50. Question avoids the clinical term 'sensorineural' and 'amplification'."
+
+  - id: ncd-07
+    question: "I have a wound from surgery that just won't heal — is that oxygen-chamber treatment something Medicare pays for?"
+    difficulty: hard
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_20.29_v4]
+    expected_snippet: |
+      Chronic refractory osteomyelitis, unresponsive
+    expected_answer: >
+      Sometimes — hyperbaric oxygen therapy is covered only for a specific, limited list of
+      conditions (like chronic refractory osteomyelitis, gas gangrene, and certain compromised
+      skin grafts), not for wound healing in general.
+    answer_key_facts:
+      - "HBO therapy coverage is limited to a specific list of conditions"
+      - "chronic refractory osteomyelitis and compromised skin grafts are on that covered list"
+      - "not a blanket coverage for slow-healing wounds generally"
+    volatile: false
+    notes: >
+      Chapter 20. Deliberately phrased as a broad lay question ("oxygen-chamber treatment", "won't
+      heal") against a document whose coverage is narrowly conditioned — tests whether the agent
+      overclaims a blanket yes.
+
+  - id: ncd-08
+    question: "If I need a heart transplant, does it matter which hospital does it, or is any hospital that takes Medicare fine?"
+    difficulty: medium
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_260.9_v3]
+    expected_snippet: |
+      Cardiac transplantation is covered under Medicare when performed in a facility which is approved by Medicare as meeting institutional coverage criteria.
+    expected_answer: >
+      It matters — Medicare only covers heart transplants performed at a facility specifically
+      approved by Medicare as meeting institutional coverage criteria, not any Medicare-accepting
+      hospital.
+    answer_key_facts:
+      - "heart transplant coverage requires a Medicare-approved transplant facility"
+      - "meeting institutional coverage criteria is required, not just general Medicare acceptance"
+    volatile: false
+    notes: "Chapter 260 (transplants)."
+
+  - id: ncd-09
+    question: "I inject my own insulin every day at home — does Medicare's coverage rule for insulin syringes apply to that?"
+    difficulty: easy
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_40.4_v1]
+    expected_snippet: |
+      The use of an insulin syringe by a diabetic would not meet the requirements of §1861(s)(2)(A) of the Act.
+    expected_answer: >
+      No — under this coverage rule, an insulin syringe is only covered when it was used by the
+      physician (or under direct supervision) in an emergency situation like diabetic coma.
+      Routine self-injection by a diabetic at home does not meet that requirement.
+    answer_key_facts:
+      - "the syringe must be used by the physician (or under direct supervision) to be covered under this rule"
+      - "the injection must be in an emergency situation such as diabetic coma"
+      - "routine self-use by a diabetic does not meet the requirement"
+    volatile: false
+    notes: >
+      Chapter 40. A deliberately counter-intuitive negative answer, phrased close to the doc's own
+      wording (easy retrieval) — tests whether the agent parrots the surprising correct answer
+      instead of assuming routine self-use is covered. This narrow determination is not the whole
+      story of how Medicare covers diabetic supplies; it is scoped to what this one NCD says.
+
+  - id: ncd-10
+    question: "I have no signs of breast disease — would a routine mammogram just to check still be covered?"
+    difficulty: easy
+    corpus: medicare_ncd
+    expected_source_type: reference
+    expected_doc_ids: [ncd_220.4_v1]
+    expected_snippet: |
+      A screening mammography is a radiologic procedure furnished to a woman without signs or symptoms of breast disease, for the purpose of early detection of breast cancer
+    expected_answer: >
+      Yes — that's a screening mammography (for a woman without signs or symptoms of breast
+      disease, for early detection), which is distinct from a diagnostic mammography and must be
+      at least a two-view exposure of each breast.
+    answer_key_facts:
+      - "a screening mammography is for someone without signs or symptoms of breast disease"
+      - "it must be at minimum a two-view exposure of each breast"
+    volatile: false
+    notes: "Chapter 220."
+
+  # ============================================================= medicare_pubs (10) ==========
+  - id: pub-01
+    question: "When's the smartest time for me to buy a Medigap policy so I don't get turned down?"
+    difficulty: medium
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [02110_p012]
+    expected_snippet: |
+      Your 6-month Medigap Open Enrollment Period starts the first month you have Medicare Part B and you’re 65 or older.
+    expected_answer: >
+      During your Medigap Open Enrollment Period — a one-time, 6-month window that starts the
+      first month you have Medicare Part B and are 65 or older. During it, insurers must sell you
+      any Medigap policy they offer in your state regardless of health problems.
+    answer_key_facts:
+      - "the Medigap Open Enrollment Period is 6 months long"
+      - "it starts the first month you have Part B and are 65 or older"
+      - "it is a one-time period that does not repeat every year"
+    volatile: false
+    notes: "Choosing a Medigap Policy (02110), p12. Rule-shaped window, not a dollar figure."
+
+  - id: pub-02
+    question: "If I end up needing a nursing facility for a couple months after a hospital stay, what does that cost me after the first few weeks?"
+    difficulty: medium
+    corpus: medicare_pubs
+    plan_year: 2026
+    expected_source_type: reference
+    expected_doc_ids: [10050_p029, 10116_p106]
+    expected_snippet: |
+      Days 21–100: You pay $217 each day.
+    expected_answer: >
+      For days 21–100 of a skilled nursing facility stay in the same benefit period, you pay $217
+      per day (2026 figure). Days 1–20 are $0 after the Part A deductible; day 101 and beyond, you
+      pay all costs.
+    answer_key_facts:
+      - "days 21-100 cost $217 per day in 2026"
+      - "days 1-20 are $0 after the deductible"
+      - "day 101 and beyond, the beneficiary pays all costs"
+    plan_year: 2026
+    volatile: true
+    notes: >
+      Appears verbatim in both Medicare & You 2026 (10050) and Your Medicare Benefits (10116) —
+      genuinely any-of. Dollar figure is plan-year-pinned; one of the ≤6 volatile slots.
+
+  - id: pub-03
+    question: "I put off signing up for Medicare drug coverage for a year — what's that going to cost me now?"
+    difficulty: hard
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [11109_p021, 10050_p084, 11222_p003]
+    expected_snippet: |
+      The Part D late enrollment penalty is calculated by multiplying 1% times the “national base beneficiary premium”
+    expected_answer: >
+      A Part D late enrollment penalty: 1% of the national base beneficiary premium ($38.99 in
+      2026) multiplied by the number of full months you went without Part D or other creditable
+      drug coverage, rounded to the nearest $0.10 — and it's added to your premium for as long as
+      you have Part D coverage.
+    answer_key_facts:
+      - "the penalty is 1% of the national base beneficiary premium per uncovered month"
+      - "the 2026 national base beneficiary premium is $38.99"
+      - "the penalty is rounded to the nearest $0.10"
+    plan_year: 2026
+    volatile: true
+    notes: >
+      Appears in The Part D Late Enrollment Penalty (11222), Medicare & You 2026 (10050), and Your
+      Guide to Medicare Prescription Drug Coverage (11109) — three-way any-of. Question never says
+      "late enrollment penalty" or "Part D".
+
+  - id: pub-04
+    question: "My mom can get around the house fine with her walker but really struggles to leave the house at all — would she count as eligible for home health care?"
+    difficulty: hard
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [10050_p043, 10116_p055, 10969_p003]
+    expected_snippet: |
+      Leaving your home isn’t recommended because of your c
+    expected_answer: >
+      Likely yes — "homebound" means either that leaving home isn't medically recommended, or
+      that the person has trouble leaving without help (like a cane, wheelchair, walker, special
+      transportation, or another person's help) due to illness or injury. Needing a walker to get
+      around, including outside the home, fits the second condition.
+    answer_key_facts:
+      - "homebound means trouble leaving home without help due to illness or injury"
+      - "using a walker or similar aid to leave home qualifies as needing help"
+      - "or, alternatively, leaving home is not medically recommended"
+    volatile: false
+    notes: >
+      Appears in Medicare & You 2026 (10050), Your Medicare Benefits (10116), and Medicare & Home
+      Health Care (10969) — any-of across all three. "Homebound" is a defined term the question
+      never uses.
+
+  - id: pub-05
+    question: "If a hospice patient outlives the typical prognosis, do they get kicked off hospice care?"
+    difficulty: medium
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [02154_p010]
+    expected_snippet: |
+      Hospice care is for people with a life expectancy of 6 months or less (if the illness runs its normal course). If you live longer than 6 months, you can still get hospice care as long as the hospice medical director or other hospice doctor recertifies that you’re terminally ill.
+    expected_answer: >
+      No — hospice is meant for a life expectancy of 6 months or less, but if the patient lives
+      longer, hospice care can continue as long as the hospice medical director or another hospice
+      doctor recertifies that the patient is still terminally ill.
+    answer_key_facts:
+      - "hospice eligibility is based on a life expectancy of 6 months or less"
+      - "care can continue past 6 months with recertification of terminal illness"
+    volatile: false
+    notes: "Medicare Hospice Benefits (02154), p10."
+
+  - id: pub-06
+    question: "I had to call 911 and get taken to the ER by ambulance — does Medicare help with that bill?"
+    difficulty: easy
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [11021_p003]
+    expected_snippet: |
+      Medicare Part B (Medical Insurance) covers ambulance services to or from a hospital, critical access hospital (CAH), rural emergency hospital, or a skilled nursing facility.
+    expected_answer: >
+      Yes — Part B covers ambulance services to or from a hospital, critical access hospital,
+      rural emergency hospital, or a skilled nursing facility, though coverage has conditions
+      around medical necessity.
+    answer_key_facts:
+      - "Part B covers ambulance services to/from a hospital, CAH, rural emergency hospital, or SNF"
+    volatile: false
+    notes: "Medicare Coverage of Ambulance Services (11021), p3."
+
+  - id: pub-07
+    question: "My doctor says I need a wheelchair to get around at home — will Medicare pay for one?"
+    difficulty: easy
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [11046_p001]
+    expected_snippet: |
+      Medicare Part B (Medical Insurance) covers power-operated vehicles (scooters) and wheelchairs as Durable Medical Equipment (DME) if:
+    expected_answer: >
+      Yes — Part B covers wheelchairs and power-operated scooters as Durable Medical Equipment
+      (DME), if your treating doctor submits a written order stating you have a medical need for
+      one for use in your home (plus other DME requirements).
+    answer_key_facts:
+      - "wheelchairs and scooters are covered as Durable Medical Equipment (DME) under Part B"
+      - "a doctor's written order establishing medical need for home use is required"
+    volatile: false
+    notes: "Medicare Coverage of Wheelchairs & Scooters (11046), p1. Avoids p3, which lists raw HCPCS model codes."
+
+  - id: pub-08
+    question: "I'm going on a long cruise that leaves from a US port but stops in other countries — is my Medicare good if I get sick on board?"
+    difficulty: hard
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [11037_p001, 11037_p002]
+    expected_snippet: |
+      Medicare coverage outside the U.S. is limited.
+    expected_answer: >
+      Mostly no — Medicare coverage outside the U.S. is limited to a few specific situations (like
+      emergency care during a covered inpatient stay at a foreign hospital immediately reachable
+      from a U.S. port). Outside those limited situations, you pay the full cost yourself.
+    answer_key_facts:
+      - "Medicare coverage outside the U.S. is limited to specific situations, not general coverage"
+      - "outside those situations you pay the full cost"
+    volatile: false
+    notes: "Medicare Coverage Outside the United States (11037). Question never says 'outside the U.S.'"
+
+  - id: pub-09
+    question: "Is there a yearly check-in with my doctor that Medicare covers at no cost to plan my preventive care?"
+    difficulty: easy
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [10110_p024, 10110_p025]
+    expected_snippet: |
+      The yearly “Wellness” visit is a check-up to develop or update your personalized plan to help prevent disease and disability
+    expected_answer: >
+      Yes — the yearly "Wellness" visit, available once you've had Part B for over 12 months. It's
+      a conversation-based visit to build or update a prevention plan, not a routine physical exam,
+      and you pay nothing if your provider accepts assignment (the Part B deductible doesn't apply).
+    answer_key_facts:
+      - "the yearly Wellness visit requires having had Part B for more than 12 months"
+      - "you pay nothing if the provider accepts assignment; the Part B deductible doesn't apply"
+      - "it is not a routine physical exam"
+    volatile: false
+    notes: "Your Guide to Medicare Preventive Services (10110), p24-25."
+
+  - id: pub-10
+    question: "Can I see a therapist regularly through Medicare, or is mental health care only covered if I'm admitted to a hospital?"
+    difficulty: medium
+    corpus: medicare_pubs
+    expected_source_type: reference
+    expected_doc_ids: [10184_p005]
+    expected_snippet: |
+      Medicare Part B (Medical Insurance) helps pay for mental health services you usually get in a hospital outpatient department or outside of a hospital (like in a clinic, doctor’s office, or therapist’s office).
+    expected_answer: >
+      No, outpatient counts too — Part B helps pay for mental health services you get outside a
+      hospital, such as in a clinic, doctor's office, or therapist's office, not only inpatient care.
+    answer_key_facts:
+      - "Part B covers outpatient mental health services, not only inpatient"
+      - "outpatient settings include a clinic, doctor's office, or therapist's office"
+    volatile: false
+    notes: "Medicare and Your Mental Health Benefits (10184), p5."
+
+  # =================================================================== abstentions (5) =======
+  - id: abs-01
+    question: "Which dermatologists near ZIP code 30076 currently accept Aetna?"
+    expected_abstain: true
+    expected_source_type: null
+    expected_doc_ids: []
+    becomes_answerable_at_phase: 3
+    notes: >
+      Provider directory data is per-record and deliberately never vendored into this repo (see
+      CLAUDE.md's "Data sources" section — NPPES is queried live, not bulk-downloaded). None of
+      the three reference corpora carry provider-level data, so the reference lane must abstain.
+      Answerable once NPPES + a plan-network source are wired up as structured_api tools.
+
+  - id: abs-02
+    question: "Is metformin covered under the Humana Gold Plus HMO plan's drug formulary this year?"
+    expected_abstain: true
+    expected_source_type: null
+    expected_doc_ids: []
+    becomes_answerable_at_phase: 3
+    notes: >
+      A specific plan's formulary is a structured, per-plan/per-drug lookup (Marketplace API /
+      Part D formulary files), not reference material — none of the three text corpora contain
+      plan-specific formulary data. Answerable once the Marketplace API tool exists.
+
+  - id: abs-03
+    question: "What will the standard Part B premium be in 2027?"
+    expected_abstain: true
+    expected_source_type: null
+    expected_doc_ids: []
+    becomes_answerable_at_phase: null
+    notes: >
+      A future plan year's figure that does not exist in any corpus yet (Medicare & You 2026 is
+      the newest publication ingested) and cannot be looked up structurally either — CMS hasn't
+      published it. Never answerable from this corpus; a genuine "I don't know yet," not a
+      routing failure.
+
+  - id: abs-04
+    question: "Was there a recall of a blood pressure medication announced this week?"
+    expected_abstain: true
+    expected_source_type: null
+    expected_doc_ids: []
+    becomes_answerable_at_phase: 2
+    notes: >
+      Time-sensitive current-events content is explicitly the web lane's job (plan.md Phase 2),
+      not the static reference corpus. Reference lane must abstain; answerable once web search
+      (or openFDA for recalls specifically, Phase 3) is wired up.
+
+  - id: abs-05
+    question: "What's the difference between a Roth IRA and a traditional 401(k)?"
+    expected_abstain: true
+    expected_source_type: null
+    expected_doc_ids: []
+    becomes_answerable_at_phase: null
+    notes: >
+      Outside the health-coverage domain entirely — retirement-account rules appear in none of
+      the three corpora and are out of scope for every planned phase. Tests that the agent
+      recognizes an out-of-domain question rather than reaching for a tangentially related
+      Marketplace tax-credit page.
