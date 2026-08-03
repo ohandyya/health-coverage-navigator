@@ -1,4 +1,4 @@
-.PHONY: help lint format format-check fix check typecheck typecheck-watch check-all \
+.PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
         scan scan-staged scan-unstaged scan-selftest
 
 .DEFAULT_GOAL := help
@@ -26,7 +26,10 @@ typecheck: ## Check code for type errors
 typecheck-watch: ## Re-run pyright on file changes
 	uv run pyright --watch
 
-check-all: lint format-check typecheck ## Run lint, format-check, and typecheck together
+test: ## Run the test suite (verbose: per-test names/results)
+	uv run pytest -v
+
+check-all: lint format-check typecheck test ## Run lint, format-check, typecheck, and tests together
 
 # Deliberately not part of check-all: check-all is the fast inner-loop command, and a scan
 # of the whole 14 MB corpus is a pre-publish gate you invoke on purpose.
