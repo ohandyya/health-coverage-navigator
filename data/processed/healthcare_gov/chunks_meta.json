@@ -1,0 +1,39 @@
+{
+  "chunked_at": "2026-08-13T15:54:28.960335+00:00",
+  "source": "healthcare_gov",
+  "tool": "health-coverage-navigator/0.1 (chunking)",
+  "chunker_version": 1,
+  "strategy": "prose_ladder",
+  "params": {
+    "max_chars": 1200,
+    "overlap_chars": 320,
+    "min_tail_chars": 300,
+    "min_fill_chars": 480,
+    "min_doc_chars": 40
+  },
+  "params_sha256": "6472229192ed137f53bd2e7476e0b52b0d01e90e0469b520b16446227797f7e0",
+  "input": {
+    "path": "data/processed/healthcare_gov/corpus.jsonl",
+    "sha256": "591b5c5f7f652d396cbdc21f4db56efdc45ac705908f83ebb8c3ef1a925ccb5f",
+    "bytes": 1493066,
+    "doc_count": 747
+  },
+  "output": {
+    "path": "data/processed/healthcare_gov/chunks.jsonl",
+    "sha256": "af7dcd815d634c72db78723dc6efa5397f387f7ff0e816e40a596c9487b650e1",
+    "chunk_count": 2009
+  },
+  "docs_skipped": {
+    "count": 0,
+    "reason": "whitespace-normalized text shorter than min_doc_chars",
+    "ids": []
+  },
+  "chunk_chars": {
+    "min": 47,
+    "median": 1007,
+    "p90": 1175,
+    "max": 1200,
+    "total": 1812561
+  },
+  "snapshot_id": "healthcare_gov@967f0e606ab0"
+}

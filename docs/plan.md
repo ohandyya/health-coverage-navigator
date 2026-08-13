@@ -199,7 +199,8 @@ the part that makes it an *agent* rather than a RAG bot.
 
 Download and prepare the raw corpus — HealthCare.gov content JSON + Medicare & You + NCDs — into
 a local `data/` directory (download → parse → chunk into `data/processed`). No embeddings, no
-vector store yet. In parallel, build a tiny gold eval set of ~30 questions with known answers and
+vector store yet. The chunking step's parameters, per-source strategy, and output contract are in
+[chunking.md](chunking.md), written before Phase 1a so retrieval inherits the reasoning. In parallel, build a tiny gold eval set of ~30 questions with known answers and
 known correct source-type. This pays off immediately: you want the corpus and the harness before
 the agent, not after.
 

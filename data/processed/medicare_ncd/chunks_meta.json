@@ -1,0 +1,39 @@
+{
+  "chunked_at": "2026-08-13T15:54:29.001570+00:00",
+  "source": "medicare_ncd",
+  "tool": "health-coverage-navigator/0.1 (chunking)",
+  "chunker_version": 1,
+  "strategy": "ncd_headings",
+  "params": {
+    "max_chars": 1200,
+    "overlap_chars": 320,
+    "min_tail_chars": 300,
+    "min_fill_chars": 480,
+    "min_doc_chars": 40
+  },
+  "params_sha256": "6472229192ed137f53bd2e7476e0b52b0d01e90e0469b520b16446227797f7e0",
+  "input": {
+    "path": "data/processed/medicare_ncd/corpus.jsonl",
+    "sha256": "5118eafef82b8e606b6c176f8567e5f7cb5fb3f2db4c12e01c2b22a5910e3f45",
+    "bytes": 1776809,
+    "doc_count": 345
+  },
+  "output": {
+    "path": "data/processed/medicare_ncd/chunks.jsonl",
+    "sha256": "489df03dbf72e02f8f6c9a95456dae2c8cb382c6be09469934205b87365fdc85",
+    "chunk_count": 2256
+  },
+  "docs_skipped": {
+    "count": 0,
+    "reason": "whitespace-normalized text shorter than min_doc_chars",
+    "ids": []
+  },
+  "chunk_chars": {
+    "min": 7,
+    "median": 809,
+    "p90": 1153,
+    "max": 1200,
+    "total": 1553592
+  },
+  "snapshot_id": "medicare_ncd@a3d0f70582c6"
+}

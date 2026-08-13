@@ -163,12 +163,14 @@ added = "2026-08-02"
 # looked at yet — hence zero. A nonzero here is a genuine "go read it" signal.
 "pii:email" = 0
 
-# The 39 geographic (non-toll-free) numbers left after the toll-free allowlist. All are
+# The 37 geographic (non-toll-free) numbers left after the toll-free allowlist. All are
 # federal, state, and territory agency lines published in HealthCare.gov's state-resource
 # pages — DC/Rockville federal offices, and insurance departments in the Virgin Islands,
 # Guam, the Northern Marianas, Rhode Island, Oklahoma, Washington and others. Reviewed
-# 2026-07-31: no personal numbers.
-"pii:phone" = 39
+# 2026-07-31: no personal numbers. Lowered 39 -> 37 on 2026-08-13 when the healthcare_gov
+# corpus dropped its 56 duplicate Spanish state pages; the two lost hits were duplicates of
+# agency numbers still present on the English pages, not a change in what the corpus carries.
+"pii:phone" = 37
 
 # Zero, and expected to stay zero permanently. The marker requires the identifier to be
 # *labelled* NPI, so the corpus's coincidentally-Luhn-valid digit runs don't count — and NPPES

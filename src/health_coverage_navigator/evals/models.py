@@ -5,6 +5,9 @@
 yet. Once Phase F0 builds it, `SourceType` should move there and this module should import it —
 the contract owns that enum, not the eval set.
 
+`CorpusName` is imported from `corpus.py`, which owns the text-corpus vocabulary — the eval set is
+a consumer of the corpora, not a peer that gets its own copy of the list.
+
 Gold questions are anchored on corpus **doc ids**, not chunk ids, so the set survives re-chunking
 (see the plan's design-decision note). Corpus-dependent correctness (do these ids exist, is the
 snippet verbatim, is the target retired) is enforced by tests/test_gold_set.py, not here — this
@@ -15,7 +18,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-CorpusName = Literal["healthcare_gov", "medicare_ncd", "medicare_pubs"]
+from health_coverage_navigator.corpus import CorpusName
+
 Difficulty = Literal["easy", "medium", "hard"]
 SourceType = Literal["reference", "structured_api", "web"]
 

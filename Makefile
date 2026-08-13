@@ -1,5 +1,5 @@
 .PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
-        scan scan-staged scan-unstaged scan-selftest
+        chunk chunk-check scan scan-staged scan-unstaged scan-selftest
 
 .DEFAULT_GOAL := help
 
@@ -30,6 +30,16 @@ test: ## Run the test suite (verbose: per-test names/results)
 	uv run pytest -v
 
 check-all: lint format-check typecheck test ## Run lint, format-check, typecheck, and tests together
+
+# Also deliberately not part of check-all: chunk writes files, and check-all is a read-only gate.
+# The correctness is already covered — `make test` builds the chunks in memory and checks them
+# against the committed manifests, so a stale chunks.jsonl fails the suite without check-all
+# having to rebuild it.
+chunk: ## Chunk the three text corpora -> data/processed/<source>/chunks.jsonl
+	uv run python -m health_coverage_navigator.chunking
+
+chunk-check: ## Rebuild chunks in memory and verify they match the committed manifests
+	uv run python -m health_coverage_navigator.chunking --check
 
 # Deliberately not part of check-all: check-all is the fast inner-loop command, and a scan
 # of the whole 14 MB corpus is a pre-publish gate you invoke on purpose.
