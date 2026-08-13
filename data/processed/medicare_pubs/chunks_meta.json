@@ -1,0 +1,69 @@
+{
+  "chunked_at": "2026-08-13T15:54:29.058853+00:00",
+  "source": "medicare_pubs",
+  "tool": "health-coverage-navigator/0.1 (chunking)",
+  "chunker_version": 1,
+  "strategy": "page_ladder",
+  "params": {
+    "max_chars": 1200,
+    "overlap_chars": 320,
+    "min_tail_chars": 300,
+    "min_fill_chars": 480,
+    "min_doc_chars": 40
+  },
+  "params_sha256": "6472229192ed137f53bd2e7476e0b52b0d01e90e0469b520b16446227797f7e0",
+  "input": {
+    "path": "data/processed/medicare_pubs/corpus.jsonl",
+    "sha256": "787b5a6f3c099c4d98bda4efcbc664ad3c8ab111c1219a2ae8d712d30cfd51fc",
+    "bytes": 2149171,
+    "doc_count": 964
+  },
+  "output": {
+    "path": "data/processed/medicare_pubs/chunks.jsonl",
+    "sha256": "f000ea75f15f9ab62fb99734362cd5571d5828bd13d4d194e9e5f18e26e06ced",
+    "chunk_count": 2457
+  },
+  "docs_skipped": {
+    "count": 29,
+    "reason": "whitespace-normalized text shorter than min_doc_chars",
+    "ids": [
+      "02110_p046",
+      "02154_p018",
+      "02179_p026",
+      "10050_p096",
+      "10050_p118",
+      "10111_p013",
+      "10111_p014",
+      "10116_p118",
+      "10128_p046",
+      "10153_p034",
+      "10184_p021",
+      "10184_p022",
+      "10969_p022",
+      "10969_p023",
+      "11021_p013",
+      "11021_p014",
+      "11045_p023",
+      "11046_p006",
+      "11046_p007",
+      "11109_p046",
+      "11109_p047",
+      "11409_p001",
+      "12026_p029",
+      "12026_p030",
+      "12207_p001",
+      "12207_p006",
+      "12207_p007",
+      "12217_p006",
+      "12217_p007"
+    ]
+  },
+  "chunk_chars": {
+    "min": 40,
+    "median": 1023,
+    "p90": 1175,
+    "max": 1200,
+    "total": 2352202
+  },
+  "snapshot_id": "medicare_pubs@746612fc0d26"
+}

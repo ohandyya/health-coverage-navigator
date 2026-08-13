@@ -24,7 +24,8 @@ data/
   a formatting choice:
   - **app-ready** — the cleaned form the application reads directly (chunk → embed for
     RAG). `healthcare_gov`, `medicare_pubs`, and `medicare_ncd` all emit this, as
-    `corpus.jsonl`.
+    `corpus.jsonl`, alongside the `chunks.jsonl` / `chunks_meta.json` pair that
+    [Chunking](#chunking) below derives from it.
   - **lossless mirror** — a faithful, queryable re-encoding that changes *format* but not
     *content*; still requires a modeling/typing layer above it before an application can
     read a value out of it. `exchange_puf` is the one source of this kind today: every
@@ -48,6 +49,17 @@ the source of truth for *what the app reads* — except for a lossless-mirror so
 > `part_d_spuf` the bargain has teeth: its manifest records each member's byte
 > offset and CRC32 inside the published container, so "reproducible" is checkable rather
 > than asserted.
+
+> **One exception to "processed is committed":** `processed/<source>/chunks.jsonl` is
+> git-ignored — the first exception on this side of the tree, and the only one made for
+> *churn* rather than size. Chunks are a pure offline function of the committed
+> `corpus.jsonl` files, rebuilt in about a second by `make chunk`, and they rewrite
+> end-to-end on every parameter tweak. `chunks_meta.json` **is** committed and records the
+> input `sha256`, the parameters, and the output `sha256`, so `make chunk-check` and the
+> test suite both fail on drift. Committing the chunks would also double-count every
+> advisory licensing hit in `make scan` — chunk text is a verbatim subset of corpus text,
+> so the counts would become a number about chunking parameters rather than about the
+> corpus. See [`docs/chunking.md`](../docs/chunking.md#7-output-and-why-the-chunks-are-not-committed).
 
 ## Source catalog
 
@@ -94,11 +106,14 @@ raw/healthcare_gov/
 └── _meta.json                # fetch provenance: timestamp, discovered/fetched/failed counts, tool
 
 processed/healthcare_gov/
-└── corpus.jsonl              # one normalized record per line (JSON Lines) — the RAG input
+├── corpus.jsonl              # one normalized record per line (JSON Lines) — the RAG input
+├── chunks.jsonl              # GIT-IGNORED — see Chunking below
+└── chunks_meta.json          # the chunk manifest (committed)
 ```
 
-Posts whose body is empty (non-article/empty pages) are dropped during normalization, so
-`corpus.jsonl` has slightly fewer rows than `posts/` has files.
+Posts whose body is empty (non-article/empty pages) are dropped during normalization, and
+`--lang` defaults to `en`, so `corpus.jsonl` has 747 rows against 804 files in `posts/`.
+The raw layer keeps every language; the corpus does not.
 
 ### `corpus.jsonl` record schema
 
@@ -106,11 +121,11 @@ One JSON object per line, produced by `normalize_record` in the download script:
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Filesystem-safe slug derived from the post URL (unique per post). |
+| `id` | The raw post's filename stem, i.e. the slug of the *discovery* URL (unique per post). |
 | `source` | Origin tag — `"healthcare_gov"`. |
-| `url` | Post path on healthcare.gov (e.g. `/retirees`). |
+| `url` | Post path on healthcare.gov (e.g. `/retirees`), as the content object reports it. |
 | `title` | Page title. |
-| `lang` | Content language (`en`, `es`, …). |
+| `lang` | Content language (`en`, `es`), derived from the `es_` slug prefix. |
 | `date` | Publish date if present (often empty for evergreen articles). |
 | `categories`, `tags`, `topics` | Taxonomy arrays (often empty on articles). |
 | `bite` | One-sentence editorial summary written by HealthCare.gov. |
@@ -119,6 +134,11 @@ One JSON object per line, produced by `normalize_record` in the download script:
 The raw `posts/<slug>.json` objects carry additional fields the normalizer currently
 drops (e.g. `page_audience`, `page_lifecycle`, `state`, SEO metadata). To surface any of
 them, extend `normalize_record` and re-run with `--normalize-only`.
+
+**Do not trust a content object's own `url` or `lang`.** Every Spanish page reports the
+*English* path (the object at `/es/hawaii/` says `url: "/hawaii/"`) and `lang: "en"`.
+Deriving `id` from `url` therefore collapsed all 56 state pages into duplicate ids, and made
+the `--lang` filter a no-op. Both fields now come from the filename stem instead.
 
 ---
 
@@ -144,7 +164,9 @@ raw/medicare_pubs/
 └── _meta.json             # fetch provenance: timestamp, counts, tool
 
 processed/medicare_pubs/
-└── corpus.jsonl           # one normalized record per PDF page — the RAG input
+├── corpus.jsonl           # one normalized record per PDF page — the RAG input
+├── chunks.jsonl           # GIT-IGNORED — see Chunking below
+└── chunks_meta.json       # the chunk manifest (committed)
 ```
 
 ### `corpus.jsonl` record schema
@@ -218,7 +240,9 @@ raw/medicare_ncd/
 └── _meta.json               # fetch provenance: timestamp, counts, tool, license note
 
 processed/medicare_ncd/
-└── corpus.jsonl             # one normalized record per NCD — the RAG input
+├── corpus.jsonl             # one normalized record per NCD — the RAG input
+├── chunks.jsonl             # GIT-IGNORED — see Chunking below
+└── chunks_meta.json         # the chunk manifest (committed)
 ```
 
 Raw files are named by **section number** (`30.3`), not the API's internal document ID,
@@ -383,6 +407,33 @@ but not characters. See
 
 ---
 
+## Chunking
+
+The one step that spans sources rather than belonging to any of them. `make chunk` turns each
+text corpus's `corpus.jsonl` into `chunks.jsonl` + `chunks_meta.json`; the two structured
+mirrors are **never chunked and never embedded**.
+
+| Source | docs | chunks | median chars | max |
+| --- | ---: | ---: | ---: | ---: |
+| `healthcare_gov` | 747 | 2,009 | 1,007 | 1,200 |
+| `medicare_ncd` | 345 | 2,256 | 809 | 1,200 |
+| `medicare_pubs` | 964 (29 skipped) | 2,457 | 1,023 | 1,200 |
+
+Every chunk is a **verbatim slice** of its parent document — `corpus.jsonl`'s `text`, sliced at
+`[char_start:char_end]` — carrying its parent's `doc_id` plus whatever that source cites by
+(`page`, `section_number`, the section `heading`). Nothing derived is stored: the citation label
+and the indexed form are computed properties. The 29 skipped `medicare_pubs` pages are ones whose
+extracted text is `"Notes"` or a cover fragment; every skipped id is listed in that source's
+`chunks_meta.json`.
+
+`chunks_meta.json` records the input `sha256`, the parameters and their hash, the output
+`sha256`, and a `snapshot_id` — the string a later eval run names to pin itself to the exact
+chunks it was measured against. Run `make chunk-check` to verify a working tree matches its
+manifests.
+
+Parameters, per-source strategy, and the reasoning behind both live in
+[`docs/chunking.md`](../docs/chunking.md).
+
 ## Adding a new data source
 
 To keep this directory legible as it grows, follow the same convention for every source:
@@ -392,7 +443,9 @@ To keep this directory legible as it grows, follow the same convention for every
    (at minimum: `fetched_at`, source URL, counts, tool). Keep the raw download untouched.
 3. **Write the processed artifact** to `data/processed/<key>/` — `corpus.jsonl` for a RAG
    text corpus, or a DB/columnar file for structured data — and make it regenerable from
-   `raw/` (a `--normalize-only`-style path).
+   `raw/` (a `--normalize-only`-style path). A new *text* corpus also needs adding to
+   `CorpusName` in `src/health_coverage_navigator/corpus.py` and a strategy in
+   `chunking/strategies.py`; a structured source needs neither, and must not get either.
 4. **Register it** in the [Source catalog](#source-catalog) table above and add a
    per-source section documenting: source URL, how it was fetched, the files produced,
    and (for a corpus) the record schema.

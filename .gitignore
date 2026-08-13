@@ -62,6 +62,17 @@ data/processed/exchange_puf/*/*.parquet
 data/raw/part_d_spuf/*/*.txt
 data/processed/part_d_spuf/*/*.parquet
 
+# The chunked corpus (~7 MB). Unlike every exception above, this one is not about size — it is
+# that chunks are a pure offline function of the committed corpus.jsonl files, rebuilt in about a
+# second by `make chunk`, and they churn end-to-end on every parameter tweak.
+# data/processed/<source>/chunks_meta.json IS committed and records the input sha256, the
+# parameters, and the output sha256, so the ignored file is exactly reproducible and any drift is
+# a test failure (tests/test_chunks.py::test_chunks_match_committed_manifest).
+# Committing the chunks would also double-count every advisory licensing hit in `make scan` —
+# chunk text is a verbatim subset of corpus text, so the counts would become a number about
+# chunking parameters rather than about the corpus.
+data/processed/*/chunks.jsonl
+
 # Logs
 *.log
 

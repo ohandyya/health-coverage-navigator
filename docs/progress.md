@@ -17,22 +17,17 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-03.*
+*Updated 2026-08-13.*
 
-- **Phase:** 0 — corpus + eval scaffold. Ingestion is done for all five bulk sources (three RAG
-  corpora + two structured mirrors, `exchange_puf` and `part_d_spuf`), the public-repo
-  guardrail is enforced by `make scan`, and the gold eval set (35 questions) plus a pytest suite
-  and loader now exist. Chunking has not started; test tooling (pytest) is now configured.
-- **Next up:** the chunking step (`data/processed/<source>/corpus.jsonl` → chunks) — the three
-  **text** corpora only; the two structured mirrors are not chunked or embedded. It is the last
-  unbuilt piece of Phase 0. **The gold eval set did not need to wait on it** — see the log entry
-  below for why doc-id anchoring removes that dependency; this corrects the previous entry, which
-  asserted the eval set was blocked on chunking. The three corpora share the
-  `id`/`source`/`url`/`title`/`bite`/`text` field vocabulary specifically so one chunker can span
-  them — but they do not chunk alike: a HealthCare.gov article is short prose, a `medicare_pubs`
-  record is one PDF page, and an NCD is a whole document with `## ` section headings written into
-  `text` so they can be split on and kept as citation labels ("NCD 30.3, *Indications and
-  Limitations of Coverage*").
+- **Phase:** 0 — corpus + eval scaffold. **The backend half of Phase 0 is complete.** Ingestion
+  is done for all five bulk sources (three RAG corpora + two structured mirrors, `exchange_puf`
+  and `part_d_spuf`), the public-repo guardrail is enforced by `make scan`, the gold eval set
+  (35 questions) plus loader and pytest suite exist, and chunking now produces 6,722 chunks
+  across the three text corpora.
+- **Next up:** frontend **F0** — the whole remaining Phase 0 surface. Nothing in
+  [frontend_plan.md](frontend_plan.md) §6's F0 list is built: no `api/` package, no `frontend/`
+  directory, and `fastapi`/`uvicorn` are not yet dependencies. The §10 "decide at F0" question
+  below gates the shape of the eval endpoints and should be settled before they are written.
 - **Open questions:**
   - [frontend_plan.md](frontend_plan.md) §10 — eval runs from the browser (read-only dashboard
     vs. HTTP-triggered runs) is marked "decide at F0" and is still undecided.
@@ -43,18 +38,22 @@ mid-stream.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
+  - `CLAUDE.md` puts "an eval runner reporting recall@k/MRR" in Phase 0, but `plan.md`'s Phase 0
+    checklist stops at the dataset loader and nothing computes those metrics. The plan is the
+    more defensible reading — a recall@k runner needs a retriever, which is Phase 1a — so
+    `CLAUDE.md` is probably the file to correct. Not done here; one of the two is wrong.
 
 ### Phase 0 checklist
 
 Backend (plan.md, Phase 0):
 
-- [x] HealthCare.gov ingestion — 803 docs
+- [x] HealthCare.gov ingestion — 747 docs (English only; was 803 before the duplicate-id fix)
 - [x] Medicare publications ingestion — 83 pubs / 964 pages
 - [x] Medicare NCD ingestion — 345 determinations
 - [x] Exchange PUF ingestion — 3 tables, plan year 2026 (structured mirror, not a text corpus)
 - [x] Part D SPUF ingestion — 7 files, 2026Q2 (structured mirror; Phase 5 source, built early)
 - [x] Public-repo guardrail enforced in code — `make scan` (secrets / PII / licensing)
-- [ ] Chunking step → chunked corpus in `data/processed` (the three text corpora only)
+- [x] Chunking step → 6,722 chunks across the three text corpora (`make chunk`)
 - [x] Gold eval set, 35 questions (30 in-corpus + 5 abstention; question → expected source-type
   → expected answer)
 - [x] Eval dataset loader / schema
@@ -72,6 +71,94 @@ Frontend (frontend_plan.md, Phase F0):
 ---
 
 ## Log
+
+### 2026-08-13 — chunking, and the duplicate doc ids it surfaced
+
+**Did:** built the chunking step — `src/health_coverage_navigator/chunking/` (params, models,
+splitter, per-source strategies, pipeline, CLI), `tests/test_chunks.py` (17 tests), `make chunk` /
+`make chunk-check`, and [chunking.md](chunking.md). Also added `corpus.py` as the shared text-corpus
+vocabulary, and fixed a corpus defect the work exposed. Phase 0's backend is now complete.
+
+**Decided:** **doc ids come from the raw post's filename stem, and the Spanish pages are dropped.**
+`healthcare_gov` had 803 records but only 747 distinct ids: the Spanish content object at
+`/es/hawaii/` self-reports `url: "/hawaii/"` **and** `lang: "en"`, so `id = slugify(url)` collapsed
+all 56 state pages into pairs, and the existing `--lang` filter was a no-op that could never have
+caught it. Both fields now derive from the stem (804 stems, zero collisions) and `--lang` defaults
+to `en`. Chunking forced the issue — two records sharing a doc id make a citation label ambiguous
+and a chunk's parent unidentifiable — but the bug predated it and would have quietly scored
+duplicate-text retrievals in every eval from here on. Deduping in the chunker was rejected: files
+sort `es_hawaii.json` **before** `hawaii.json`, so "keep first" would have silently stamped the
+Spanish title onto 21 English state pages. `normalize()` now raises on a duplicate id rather than
+trusting the caller.
+
+**Decided:** **`chunks.jsonl` is git-ignored; `chunks_meta.json` is committed.** This inverts the
+"processed is committed" rule and is the first exception on that side of the tree, so the reasoning
+matters. Size (~7 MB) is not it. The real arguments: chunks are a pure offline function of
+committed inputs (unlike `corpus.jsonl`, which needs network to rebuild) and rebuild in about a
+second; they churn end-to-end on every parameter tweak, and git deltifies reordered JSONL badly.
+The decisive one is that `scan_sensitive.py` scopes licensing markers to `data/processed/*`, so
+committed chunks would **double-count every narrative CPT/HCPCS mention** — triple inside overlap
+regions — while adding zero new licensing surface, since chunk text is a verbatim subset of corpus
+text. The advisory baselines would have stopped being a number about the corpus. What replaces the
+artifact is the manifest plus `test_chunks_match_committed_manifest`, so reproducibility is checked
+rather than asserted — the same standard `part_d_spuf`'s CRC32 set.
+
+**Decided:** **overlap is 320 chars because the longest gold snippet is 279.** Not a round number
+picked by feel. Combined with snapping the next chunk's start **backward only** — the greatest
+boundary at or *before* `end - overlap`, never after — realized overlap is always ≥ 320, so any
+passage under that length is wholly inside at least one chunk. That turns
+`test_gold_snippets_survive_chunking` from an observation into a guarantee. "Snap to the nearest
+boundary" is the obvious-looking version of that code and silently breaks it; the splitter says so
+in a docstring.
+
+**Decided:** **NCD sections are split on `## ` and small sections are not merged**, even though 505
+of 2,256 NCD chunks are under 200 chars (339 of them `Benefit Category`). `build_text()` writes
+those headings specifically so the chunker can keep the section name as a citation label; merging
+discards it. `Benefit Category` is always first, so it could only merge *forward*, after which the
+heading would misdescribe several KB of clinical indications. And the sections are semantically
+atomic — a statutory benefit category, a cross-reference pointer. The residual risk is BM25
+length normalization over-favouring short chunks; that is a **Phase 1a `b`/`k1` question to measure
+against the gold set**, and chunking.md says so explicitly to stop it being relitigated as a
+chunking bug.
+
+**Decided:** the contextual header (`NCD 30.3 > Acupuncture > Indications...`) is a **computed
+property**, not stored text. Baking it in would end the verbatim-slice contract that the offsets
+test and Phase 4's per-claim highlighting both rest on, and would make a citation-format tweak a
+full re-chunk. Keeping the pieces as bare fields instead would push header construction into Phase
+1a, 1b and the eval runner separately, where they would drift. Phase 1b's line becomes: embed
+`retrieval_text`, **store `text`** — so the `text` key lancedb.md's loader expects is unchanged.
+
+**Decided:** medicare_pubs pages are split to the same budget as everything else rather than kept
+one-page-one-chunk. 197 of 964 pages exceed 2,400 chars, and one index and one gold set span all
+three corpora — letting one corpus average 2× another's chunk size would make the Phase 1a-vs-1b
+comparison partly a measurement of chunk size. Nothing is lost, because `page` is metadata: the
+citation is *Medicare & You 2026, p. 31* either way. The printed running header stays **in** the
+text (stripping it would break the verbatim contract for ~40 chars) and is *promoted* to `heading`,
+which lifts heading coverage from 192 pages to 641.
+
+**Decided:** characters, not tokens, with no tokenizer dependency. Phase 1a is lexical; Phase 1b's
+embedding ceiling is 27× the budget, so a real token count buys only a cost estimate that
+`n_chars / 4` gives within ~10% — and one baked into a committed artifact is invalidated by any
+model change.
+
+**Dead end:** the first cut of the manifest-writing path rewrote `chunks_meta.json` on every run,
+because the timestamp always differs. A "re-runnable" step that dirties the tree every time is one
+nobody re-runs, so the write is now gated on the content *excluding* `chunked_at`. Verified by
+mtime across two runs.
+
+**Dead end:** `BuildResult` as a plain class with an `__init__` had pyright widening
+`self.source` to `str`, which then failed at all six `CorpusName` call sites downstream. A frozen
+`@dataclass` with real annotations fixed it and deleted the boilerplate. Worth remembering: an
+inferred attribute is not the same as a declared one.
+
+**Deviation from the plan:** the per-source path helpers (`corpus_path`, `chunks_path`,
+`chunks_meta_path`) live in `corpus.py`, not `paths.py` as planned — `paths.py` cannot name
+`CorpusName` without importing `corpus.py`, which imports `paths.py`. `paths.py` keeps the
+directory constants; `corpus.py` owns everything typed by corpus name.
+
+**Stopped at:** clean. `make check-all` (32 tests, 0 pyright errors), `make chunk-check`, and
+`make scan` all pass. One baseline moved: `pii:phone` 39 → 37, because dropping the Spanish state
+pages removed two duplicate agency numbers — a corpus that shrank, not a change in what it carries.
 
 ### 2026-08-03 — pyright never actually checked `tests/`
 

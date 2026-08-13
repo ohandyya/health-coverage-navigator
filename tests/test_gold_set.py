@@ -7,15 +7,14 @@ need re-testing here. This file is what makes it impossible to commit a gold que
 """
 
 import collections
-import json
 
 import pytest
 
+from health_coverage_navigator.corpus import CORPUS_NAMES, load_corpus
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldSet
-from health_coverage_navigator.paths import PROCESSED_DIR
 
-CORPORA = ("healthcare_gov", "medicare_ncd", "medicare_pubs")
+CORPORA = CORPUS_NAMES
 
 
 def _normalize(text: str) -> str:
@@ -30,15 +29,7 @@ def gold() -> GoldSet:
 @pytest.fixture(scope="session")
 def corpus_docs() -> dict[str, dict[str, dict]]:
     """corpus name -> {doc id -> record} for all three text corpora."""
-    docs: dict[str, dict[str, dict]] = {}
-    for name in CORPORA:
-        path = PROCESSED_DIR / name / "corpus.jsonl"
-        with open(path, encoding="utf-8") as f:
-            docs[name] = {}
-            for line in f:
-                rec = json.loads(line)
-                docs[name][rec["id"]] = rec
-    return docs
+    return {name: {rec["id"]: rec for rec in load_corpus(name)} for name in CORPUS_NAMES}
 
 
 # ---------------------------------------------------------------- 1. parses -----------------

@@ -35,7 +35,12 @@ Usage (requests + beautifulsoup4 are declared in pyproject.toml, so just `uv syn
   uv run python scripts/download_healthcare_gov.py --limit 20       # smoke test (first 20 posts)
   uv run python scripts/download_healthcare_gov.py --refresh        # re-fetch everything
   uv run python scripts/download_healthcare_gov.py --normalize-only # rebuild corpus.jsonl from raw
-  uv run python scripts/download_healthcare_gov.py --lang en        # keep only English in corpus
+  uv run python scripts/download_healthcare_gov.py --lang all       # keep Spanish pages too
+
+Corpus ids and languages come from the raw post's *filename stem* (i.e. the discovery url),
+not from the content object's own `url`/`lang` fields, which are wrong on all 56 Spanish
+pages. The raw layer keeps every language; `--lang` defaults to `en` so the corpus that
+feeds retrieval is single-language and free of near-duplicate Spanish twins.
 """
 
 from __future__ import annotations
@@ -134,15 +139,22 @@ def html_to_text(html: str) -> str:
     return "\n".join(ln for ln in lines if ln)
 
 
-def normalize_record(obj: dict) -> dict:
-    """Flatten a raw content object into one clean record for the corpus."""
-    url = obj.get("url", "")
+def normalize_record(obj: dict, slug: str) -> dict:
+    """Flatten a raw content object into one clean record for the corpus.
+
+    `slug` is the raw post's filename stem, which comes from the *discovery* url and is
+    unique per post. Both `id` and `lang` are derived from it rather than from the object's
+    own `url`/`lang` fields, because those are wrong on every Spanish page: the object at
+    `/es/hawaii/` self-reports `url: "/hawaii/"` and `lang: "en"`. Trusting them collapsed
+    all 56 state pages into 56 duplicate ids (803 records, 747 distinct ids) and made the
+    `--lang` filter a no-op.
+    """
     return {
-        "id": slugify(url),
+        "id": slug,
         "source": "healthcare_gov",
-        "url": url,
+        "url": obj.get("url", ""),
         "title": obj.get("title", ""),
-        "lang": obj.get("lang", ""),
+        "lang": "es" if slug == "es" or slug.startswith("es_") else obj.get("lang", ""),
         "date": obj.get("date", ""),
         "categories": obj.get("categories", []),
         "tags": obj.get("tags", []),
@@ -251,14 +263,18 @@ def normalize(raw_dir: Path, processed_dir: Path, langs: set[str] | None) -> int
     out_path = processed_dir / "corpus.jsonl"
 
     written = 0
+    seen: set[str] = set()
     with out_path.open("w", encoding="utf-8") as out:
         for post_file in sorted(posts_dir.glob("*.json")):
             obj = json.loads(post_file.read_text(encoding="utf-8"))
-            rec = normalize_record(obj)
+            rec = normalize_record(obj, post_file.stem)
             if langs and rec["lang"] and rec["lang"] not in langs:
                 continue
             if not rec["text"]:  # skip empty / non-article posts
                 continue
+            if rec["id"] in seen:  # doc ids are the anchor for gold labels and chunk parentage
+                raise RuntimeError(f"duplicate corpus id {rec['id']!r} from {post_file.name}")
+            seen.add(rec["id"])
             out.write(json.dumps(rec, ensure_ascii=False) + "\n")
             written += 1
 
@@ -280,7 +296,9 @@ def main() -> int:
         "--limit", type=int, default=0, help="Only fetch the first N discovered posts (smoke test)"
     )
     p.add_argument(
-        "--lang", default="all", help="Comma-separated langs to keep in corpus.jsonl, or 'all'"
+        "--lang",
+        default="en",
+        help="Comma-separated langs to keep in corpus.jsonl, or 'all' (default: en)",
     )
     p.add_argument(
         "--delay", type=float, default=0.25, help="Seconds between requests (default: 0.25)"

@@ -114,7 +114,7 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 | **Orange Book** | — | FDA's list of approved drugs with therapeutic-equivalence ratings — which generics substitute for which brand. Available via openFDA. |
 | **Drugs@FDA** | — | FDA's database of approved drug products and their application histories. Available via openFDA. |
 | **SBC** | Summary of Benefits and Coverage | The standardized plan-summary document insurers must provide. Uses a federally standardized public template, which makes it parseable across issuers. |
-| **corpus.jsonl** | — | The repo's processed-corpus format: one JSON record per chunk, written to `data/processed/<source>/`. |
+| **corpus.jsonl** | — | The repo's processed-corpus format: one JSON record per *document*, written to `data/processed/<source>/`. Its sibling `chunks.jsonl` holds one record per chunk, derived from it by `make chunk` and git-ignored (see [chunking.md](chunking.md)). |
 | **bite** | — | A HealthCare.gov field name, not an industry term: the one-sentence editorial summary the site writes for each post. Useful as a chunk-level abstract. |
 
 ---
@@ -242,7 +242,8 @@ the schema.
 | **groundedness / faithfulness** | Whether an answer's claims are actually supported by the retrieved context, as opposed to merely being true. Graded separately from correctness. |
 | **provenance** | The chain from a claim back to its source. Two senses in this repo: *answer* provenance (which chunk or URL backs a claim) and *fetch* provenance (the `_meta.json` recording when and from where a file was downloaded). |
 | **citation / claim / trace** | The three structured answer components: the sources cited, the individual assertions made, and the step-by-step record of how the agent got there. |
-| **chunk** | One retrievable unit of corpus text — the granularity of both retrieval and citation. |
+| **chunk** | One retrievable unit of corpus text — the granularity of both retrieval and citation. In this repo a chunk is a **verbatim slice** of a parent `corpus.jsonl` document, carrying that document's id and the character offsets it was cut at, so a retrieved chunk always maps back to a document (which is how recall@k is scored) and to an exact span (which is what per-claim highlighting will need). |
+| **citation label** | The human-readable string an answer cites a chunk as — `NCD 30.3, Acupuncture — Indications and Limitations of Coverage`, `Medicare & You 2026, p. 31`. It is *computed* from a chunk's fields, never stored, which is why `page`, `section_number`, and the section `heading` are carried on every chunk rather than looked up later. |
 | **gold eval set** | The hand-written question set with known answers and known correct lane, used to grade the system. Built before the agent, not after. |
 | **recall@k** | The fraction of questions whose correct chunk appears in the top *k* retrieved results. The Phase 0 retrieval metric. |
 | **MRR** | Mean Reciprocal Rank — the average of 1/(rank of the first correct result). Rewards ranking the right chunk higher, which recall@k alone does not. |
