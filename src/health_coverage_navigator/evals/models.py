@@ -1,9 +1,10 @@
 """Pydantic schema for the Phase 0 gold evaluation set.
 
-`SourceType` mirrors the frozen API contract's `Literal["reference", "structured_api", "web"]`
-(see docs/frontend_plan.md §4.2). It is defined here only because `api/models.py` does not exist
-yet. Once Phase F0 builds it, `SourceType` should move there and this module should import it —
-the contract owns that enum, not the eval set.
+`SourceType` is imported from `api/models.py`, which owns the frozen API contract's vocabulary
+(docs/frontend_plan.md §4.2). The arrow points eval-set → contract deliberately: the gold set
+asserts what the API must eventually return, so it is a consumer of that enum rather than a peer
+with its own copy. `api/models.py` imports nothing from this package and nothing from FastAPI,
+which is what keeps the arrow one-way and keeps the gold-set tests free of a web framework.
 
 `CorpusName` is imported from `corpus.py`, which owns the text-corpus vocabulary — the eval set is
 a consumer of the corpora, not a peer that gets its own copy of the list.
@@ -18,10 +19,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from health_coverage_navigator.api.models import SourceType
 from health_coverage_navigator.corpus import CorpusName
 
 Difficulty = Literal["easy", "medium", "hard"]
-SourceType = Literal["reference", "structured_api", "web"]
 
 
 class GoldQuestion(BaseModel):

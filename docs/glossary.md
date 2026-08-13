@@ -247,6 +247,9 @@ the schema.
 | **gold eval set** | The hand-written question set with known answers and known correct lane, used to grade the system. Built before the agent, not after. |
 | **recall@k** | The fraction of questions whose correct chunk appears in the top *k* retrieved results. The Phase 0 retrieval metric. |
 | **MRR** | Mean Reciprocal Rank — the average of 1/(rank of the first correct result). Rewards ranking the right chunk higher, which recall@k alone does not. |
+| **false abstention** | Abstaining on a question the corpus *can* answer. Tracked as its own metric rather than folded into recall, because it is the failure the grounding guardrail is most likely to overshoot into — and an over-cautious system and a system with poor retrieval score identically on recall alone. |
+| **eval run** | One scored pass of the gold set by one answerer, persisted as JSON under `data/eval_runs/` (git-ignored — a run is a measurement, not a source of truth). Every run records the `runner` that produced it and the chunk `snapshot_id` it was measured against, so a score that moved between runs is never ambiguous between "the retriever changed" and "the chunks changed". |
+| **stub mode** | The state in which every answer is canned, reported as `stub: true` by `/api/health` and rendered as a persistent banner. Phase 0 is entirely stub mode by design — the UI is proven before an agent exists. Eval runs made in it carry `runner: "stub"` for the same reason `abstained` is a boolean: output that is not what it appears to be must say so structurally, not by convention. |
 
 ---
 

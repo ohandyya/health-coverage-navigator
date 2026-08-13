@@ -73,6 +73,25 @@ data/processed/part_d_spuf/*/*.parquet
 # chunking parameters rather than about the corpus.
 data/processed/*/chunks.jsonl
 
+# Eval run outputs. Generated artifacts, per frontend_plan.md §5.2 — a run is a measurement of a
+# retriever at a moment, not a source of truth, and the runner rebuilds one on demand. Committing
+# them would also put whatever an answerer produced under the public-repo guardrail's review.
+data/eval_runs/
+
+# Frontend build tooling. This block MUST exist before the first `npm install`, and that ordering
+# is load-bearing rather than tidy: scripts/scan_sensitive.py scans every tracked-or-untracked-
+# and-not-ignored file for credential and PII markers repo-wide (only the licensing markers are
+# scoped to data/). npm dependency trees routinely ship *.pem and *credentials* test fixtures,
+# which fire the BLOCKING cred:secret-filename marker on filename alone, and thousands of author
+# e-mail addresses, against a pii:email baseline of 0. Ignoring first puts all of it out of scope
+# by construction — the same mechanism that keeps .env and the raw PDFs out.
+# frontend/src/api/schema.d.ts is generated but IS committed, so the repo type-checks without
+# running the backend (frontend_plan.md §3).
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
 # Logs
 *.log
 

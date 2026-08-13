@@ -2,9 +2,9 @@
 
 Design decisions and implementation plan for the Health Coverage Navigator web UI.
 
-**Status:** design only. Nothing here is implemented yet. This document exists so the API
-contract can be locked in now (during Phase 0) while the UI itself gets built alongside
-[Phase 1a](plan.md#phase-1a--rag-without-a-vector-database-full-text-search).
+**Status:** this is the design, not the build log — [progress.md](progress.md) says what is
+actually built. Where implementation forced a decision this document had left open or sketched
+loosely, the decision is recorded *here*, in the section that owns it.
 
 **Audience note:** written for someone who is comfortable in Python and new to frontend work.
 Where a choice has a "why" that isn't obvious to a backend developer, it's spelled out.
@@ -31,6 +31,9 @@ Decisions made without asking, because they're conventional defaults:
 | Data fetching | Plain `fetch` wrapped in hooks | Add TanStack Query only if the eval dashboard's polling becomes annoying. Not before. |
 | Routing | React Router, two routes: `/` (chat) and `/evals` | Anything more is premature. |
 | Package manager | `npm` | Boring, bundled with Node, one less thing to install. |
+| Node version | 22 LTS, pinned by `.nvmrc` | Vite 8 requires `^20.19.0 \|\| >=22.12.0`. Pinning means the version is a property of the repo, not of whichever machine last touched it. |
+| TypeScript | `~5.9`, not the 6.x `create-vite` scaffolds | `openapi-typescript` peer-requires `typescript@^5.x`, and the codegen contract in §4.3 is the highest-leverage thing in this document. A TS major we do not need is the wrong thing to trade it for. Revisit when `openapi-typescript` supports 6. |
+| Linter | `oxlint` (what `create-vite` now ships) rather than ESLint | Same `npm run lint` entry point, materially faster, zero configuration. §7 said ESLint because that is what the template used at the time. |
 | Type safety across the boundary | `openapi-typescript` generating TS types from FastAPI's `/openapi.json` | This is the single highest-leverage choice in this document. See §4.3. |
 | Frontend tests | Vitest for the SSE parser and message-reducer logic only | Component tests for a personal tool are low value. The stream parser is not — it's the one place a subtle bug hides. |
 
@@ -72,14 +75,18 @@ and costs a CORS config, a second process to start, and a second thing to deploy
 health_coverage_navigator/
 ├── src/health_coverage_navigator/
 │   ├── api/
-│   │   ├── __init__.py
+│   │   ├── __init__.py       # docstring only — a re-export here would close an import cycle
 │   │   ├── app.py            # FastAPI app factory, static mount, lifespan
 │   │   ├── models.py         # ⭐ Pydantic request/response/event models — the contract
+│   │   ├── deps.py           # AppContext + the dependency that hands it to a route
+│   │   ├── dump_openapi.py   # static schema dump for `make types` (see §4.3)
 │   │   ├── routes/
+│   │   │   ├── health.py     # GET /api/health
 │   │   │   ├── chat.py       # POST /api/chat, POST /api/chat/stream
-│   │   │   ├── evals.py      # eval set + run endpoints
-│   │   │   └── corpus.py     # (optional) document lookup for citation drill-down
+│   │   │   ├── evals.py      # eval set + run endpoints (owns the gold-set wire models)
+│   │   │   └── corpus.py     # document lookup for citation drill-down
 │   │   └── stub.py           # canned responses so the UI can be built before Phase 1a
+│   ├── evals/runner.py       # gold set -> scored run, with a pluggable answerer
 │   └── ...
 ├── frontend/
 │   ├── package.json
@@ -214,23 +221,33 @@ it works without `uvicorn` running.
 | `POST` | `/api/chat/stream` | Same input, `text/event-stream` response. | 1a |
 | `GET` | `/api/corpus/{doc_id}` | Full document behind a citation. | 1a |
 | `GET` | `/api/evals/questions` | The gold eval set. | 0 |
-| `POST` | `/api/evals/runs` | Kick off an eval run (background task). | 0/1a |
-| `GET` | `/api/evals/runs` | List past runs with headline metrics. | 0/1a |
-| `GET` | `/api/evals/runs/{id}` | Per-question results for one run. | 0/1a |
-| `GET` | `/api/health` | Liveness + which lanes are configured. | 0 |
+| `POST` | `/api/evals/runs` | Kick off an eval run (background task). Returns `202`. | 0 |
+| `GET` | `/api/evals/runs` | List past runs with headline metrics. | 0 |
+| `GET` | `/api/evals/runs/{id}` | Per-question results for one run. | 0 |
+| `GET` | `/api/evals/runs/{id}/stream` | SSE progress for a run in flight; replayed from the start. | 0 |
+| `GET` | `/api/health` | Liveness, `stub` mode, and which lanes are configured. | 0 |
 
 ### 4.5 SSE event schema
 
 One stream feeds both the answer pane and the trace panel. Typed events keep that clean:
 
 ```
-event: start      data: {"conversation_id": "...", "message_id": "..."}
-event: step       data: {TraceStep}          ← trace panel appends
-event: token      data: {"delta": "Your "}   ← answer pane appends
-event: citation   data: {Citation}           ← citation list grows as sources are used
-event: done       data: {ChatResponse}       ← authoritative final object
-event: error      data: {"message": "..."}
+event: start      data: {"type": "start", "conversation_id": "...", "message_id": "..."}
+event: step       data: {"type": "step", "step": {TraceStep}}       ← trace panel appends
+event: token      data: {"type": "token", "delta": "Your "}         ← answer pane appends
+event: citation   data: {"type": "citation", "citation": {Citation}} ← citation list grows
+event: done       data: {"type": "done", "response": {ChatResponse}} ← authoritative final object
+event: error      data: {"type": "error", "code": "...", "message": "..."}
 ```
+
+**The discriminant lives inside the JSON, not only on the `event:` line, and payloads are
+wrapped.** Both were forced by making the union real rather than notional. Without a discriminant
+in the body, `openapi-typescript` cannot emit a narrowable union, so `stream.ts` would need a
+hand-written string→type map — precisely the duplicated contract CLAUDE.md forbids; and with bare
+payloads, `step` and `done` are not structurally distinguishable. The `event:` line is kept for
+readability under `curl` and is *derived from* the payload (`sse_frame()` in `api/models.py`), so
+the two cannot disagree. The field is named `type` rather than `event` to avoid colliding with the
+SSE keyword.
 
 The `done` event carries the complete `ChatResponse`. The client replaces its incrementally-
 built state with it, so a dropped or malformed `token` event can't leave the UI showing
@@ -244,8 +261,12 @@ chunk boundaries that split mid-frame and mid-UTF-8-character.
 
 **Second gotcha:** SSE event payloads don't automatically appear in the OpenAPI schema, since
 FastAPI only sees `StreamingResponse`. To keep §4.3's type generation covering them, define the
-event models as a discriminated union and reference it from a route's `responses=` metadata (or
-a small schema-only endpoint) so it lands in `openapi.json`.
+event models as a discriminated union and reference it from a route's `responses=` metadata so it
+lands in `openapi.json`. That metadata takes a *model*, not a bare annotated union, hence the
+`StreamEventEnvelope` wrapper — never sent on the wire, unwrapped in `client.ts` as
+`components["schemas"]["StreamEventEnvelope"]["event"]`. The route also needs a response class
+whose `media_type` is `text/event-stream` at the class level, or FastAPI files the schema under
+`application/json`.
 
 ---
 
@@ -392,13 +413,20 @@ serve:        ## Single-process mode: FastAPI serving the built UI (:8000)
 	$(MAKE) ui-build && uv run uvicorn health_coverage_navigator.api.app:app --host 127.0.0.1
 ```
 
-Also: extend `check-all` to run `tsc --noEmit` and `npm run lint` (ESLint) so the frontend is
-covered by the same gate as `ruff` and `pyright`. Add the frontend lint step to
-`.pre-commit-config.yaml` only if it's fast enough not to be annoying — otherwise leave it in
-`check-all`.
+Plus `ui-test` (Vitest over the stream parser), `types-check` (regenerate and `diff`, mirroring
+`chunk-check`), and `eval` (run the gold set from the CLI).
 
-New dependencies: `fastapi`, `uvicorn[standard]`, `sse-starlette` (optional, tidier SSE than
-hand-rolling), `pydantic` (already transitive via PydanticAI later).
+`check-all` runs the frontend gate (`tsc --noEmit` + lint) via a `ui-check` target, but that target
+**skips with a message when `frontend/node_modules` is absent** rather than failing. `check-all` is
+the command this repo trusts, and a fresh clone or a Python-only session has to be able to run it
+green; once `make ui-install` has run, the full gate applies. `.pre-commit-config.yaml` is
+unchanged — its hooks are all `types: [python]`, and a frontend hook is only worth adding if it
+stays fast.
+
+New dependencies: `fastapi`, `uvicorn[standard]`, and `httpx2` (dev — `fastapi.testclient` needs
+it). **Not `sse-starlette`**: §7 marked it optional, and the frame writer turned out to be a
+three-line `sse_frame()` plus a `StreamingResponse` subclass. Revisit if client-disconnect
+detection or keep-alive pings start to matter.
 
 ---
 
@@ -433,14 +461,17 @@ the storage layer; internationalization; PWA/offline; and any deployment target.
 
 ## 10. Open questions
 
-1. **Multi-turn conversation.** The contract assumes conversations are multi-turn with
-   server-side in-memory history. If the agent is single-shot in Phase 1a, `conversation_id` is
-   carried but unused — harmless, and it avoids a contract change later. Confirm that's the
-   intent.
-2. **Eval runs from the browser.** Triggering a run over HTTP means a long-running background
-   task and a progress channel (probably SSE again, reusing §4.5's machinery). Alternative: the
-   dashboard is read-only over runs produced by a CLI. Read-only is meaningfully simpler; decide
-   at F0.
-3. **Corpus browser.** A "search the 886 ingested documents" page was considered and left out of
+1. ~~**Multi-turn conversation.**~~ **Settled at F0: as written.** `conversation_id` is carried
+   through the contract from day one and is unused while the agent is single-shot. Harmless, and
+   it means multi-turn is a change to the agent rather than to the contract.
+2. ~~**Eval runs from the browser.**~~ **Settled at F0: triggerable over HTTP.** `POST
+   /api/evals/runs` starts a background job; `GET /api/evals/runs/{id}/stream` follows it with
+   §4.5's SSE machinery. The answerer is a parameter of `evals/runner.py`, so Phase 0 runs the
+   stub — every run record carries `runner: "stub"` and the dashboard renders it as a badge — and
+   Phase 1a swaps one function without touching the API, the storage format, or the UI. Progress
+   events are **buffered and replayed** rather than pushed live: the canned answerer finishes all
+   35 questions in under a millisecond, so a push-only stream would routinely finish before the
+   browser opened it.
+3. **Corpus browser.** A "search the 2,056 ingested documents" page was considered and left out of
    v1. Citation drill-down covers most of the need. Revisit if inspecting the corpus by hand
-   turns out to be a frequent debugging move.
+   turns out to be a frequent debugging move. *Still open.*

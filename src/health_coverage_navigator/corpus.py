@@ -66,3 +66,31 @@ def load_corpus(source: CorpusName) -> list[dict]:
             seen.add(rec["id"])
             docs.append(rec)
     return docs
+
+
+def load_doc_index() -> dict[str, dict]:
+    """All three corpora keyed by doc id, for `GET /api/corpus/{doc_id}`.
+
+    Flat across sources rather than nested by source, because a citation carries a bare `doc_id`
+    and the API resolves it without being told which corpus it came from. That only works because
+    doc ids are globally unique — a property `load_corpus()` does **not** enforce (it checks
+    uniqueness only *within* a source), so this function checks it, and
+    `tests/test_corpus.py::test_doc_ids_are_globally_unique` checks it against the live corpus.
+    Without that, a future ingestion refresh could make the endpoint silently serve the wrong
+    document, which for a citation drill-down is the worst failure available.
+
+    Loading all 2,056 documents costs ~23 ms and ~12 MB, which is why the API does this once in
+    its lifespan rather than building a byte-offset sidecar index. Revisit if the corpus grows an
+    order of magnitude.
+    """
+    index: dict[str, dict] = {}
+    for source in CORPUS_NAMES:
+        for rec in load_corpus(source):
+            doc_id = rec["id"]
+            if doc_id in index:
+                raise ValueError(
+                    f"doc id {doc_id!r} appears in both {index[doc_id]['source']!r} "
+                    f"and {source!r}; doc ids must be unique across all corpora"
+                )
+            index[doc_id] = rec
+    return index

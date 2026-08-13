@@ -19,18 +19,27 @@ mid-stream.
 
 *Updated 2026-08-13.*
 
-- **Phase:** 0 — corpus + eval scaffold. **The backend half of Phase 0 is complete.** Ingestion
-  is done for all five bulk sources (three RAG corpora + two structured mirrors, `exchange_puf`
-  and `part_d_spuf`), the public-repo guardrail is enforced by `make scan`, the gold eval set
-  (35 questions) plus loader and pytest suite exist, and chunking now produces 6,722 chunks
-  across the three text corpora.
-- **Next up:** frontend **F0** — the whole remaining Phase 0 surface. Nothing in
-  [frontend_plan.md](frontend_plan.md) §6's F0 list is built: no `api/` package, no `frontend/`
-  directory, and `fastapi`/`uvicorn` are not yet dependencies. The §10 "decide at F0" question
-  below gates the shape of the eval endpoints and should be settled before they are written.
+- **Phase:** **0 is complete, both halves.** The backend half was already done (five bulk sources,
+  the `make scan` guardrail, 35 gold questions, 6,722 chunks). The frontend half now is too: the
+  frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval runner with
+  HTTP-triggered runs, and a React UI rendering all of it. `make dev` gives a working end-to-end
+  loop with no agent behind it, which is exactly what F0 was for.
+- **Next up:** **Phase 1a** — [plan.md](plan.md#phase-1-a--rag-without-a-vector-database-full-text-search).
+  The swap is deliberately small and the seams are already cut: replace `api/stub.py`'s
+  `stub_answer()` with a PydanticAI agent behind a single `retrieve` tool over
+  `data/processed/*/chunks.jsonl` (lexical/BM25, no vector DB — that is 1b), pass the real
+  answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
+  `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on
+  their own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not
+  need to change — if they do, that is a signal worth stopping on.
 - **Open questions:**
-  - [frontend_plan.md](frontend_plan.md) §10 — eval runs from the browser (read-only dashboard
-    vs. HTTP-triggered runs) is marked "decide at F0" and is still undecided.
+  - **nvm is installed at `~/.nvm` but not wired into the shell profile**, so an interactive
+    `node`/`npm` still resolves to the old v20.7.0 while `make ui-*` (which sources nvm itself)
+    gets 22. Adding `export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`
+    to `~/.zshrc` fixes it; deliberately not done, since it is a change to the machine rather than
+    the repo.
+  - **The UI has not been looked at in a browser.** Every layer beneath the pixels is verified by
+    tests and by HTTP; the rendering is not. First thing to do next session, before building on it.
   - `plan.md`'s Exchange PUF paragraph still describes two tables as the ones that matter; the
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
@@ -38,10 +47,6 @@ mid-stream.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
-  - `CLAUDE.md` puts "an eval runner reporting recall@k/MRR" in Phase 0, but `plan.md`'s Phase 0
-    checklist stops at the dataset loader and nothing computes those metrics. The plan is the
-    more defensible reading — a recall@k runner needs a retriever, which is Phase 1a — so
-    `CLAUDE.md` is probably the file to correct. Not done here; one of the two is wrong.
 
 ### Phase 0 checklist
 
@@ -61,16 +66,123 @@ Backend (plan.md, Phase 0):
 
 Frontend (frontend_plan.md, Phase F0):
 
-- [ ] `api/models.py` — the frozen contract models
-- [ ] `api/app.py` — `/api/health` + stubbed `POST /api/chat`
-- [ ] `frontend/` scaffold (Vite + React + TS + Tailwind + shadcn), `/api` proxy
-- [ ] `make types` → `frontend/src/api/schema.d.ts`
-- [ ] Chat page rendering the stub end to end
-- [ ] Eval endpoints (after the gold set exists)
+- [x] `api/models.py` — the frozen contract models, including the SSE union
+- [x] `api/app.py` — `/api/health` + stubbed `POST /api/chat`, static mount, SPA fallback
+- [x] `frontend/` scaffold (Vite + React + TS + Tailwind v4 + shadcn), `/api` proxy
+- [x] `make types` → `frontend/src/api/schema.d.ts` (committed), plus `make types-check`
+- [x] Chat page rendering the stub end to end — badges, citation cards, trace panel, abstention
+- [x] Eval endpoints over the gold set, plus HTTP-triggered runs with SSE progress
+
+Beyond the F0 list, because implementation made them the cheaper order:
+
+- [x] `POST /api/chat/stream` + `stream.ts` + its Vitest suite (scheduled for F1; see the log)
+- [x] `evals/runner.py` with a pluggable answerer — the Phase 1a swap point
+- [x] `GET /api/corpus/{doc_id}` citation drill-down against the real corpus
 
 ---
 
 ## Log
+
+### 2026-08-13 — Phase F0: the contract, the stub, and the UI on top of it
+
+**Did:** built the whole frontend half of Phase 0 — the frozen API contract, a FastAPI app serving
+canned answers over both JSON and SSE, an eval runner with HTTP-triggered runs, and a React UI
+rendering all of it. Phase 0 is now complete on both halves.
+
+**Decided:** **`api/models.py` imports neither `evals` nor `fastapi`, and eval *wire* models live
+in `routes/evals.py`.** `evals/models.py` had a standing note to move `SourceType` into the
+contract module and import it back; doing so fixes the dependency arrow as evals → contract, which
+then forbids the obvious tidy-up of putting `EvalQuestionsResponse` (which needs `GoldQuestion`)
+beside the other models. The no-`fastapi` half is the load-bearing one: `tests/test_gold_set.py`
+transitively imports the contract, and the gold-set tests should not drag in a web framework.
+`api/__init__.py` is docstring-only for the same reason — a single re-export of `create_app` there
+would make `import api.models` execute `app.py`, reach `routes/evals.py`, and land back in a
+half-initialised `api.models`.
+
+**Decided:** **the SSE discriminant goes inside the JSON payload, and payloads are wrapped.**
+frontend_plan §4.5 sketched bare payloads with the type only on the `event:` line. That cannot be
+a discriminated union: `openapi-typescript` has nothing to narrow on, so `stream.ts` would need a
+hand-written string→type map — the duplicated contract CLAUDE.md exists to prevent — and `step`
+and `done` are not structurally distinguishable as bare objects. The `event:` line is kept for
+`curl` readability and *derived* from the payload, so the two cannot drift. Getting the union into
+`openapi.json` at all needed a `StreamEventEnvelope` model (the `responses=` metadata takes a
+model, not an annotated union) plus a response class declaring `text/event-stream` at class level;
+without the latter FastAPI files the schema under `application/json` and it looks correct while
+being wrong.
+
+**Decided:** **streaming was pulled forward from F1 into F0.** Three reasons, and the first is the
+one that decides it: `/api/chat/stream` is the only non-artificial place to hang the envelope, so
+the alternative was a fake schema-only endpoint returning something nobody wants. The plan also
+calls the stream parser "the one place a subtle bug hides", and debugging it beside a brand-new
+agent in 1a is the worse ordering. It cost a generator, since it is the same canned response
+either way.
+
+**Decided:** **eval runs are triggerable over HTTP (settling frontend_plan §10.2), and the
+answerer is a parameter.** At Phase 0 that parameter is the chat stub, so metrics are *genuinely
+computed* against canned answers rather than faked — recall@5 lands at 0.033 and abstention
+accuracy at 0.40, which is the honest picture — and every run record carries `runner: "stub"`,
+which the dashboard renders as a badge. Phase 1a swaps one function and the API, the storage
+format, and the UI are untouched. Progress events are **buffered and replayed** rather than pushed:
+the stub finishes 35 questions in under a millisecond, so a push-only stream would routinely
+complete before the browser opened it and the dashboard would show an empty run that had in fact
+succeeded. That stays correct when 1a makes a run slow.
+
+**Decided:** **`check-all` runs the frontend gate but skips it with a message when
+`frontend/node_modules` is absent.** frontend_plan §7 said to fold `tsc` and lint in
+unconditionally, which breaks the repo's primary command on a fresh clone. Skipping is not the
+softer option here — `tsc` is a correctness check, unlike `scan` (slow) and `chunk` (writes files),
+so it belongs in `check-all` rather than beside them.
+
+**Decided:** **TypeScript is pinned to `~5.9`, against the 6.x `create-vite` now scaffolds.**
+`openapi-typescript` peer-requires 5.x, and the codegen is the mechanism that makes a Pydantic
+change a TypeScript compile error — frontend_plan §4.3's "single highest-leverage choice". Trading
+that for a TS major nothing needs is the wrong trade. Also swapped ESLint for `oxlint` (what the
+template ships now; same `npm run lint`, no config) and skipped `sse-starlette` entirely — §7
+marked it optional and the frame writer turned out to be three lines.
+
+**Decided:** the stub's two citations have deliberately *different shapes* — one with an external
+`url` and a score, one with neither — and its trace covers all four `kind` values with one step
+leaving every optional field unset. A canned response that fills every field cannot catch a
+component that renders `undefined ms`. Trigger words (`abstain`, `lanes`) select the abstention and
+all-three-lanes variants rather than React fixtures, so those paths go through the real serializer
+and the real generated types.
+
+**Rejected:** a lazy corpus index. Measured the eager load at ~23 ms and ~12 MB for all 2,056
+documents, which is less than the cost of writing the lazy path. Also rejected a `doc_id →
+byte-offset` sidecar: it saves the memory and buys a second file format, a rebuild step, and a
+seek per request. Chunks are deliberately never loaded by the API — `chunks.jsonl` is git-ignored
+and a fresh clone has none, so `/api/health` reads the committed manifest instead.
+
+**Dead end:** the first eval-run test monkeypatched `runner.EVAL_RUNS_DIR` and still wrote into the
+real `data/eval_runs/` — default arguments bind at definition, so `runs_dir: Path = EVAL_RUNS_DIR`
+never saw the patch. Caught only by listing `data/` afterwards, not by a failing assertion. Every
+persistence function now takes `Path | None` and resolves through `_runs_dir()` at call time. Worth
+remembering: a test that quietly writes into the repo's data tree is exactly what the public-repo
+guardrail exists to stop, and nothing in the suite would have said so.
+
+**Dead end:** Vite 8 binds `[::1]` only, so `curl 127.0.0.1:5173` is refused while
+`localhost:5173` works — an ugly split, and inconsistent with the uvicorn side, which binds
+`127.0.0.1` deliberately because there is no auth. `server.host` is now explicit.
+
+**Dead end:** the SPA fallback's `assets/` carve-out was written as `path.startswith("assets/")`,
+which misses a bare directory request — Starlette passes that through as `assets` with no trailing
+slash, so `/assets/` fell through to `index.html` with a 200. Compared as a whole path segment now,
+with the bare-directory case in the test parametrisation.
+
+**Dead end:** Homebrew on this machine has a stale formula index (no `node@22`, and it errors on
+the macOS version), so the Node 22 upgrade went through a `~/.nvm` install instead. That is
+self-contained and left the existing `/usr/local/bin/node` v20.7.0 untouched — but **nvm was
+deliberately not added to the shell profile**, so an interactive shell still gets v20.7.0. The
+Makefile's `ui-*` targets source nvm themselves, so `make` works either way; a bare `npm` in a new
+terminal does not. See *Open questions*.
+
+**Stopped at:** clean. `make check-all` (64 pytest + tsc + oxlint), `make ui-test` (11 vitest),
+`make types-check`, and `make scan` all pass, with every advisory scan count exactly at baseline —
+the `.gitignore`-before-`npm install` ordering held and `node_modules` never entered scan scope.
+Verified end to end over HTTP: the proxy, the SSE stream through it, a browser-triggered eval run,
+citation drill-down against the real corpus, and the SPA deep link in both dev and single-process
+mode. **The rendered UI itself has not been eyeballed in a browser** — everything below the pixels
+is verified, the pixels are not.
 
 ### 2026-08-13 — chunking, and the duplicate doc ids it surfaced
 
