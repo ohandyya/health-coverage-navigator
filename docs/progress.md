@@ -23,7 +23,9 @@ mid-stream.
   the `make scan` guardrail, 35 gold questions, 6,722 chunks). The frontend half now is too: the
   frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval runner with
   HTTP-triggered runs, and a React UI rendering all of it. `make dev` gives a working end-to-end
-  loop with no agent behind it, which is exactly what F0 was for.
+  loop with no agent behind it, which is exactly what F0 was for. `check-all` now covers the
+  frontend fully — `tsc`, lint, and vitest — and the `sync-frontend` skill carries the procedure
+  for keeping the two sides of the contract in step.
 - **Next up:** **Phase 1a** — [plan.md](plan.md#phase-1-a--rag-without-a-vector-database-full-text-search).
   The swap is deliberately small and the seams are already cut: replace `api/stub.py`'s
   `stub_answer()` with a PydanticAI agent behind a single `retrieve` tool over
@@ -38,8 +40,6 @@ mid-stream.
     gets 22. Adding `export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`
     to `~/.zshrc` fixes it; deliberately not done, since it is a change to the machine rather than
     the repo.
-  - **The UI has not been looked at in a browser.** Every layer beneath the pixels is verified by
-    tests and by HTTP; the rendering is not. First thing to do next session, before building on it.
   - `plan.md`'s Exchange PUF paragraph still describes two tables as the ones that matter; the
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
@@ -82,6 +82,42 @@ Beyond the F0 list, because implementation made them the cheaper order:
 ---
 
 ## Log
+
+### 2026-08-13 — a skill for contract sync, and vitest joins the gate
+
+**Did:** added the `sync-frontend` skill — the procedure for propagating a FastAPI contract change
+through codegen into the frontend — and folded `vitest` into `make ui-check`, so the stream-parser
+suite now runs as part of `check-all` rather than only on demand.
+
+**Decided:** **the skill is deliberately not about `make types`.** That is one line and needs no
+skill; the document exists for the three things around it — the schema diff is the work list (which
+is only true because `dump_openapi.py` renders byte-stably, so no line in it is dict ordering), the
+seams codegen cannot see, and an empty diff after a real backend change being a *symptom* rather
+than a success. The seam that justifies the whole document: `client.ts` hand-writes its URL strings
+and the generated `paths`/`operations` types are unused, so a **renamed route compiles clean and
+404s at runtime**. Nothing in the toolchain catches it; a by-hand diff of the `paths` keys is the
+only defence, so the skill says to do it even when the diff looked small.
+
+**Decided:** **vitest runs in `ui-check`, not only in `ui-test`.** Same shape as the earlier
+argument for `tsc`, and stronger: `stream.ts` is the one frontend module with real logic, and the
+bugs its tests cover — an SSE frame or a multi-byte character split across a chunk boundary — are
+invisible in ordinary use, so the suite is the only feedback that exists. Neither reason `scan` and
+`chunk` sit outside `check-all` applies here: it writes nothing and takes about a second.
+
+**Decided:** the skill's stopping rule is CLAUDE.md's "the UI tracks the phases, it doesn't lead
+them", stated explicitly because the instinct mid-sync runs the other way. A new response field that
+*could* be rendered gets reported and asked about, not rendered; a widened `Literal` surfaces the
+question (what does the new lane look like?) rather than an invented answer to unblock the compiler.
+The contract was frozen early precisely so a Phase 4 field does not acquire Phase 4's UI today.
+
+**Also:** the F0 UI was run and looked at in a browser, closing the open question the previous entry
+left — the pixels are now verified alongside everything beneath them.
+
+**Stopped at:** the skill has not been run against a real contract change. Its §3/§4 claims are read
+off the F0 code as it stands, not proven by an actual sync — the first Phase 1a contract edit is
+what will test them.
+
+**Commits:** `791b875`, `2dba60c`
 
 ### 2026-08-13 — Phase F0: the contract, the stub, and the UI on top of it
 

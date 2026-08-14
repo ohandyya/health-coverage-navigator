@@ -413,11 +413,11 @@ serve:        ## Single-process mode: FastAPI serving the built UI (:8000)
 	$(MAKE) ui-build && uv run uvicorn health_coverage_navigator.api.app:app --host 127.0.0.1
 ```
 
-Plus `ui-test` (Vitest over the stream parser), `types-check` (regenerate and `diff`, mirroring
-`chunk-check`), and `eval` (run the gold set from the CLI).
+Plus `ui-test` (Vitest over the stream parser, on its own), `types-check` (regenerate and `diff`,
+mirroring `chunk-check`), and `eval` (run the gold set from the CLI).
 
-`check-all` runs the frontend gate (`tsc --noEmit` + lint) via a `ui-check` target, but that target
-**skips with a message when `frontend/node_modules` is absent** rather than failing. `check-all` is
+`check-all` runs the frontend gate (`tsc --noEmit` + lint + Vitest) via a `ui-check` target, but
+that target **skips with a message when `frontend/node_modules` is absent** rather than failing. `check-all` is
 the command this repo trusts, and a fresh clone or a Python-only session has to be able to run it
 green; once `make ui-install` has run, the full gate applies. `.pre-commit-config.yaml` is
 unchanged — its hooks are all `types: [python]`, and a frontend hook is only worth adding if it

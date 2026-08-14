@@ -22,7 +22,7 @@ A `uv`-managed Python project: src layout, package `health_coverage_navigator`, 
 
 Ruff and pytest are both configured as dev dependencies (see `[tool.ruff]` and `[tool.pytest.ini_options]` in `pyproject.toml`). Pyright's `include` covers both `src` and `tests` — a bug in a test file is a real typecheck failure, not something that only shows up if the file happens to be open in an editor.
 
-A `Makefile` wraps every gate (`make help` lists them). `make check-all` runs ruff, pyright, pytest, and the frontend's `tsc`/lint — the last of which *skips with a message* when `frontend/node_modules` is absent, so a fresh clone still runs green. Server and frontend targets exist: `make dev` (both servers), `make serve` (one process), `make types` / `types-check` (OpenAPI → TS codegen), `make ui-install` / `ui-dev` / `ui-build` / `ui-test`, `make eval`.
+A `Makefile` wraps every gate (`make help` lists them). `make check-all` runs ruff, pyright, pytest, and the frontend gate (`tsc`, lint, Vitest) — the last of which *skips with a message* when `frontend/node_modules` is absent, so a fresh clone still runs green. Server and frontend targets exist: `make dev` (both servers), `make serve` (one process), `make types` / `types-check` (OpenAPI → TS codegen), `make ui-install` / `ui-dev` / `ui-build` / `ui-test`, `make eval`.
 
 The frontend requires **Node 22** (pinned in `.nvmrc`; Vite 8 needs `^20.19.0 || >=22.12.0`). If nvm is installed, the `ui-*` targets load it automatically. **TypeScript is pinned to `~5.9`, not the 6.x that `create-vite` scaffolds** — `openapi-typescript` peer-requires 5.x, and that codegen is the contract-enforcement mechanism, so it wins.
 
