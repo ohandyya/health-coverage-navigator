@@ -19,6 +19,38 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 
 ---
 
+## Maintaining this glossary
+
+**Standing rule, not a one-time task: when a change introduces a domain term this file does not
+already carry, add the entry in the same change** — not later, not in a follow-up. That applies
+equally to docs, code, comments, commit messages, and new data sources. A new source in particular
+almost always drags in several terms at once (its publisher, its file format, its identifiers);
+glossing them is part of adding the source, not a separate chore.
+
+- **What qualifies:** health, medical, insurance, pharmacy, and US-healthcare-regulatory
+  vocabulary — agencies, programs, coverage vehicles, code systems, benefit-design concepts,
+  dataset and identifier names, clinical service categories.
+- **What does not:** general software terms, library and framework names, and project-internal
+  jargon that [`plan.md`](plan.md) or [`frontend_plan.md`](frontend_plan.md) already owns. Don't
+  grow this into a second copy of those docs.
+- **What an entry must contain:** the expansion, and — the load-bearing part — what the term means
+  *in this repo*: its licensing status, which routing lane it belongs to, which schema field or
+  dataset column it maps to, or the correctness rule it carries. A bare dictionary expansion is
+  not a useful entry.
+- **What not to duplicate:** the 256 vendored HealthCare.gov consumer definitions. Point at them;
+  don't restate them.
+
+Terms that gate what may be committed — CPT, CDT, HCPCS, ICD, NCD, LCD, PII, PHI — are glossed
+with their consequence spelled out. Keep it that way: a glossary that softens the
+[public-repo guardrail](../CLAUDE.md#public-repo-data-guardrail-action-required-before-committing-data)
+is worse than no glossary.
+
+Read this file when an unfamiliar acronym appears rather than re-deriving the meaning, and treat
+its entries as the repo's settled usage — if a doc and this file disagree, that is a bug in one of
+them, not a matter of taste.
+
+---
+
 ## Agencies and organizations
 
 | Term | Expansion | What it means in this repo |

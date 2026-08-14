@@ -91,6 +91,32 @@ Beyond the F0 list, because implementation made them the cheaper order:
 
 ## Log
 
+### 2026-08-14 — CLAUDE.md condensed to invariants; two reference docs split out
+
+**Did:** cut `CLAUDE.md` from ~2,900 words to ~1,300 (line count is flat — prose became tables and
+bullets, which is the shape that survives condensing). Nothing was deleted; four blocks moved to
+docs that load on demand:
+
+| Moved out of `CLAUDE.md` | Now lives in |
+|---|---|
+| Command list, Make targets, toolchain pins, pyright/Node/TS gotchas | **new** [development.md](development.md) |
+| Config split rationale, the three easy-to-break rules | **new** [configuration.md](configuration.md) |
+| Glossary maintenance rules (what qualifies / what an entry must contain) | [glossary.md](glossary.md#maintaining-this-glossary) — the doc they govern |
+| Full data-source catalog with URLs | [plan.md](plan.md) already had it; CLAUDE.md keeps only the two *don't* rules |
+
+**Decided:** the test for staying in `CLAUDE.md` is **"would a session that never reads this go
+wrong?"** — not "is this true". Rules whose violation is silent and expensive stay (never put a
+tunable in `Secrets`, never chunk a structured source, never add a bulk downloader for
+NPPES/openFDA, the contract's `abstained` boolean). Reference material a session can look up when
+it needs it goes to `docs/` behind a link. The architecture-phase section was the biggest single
+win: seven prose paragraphs restating `plan.md` became a seven-row table, with only Phase 1a kept
+long because it is the phase being built.
+
+**Kept deliberately:** the whole *Public-repo data guardrail* section, at full strength and under
+its exact existing heading — three files link to that anchor
+(`data/README.md`, `frontend_plan.md` §8, `scan-sensitive` skill), and it is the one section whose
+failure mode is a licensing violation in a public repo rather than a wasted turn.
+
 ### 2026-08-14 — the plan is reframed: an agent that grows tools, not a RAG app that grows features
 
 **Did:** rewrote [plan.md](plan.md)'s Phase 1–4 framing. No code changed and no phase moved; what

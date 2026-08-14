@@ -319,8 +319,10 @@ So the split is enforced:
 | [`docs/glossary.md`](docs/glossary.md) | *What the words mean* | Schedule, design, or status |
 
 **[`CLAUDE.md`](CLAUDE.md) holds only invariants** — the conventions that are true regardless of
-how far along the build is. Guardrails stay legible because a status change never shows up in the
-diff as a rules change.
+how far along the build is, and *only* the ones worth spending context on in every session.
+Rationale and detail live in `docs/` behind links (`development.md`, `configuration.md`, the
+per-source guides), so the always-loaded file stays short. Guardrails stay legible because a
+status change never shows up in the diff as a rules change.
 
 **The progress log records dead ends, not just wins.** Every session appends *Did / Decided /
 Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves later:
@@ -374,7 +376,8 @@ health_coverage_navigator/
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
 ├── evals/gold/questions.yaml     # 35 hand-authored, corpus-verified questions
 ├── data/{raw,processed}/         # committed — see the licensing rules
-└── docs/                         # plan · frontend_plan · progress · glossary + per-source guides
+└── docs/                         # plan · frontend_plan · progress · glossary
+                                  #   + development · configuration + per-source guides
 ```
 
 ---
