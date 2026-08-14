@@ -36,7 +36,7 @@ typecheck-watch: ## Re-run pyright on file changes
 test: ## Run the test suite (verbose: per-test names/results)
 	uv run pytest -v
 
-check-all: lint format-check typecheck test ui-check ## Run every gate: ruff, pyright, pytest, tsc, oxlint
+check-all: lint format-check typecheck test ui-check ## Run every gate: ruff, pyright, pytest, tsc, oxlint, vitest
 
 # ---------------------------------------------------------------- frontend -------------------
 
@@ -58,9 +58,17 @@ ui-test: ## Vitest over the SSE parser (the one frontend module with real logic)
 # full gate applies. The rejected alternative was leaving the frontend out of check-all entirely
 # (as `scan` and `chunk` are) — but those are excluded for being slow or for writing files, and
 # tsc is neither; it is a correctness check that belongs with the others.
-ui-check: ## Typecheck and lint the frontend (skipped when deps aren't installed)
+#
+# Vitest runs here for the same reason, and the argument is stronger: `stream.ts` is the one
+# frontend module with real logic, and the bugs its tests cover (a frame or a multi-byte character
+# split across a chunk boundary) are invisible in normal use, so the suite is the only feedback
+# there is. It writes nothing and takes about a second. `make ui-test` still runs it alone.
+ui-check: ## Typecheck, lint, and test the frontend (skipped when deps aren't installed)
 	@if [ -d frontend/node_modules ]; then \
-		$(NODE_ENV_PREFIX) cd frontend && npx tsc --noEmit -p tsconfig.app.json && npm run lint; \
+		$(NODE_ENV_PREFIX) cd frontend \
+			&& npx tsc --noEmit -p tsconfig.app.json \
+			&& npm run lint \
+			&& npx vitest run; \
 	else \
 		echo "frontend/node_modules missing — run 'make ui-install'; skipping ui-check"; \
 	fi
