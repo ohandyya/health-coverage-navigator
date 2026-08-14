@@ -1,7 +1,7 @@
 # LanceDB — Vector Backend Decision & Usage
 
-Scope: Phase 1-b of Health Coverage Navigator (swapping the `retrieve()` tool from
-full-text search onto vector retrieval, without changing the agent or the eval set).
+Scope: Phase 1-b of Health Coverage Navigator — adding a `vector_search()` tool **alongside**
+the Phase 1-a full-text toolset, without changing the agent or the eval set.
 
 ---
 
@@ -10,8 +10,9 @@ full-text search onto vector retrieval, without changing the agent or the eval s
 **Context that drove the decision:**
 - The corpus (HealthCare.gov content + *Medicare & You* + NCDs) is small — thousands of
   chunks, not millions. Raw scale isn't the deciding factor for any of the usual options.
-- Phase 1-b's whole point is to A/B a vector backend against the Phase 1-a full-text
-  baseline on the same ~30-question gold set, behind the same `retrieve()` interface.
+- Phase 1-b's whole point is to measure vector retrieval against the Phase 1-a full-text
+  baseline on the same ~30-question gold set — as a third tool the agent may choose, so the
+  comparison is lexical-only vs. vector-only vs. both, on one agent.
 - This is a public, open-source repo — anyone cloning it should be able to run the
   pipeline with zero extra infrastructure.
 - We already ruled out OpenRouter over BAA/PII exposure for health-domain data. The same
@@ -137,7 +138,7 @@ async def embed(text: str) -> list[float]:
 db = await lancedb.connect_async("data/lancedb")
 table = await db.open_table("corpus")
 
-async def retrieve(query: str, plan_year: int) -> list[dict]:
+async def vector_search(query: str, plan_year: int) -> list[dict]:
     vector = await embed(query)
     return (
         await table.vector_search(vector)
@@ -147,8 +148,9 @@ async def retrieve(query: str, plan_year: int) -> list[dict]:
     )
 ```
 
-`retrieve()` above is a drop-in PydanticAI tool: `async def`, awaits its own embedding
-call, awaits LanceDB's `AsyncTable.vector_search`. Nothing in the path blocks.
+`vector_search()` above is a drop-in PydanticAI tool: `async def`, awaits its own embedding
+call, awaits LanceDB's `AsyncTable.vector_search`. Nothing in the path blocks. It registers
+next to the Phase 1-a lexical tools rather than replacing them — the agent picks.
 
 ### Who pays for the embeddings
 

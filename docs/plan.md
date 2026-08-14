@@ -5,10 +5,10 @@ Created time: July 3, 2026 2:55 PM
 Status: In Progress
 Tags: Learn
 
-An open-source AI agent that answers U.S. health-coverage questions by routing between three
-tool "lanes": **RAG** over public reference documents, **structured public APIs** for exact
-facts, and **web search** for the fresh, open-ended world. Built on PydanticAI, using only
-public data.
+An open-source AI **agent** — one PydanticAI agent, built once and then grown a toolset at a
+time — that answers U.S. health-coverage questions by routing between three tool "lanes":
+the **indexed reference corpus** of public documents, **structured public APIs** for exact
+facts, and **web search** for the fresh, open-ended world. Public data only.
 
 The organizing idea: almost every health-coverage question decomposes into one of three
 sub-types, and picking the right lane is the core engineering problem — not retrieval alone.
@@ -17,9 +17,16 @@ which is directly borrowable from binary-decomposition eval thinking.
 
 | Sub-question type | Example | Lane |
 |---|---|---|
-| "What does the rule/benefit say?" | *What is a deductible?* | **RAG** (indexed reference) |
+| "What does the rule/benefit say?" | *What is a deductible?* | **Reference** (the indexed corpus) |
 | "What's the fact for this plan/drug/provider?" | *Is drug X covered under plan Y?* | **Structured API** |
 | "What's happening now / not in my corpus?" | *Any recent recall on drug X?* | **Web search** |
+
+**This is an agent, not a pipeline.** There is no fixed retrieve-then-answer chain anywhere in
+the build. From Phase 1 onward there is a single PydanticAI `Agent` that decides which tools to
+call, how often, and when it has enough to answer or must abstain. Each phase hands that same
+agent more tools — full-text search, then vector search, then web search, then typed APIs — and
+never replaces the agent underneath. What is written once in Phase 1 and then inherited: the
+output schema, the provenance plumbing, the grounding/abstention rule, and the step limits.
 
 Each phase below is independently shippable and has an **acceptance test** — the phase is done
 when you can do the thing in the milestone line.
@@ -31,7 +38,7 @@ when you can do the thing in the milestone line.
 ## What does it do
 
 Nearly everyone deals with health insurance, so impact is enormous. The public-data story is the
-best in all of insurance. RAG over genuinely public reference material: the Medicare & You
+best in all of insurance. An indexed corpus of genuinely public reference material: the Medicare & You
 handbook, CMS coverage determinations (the Medicare Coverage Database of national/local
 determinations is a deep, structured, public corpus), ACA marketplace rules, and Summary of
 Benefits & Coverage documents (which use a federally standardized public template). Live public
@@ -46,9 +53,10 @@ guidance under the No Surprises Act.
 
 ### Bulk-downloadable corpus (vendored into the repo)
 
-Two kinds live here, and the difference matters: the **text corpora** get chunked and embedded
-for RAG, while the **structured** sources land as a lossless columnar mirror that a later typed
-layer queries — never chunked, never embedded.
+Two kinds live here, and the difference matters: the **text corpora** get chunked for the
+reference lane's search tools (and embedded once Phase 1-b adds vectors), while the
+**structured** sources land as a lossless columnar mirror that a later typed layer queries —
+never chunked, never embedded.
 
 **HealthCare.gov consumer-education content (the cleanest starting corpus).** HealthCare.gov
 publishes every article and glossary term as machine-readable JSON, explicitly for third-party
@@ -160,10 +168,13 @@ cross-domain requests, returning content objects, collections, and a site-wide i
 pulling the freshest official explanation of a concept at query time.
 [HealthCare.gov](https://www.healthcare.gov/developers/)
 
-**General web search tool** — this is where your agent goes when the question isn't answerable
+**General web search tool** — this is where the agent goes when the question isn't answerable
 from the corpus or a structured endpoint: "any recent news on drug X," "did this insurer have a
-market-conduct action," "what changed for the 2026 plan year that isn't in my index yet." This is
-the part that makes it an *agent* rather than a RAG bot.
+market-conduct action," "what changed for the 2026 plan year that isn't in my index yet."
+An **agent-oriented search API — Tavily or Exa** — rather than a scrape-and-parse SERP: both
+return clean extracted content with source URLs, which is what the provenance requirement needs
+and what a raw search-results page does not give. Wired up in
+[Phase 2](#phase-2--add-the-web-search-tool); the choice between them is made there.
 
 > ### ⚠️ Licensing note (matters because this repo is public)
 > CMS **NCDs** and the **HealthCare.gov content** are freely reusable. But the Medicare Coverage
@@ -175,6 +186,11 @@ the part that makes it an *agent* rather than a RAG bot.
 
 ## Cross-cutting principles (apply from day one)
 
+- [ ] **One agent, more tools.** Phase 1 stands up a single PydanticAI agent; every phase after
+      it registers additional tools on that same agent rather than building a parallel system.
+      A phase that would require rewriting the agent loop is a sign the phase is wrong, not the
+      loop. The corollary: the agent's *scaffolding* — output schema, deps, provenance, grounding
+      rule, step limits — is built once, in Phase 1, when there is exactly one lane to debug.
 - [ ] **Eval harness is the through-line.** Each phase adds exactly one new *thing to grade*:
       retrieval → answer → routing → tri-modal routing → multi-hop + citations → regression. You
       want the harness before the agent, not after.
@@ -228,20 +244,53 @@ a stubbed answer end to end.
 - [ ] FastAPI app skeleton with a stubbed answer endpoint returning canned data
 - [ ] Web UI scaffolded and rendering that stub
 
-### Phase 1 — RAG-only MVP
+### Phase 1 — The agent itself, over the reference corpus
 
-Single tool: `retrieve(query)` over the corpus. Agent answers coverage/terminology questions with
-citations back to chunks. No web, no APIs yet. Ship it. This alone is useful and proves your
-retrieval quality. Split into two sub-phases so you first prove the RAG loop with the simplest
-possible retrieval, then swap in a vector database behind the same interface.
+This is where the agentic system gets built, and it is the only phase that builds one. A single
+PydanticAI `Agent`: a model named in `config.yaml`, typed dependencies, a structured output type,
+a system prompt carrying the grounding rule, and a toolset over the reference corpus. It answers
+coverage and terminology questions with citations back to chunks, and abstains when the question
+falls outside the corpus. One lane — no web, no structured APIs — so that when the loop
+misbehaves there is exactly one thing it could be. Ship it; this alone is useful.
 
-#### Phase 1-a — RAG without a vector database (full-text search)
+What is deliberately *not* built here is a RAG pipeline. Nothing chains
+retrieve → stuff-context → generate. The agent is handed search tools and left to decide how to
+use them: which tool, what query, whether one call was enough, whether to widen the search or
+abstain. That decision-making is the thing this project is about, which is why the tool trace is
+worth looking at even in a one-lane phase.
 
-Retrieve using plain full-text techniques over `data/processed` — `ls`, `grep`, keyword/BM25-style
-lexical search — with **no database of any kind**: not a vector store, and not an embedded SQL or
-full-text engine either. Python's standard library and the command line are the whole toolbox. The
-point is to stand up the entire agent → retrieve → cite → abstain loop against the simplest
-retrieval backend imaginable, and to have a lexical baseline the vector approach must beat.
+Everything built here is scaffolding the later phases inherit rather than replace — output
+schema, provenance plumbing, grounding guardrail, step limits. Later phases register more tools
+on this same agent.
+
+Split into two sub-phases: first prove the loop with the crudest search that could work, then
+grow the toolset with vector search and let the agent choose between them.
+
+#### Phase 1-a — full-text tools, no database
+
+Give the agent a small toolset over `data/processed` built from plain full-text techniques —
+directory listing, `grep`, keyword/BM25-style lexical search — with **no database of any kind**:
+not a vector store, and not an embedded SQL or full-text engine either. Python's standard library
+and the command line are the whole toolbox.
+
+Narrow tools the agent composes itself, rather than one `retrieve(query)` that hides the search
+strategy inside a function:
+
+| Tool | What it does |
+|---|---|
+| `list_documents(source?)` | What is in the corpus at all — sources, titles, counts. Orients the agent, and is the honest basis for answering *"what can you tell me about?"* |
+| `grep_corpus(pattern, source?)` | Literal / regex match over chunk text. For exact strings: a defined term, a plan name, an NCD number. |
+| `search_corpus(query, k)` | Ranked lexical retrieval — BM25 over an in-memory inverted index. The general-purpose tool. |
+| `get_chunk(chunk_id)` | Widen a hit to its neighbours in the parent document, for when a match lands mid-definition. |
+
+Exact signatures settle in implementation; what is decided here is the *shape* — orient, match
+exactly, rank, expand — and that there is more than one of them.
+
+Two reasons for a toolset over a single call. It is the honest version of the exercise: an agent
+that picks a tool, reads the result, and reformulates a failed query is doing the thing being
+built, and its mistakes are legible in the trace instead of buried in a ranking function. And it
+makes Phase 2's routing a change of degree rather than of kind — the agent is already choosing
+between tools before a second lane exists.
 
 BM25 stays in scope, because **BM25 is a ranking formula, not a storage engine**: term frequencies
 in a `dict`, an inverted index built at startup, ~40 lines of stdlib. Measured over the real 6,722
@@ -249,8 +298,9 @@ chunks — 214 ms to build the index, 3–4 ms per query. Anything that would re
 implement is out; BM25 is not that.
 
 **Milestone / acceptance test:** you can ask a coverage/terminology question **in the browser**
-and get a cited answer sourced from full-text search over `data/processed`, and it abstains when
-the question is out of corpus.
+and get a cited answer sourced from the full-text tools over `data/processed`; it abstains when
+the question is out of corpus; and the trace shows which tools the agent called, in what order,
+with what arguments.
 
 This is where the Phase 0 stub gets replaced by the real agent — the UI itself barely changes,
 which is the point of having frozen the contract first. Frontend detail:
@@ -261,56 +311,83 @@ which is the point of having frozen the contract first. Frontend detail:
 - [ ] Get an honest *"not in my reference material"* when the question is out of corpus — no hallucinated answer
 - [ ] Do all of the above from the web UI, with the answer streaming in as it's generated
 - [ ] Expand any citation to see the retrieved text behind it
+- [ ] See which tools the agent chose and in what order — the trace is a user-facing feature from the first agent phase, not a debug view
 
 **Software capability**
-- [ ] PydanticAI agent with a single `retrieve` tool backed by full-text search (grep / lexical / BM25) over `data/processed` — **no database at all**: no vector store, no DuckDB/SQLite FTS, no embeddings. Stdlib only.
-- [ ] Structured output (answer + citation list)
+- [ ] PydanticAI `Agent`: model from `config.yaml`, typed deps (corpus handle), structured output type, system prompt carrying the grounding rule
+- [ ] Full-text toolset over `data/processed` — `list_documents` / `grep_corpus` / `search_corpus` / `get_chunk` — with **no database at all**: no vector store, no DuckDB/SQLite FTS, no embeddings. Stdlib only.
+- [ ] BM25 inverted index built in-process at startup, from `chunks.jsonl`
+- [ ] Structured output populating the frozen contract's fields (answer + citations + claims + `abstained`)
 - [ ] Chunk → source provenance plumbing
-- [ ] Grounding guardrail: answer only from retrieved context
-- [ ] Eval set extended from retrieval-only to **answer correctness** and **faithfulness/groundedness**
+- [ ] Grounding guardrail: answer only from what the tools returned
+- [ ] **Step / usage limits on the agent loop from day one** — cheap now, painful to retrofit; Phase 4 extends loop safety rather than introducing it
+- [ ] Tool-call trace captured and surfaced through the `trace` field
+- [ ] Eval set extended from retrieval-only to **answer correctness** and **faithfulness/groundedness**, now graded through the agent's own tool calls rather than a bare function call
 - [ ] Stub endpoint replaced by the real agent; streaming response wired through to the UI
 - [ ] Eval dashboard in the UI over real eval runs
 
-#### Phase 1-b — RAG with a vector database
+#### Phase 1-b — add vector search alongside the full-text tools
 
-Swap the retrieval backend behind the same `retrieve` interface for embeddings + a local vector
-store — **LanceDB**, embedded and on-disk, with embeddings computed by us and handed over as
-plain vectors. Reuse the Phase 1-a agent, provenance, and eval set — only the retrieval
-implementation changes — so you can measure semantic vs. lexical retrieval on the same gold
-questions. LanceDB holds vector *and* BM25 search in one table, so the 1-a lexical baseline and
-the 1-b vector run can share a store instead of the comparison straddling two systems. See
-[lancedb.md](lancedb.md) for the full rationale, the rejected alternatives (Chroma, pgvector,
-managed cloud services), and the ingestion/query usage pattern.
+Grow the toolset rather than swap it: add a `vector_search(query, k)` tool backed by embeddings in
+a local vector store — **LanceDB**, embedded and on-disk, with embeddings computed by us and
+handed over as plain vectors. **The Phase 1-a lexical tools stay registered.** Semantic and
+lexical search sit side by side and the agent picks — or uses both and reconciles them. Same
+agent, same corpus, same gold set; the only thing that changed is that there is now more than one
+way to find a chunk, and choosing is the agent's problem.
 
-**Milestone / acceptance test:** the same questions now route through vector retrieval, and you
-can compare retrieval/answer quality against the Phase 1-a full-text baseline.
+LanceDB holds vector *and* BM25 search in one table, so the lexical and vector paths can share a
+store instead of the comparison straddling two systems. See [lancedb.md](lancedb.md) for the full
+rationale, the rejected alternatives (Chroma, pgvector, managed cloud services), and the
+ingestion/query usage pattern.
+
+The comparison is now three-way rather than a swap: run the gold set with the agent restricted to
+lexical tools, to the vector tool, and to both. "Both" has to earn its place — it only wins if it
+beats each alone, and the extra tool is also extra opportunity for the agent to choose badly.
+
+**Milestone / acceptance test:** the same questions can now be answered through semantic
+retrieval, and you can compare lexical-only, vector-only, and both-tools runs on the same gold
+set.
 
 **User-facing capability**
-- [ ] Same Q&A experience as Phase 1-a, now answering from semantic (vector) retrieval
+- [ ] Same Q&A experience as Phase 1-a, now able to find chunks by meaning rather than wording
+- [ ] The trace shows *which* kind of search produced each citation
 
 **Software capability**
 - [ ] Embedding model configured — same model for documents and queries, fixed dimensionality
 - [ ] LanceDB wired up, populated from `data/processed`
-- [ ] `retrieve` tool re-backed by vector search behind the same interface
-- [ ] Eval comparison: vector vs. full-text baseline on the same gold set (recall@k, MRR, answer correctness)
-- [ ] Eval dashboard gains a **run-comparison view** so the vector-vs-lexical call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
+- [ ] `vector_search` tool registered **alongside** the Phase 1-a tools, not in place of them
+- [ ] Toolset composition as an eval axis (which tools the agent is allowed to see), so lexical-only / vector-only / both is one runner with a flag rather than three code paths
+- [ ] Eval comparison across those three configurations on the same gold set (recall@k, MRR, answer correctness)
+- [ ] Eval dashboard gains a **run-comparison view** so the lexical-vs-vector-vs-both call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
 
 ### Phase 2 — Add the web-search tool
 
-Now the agent has two tools and must *choose*. This is the first real routing decision: "is this
-in my indexed reference material, or do I need the open web?" Add an eval slice specifically for
-routing correctness (did it pick the right lane?), separate from answer correctness.
+Grow the same agent with a second *lane*. Until now every tool it had pointed at the same corpus;
+now it must decide whether the corpus is the right place at all. This is the first real routing
+decision — "is this in my indexed reference material, or do I need the open web?" — and it is a
+harder question than Phase 1-b's, because the wrong answer here is a confident abstention or a
+web answer to something the corpus already settles. Add an eval slice specifically for routing
+correctness (did it pick the right lane?), separate from answer correctness.
+
+Use an **agent-oriented search API — Tavily or Exa** — not a scraped SERP. Both return extracted
+page content with source URLs in one call, which is exactly what the per-claim provenance
+requirement needs; scraping would mean owning an extraction pipeline that has nothing to do with
+this project. Tavily and Exa differ in emphasis (Tavily leans Q&A-shaped answers with snippets,
+Exa leans semantic/neural search over pages), so pick by measuring both on the out-of-corpus
+slice of the gold set rather than by reputation. Either way the key is a secret in `.env` and the
+tool is wrapped so a rate-limit or an outage degrades to an honest "couldn't check the web"
+rather than a fabricated answer.
 
 **Milestone / acceptance test:** you can ask something not in the corpus and get a real
-web-sourced answer — and the system chose the right lane on its own.
+web-sourced answer — and the agent chose the right lane on its own.
 
 **User-facing capability**
 - [ ] Ask time-sensitive / out-of-corpus questions (*"recent news on [drug]"*, *"2026 enrollment deadline"*) and get an answer
 - [ ] See whether each answer came from reference material or the web
 
 **Software capability**
-- [ ] Web-search tool integrated
-- [ ] Router / tool-selection layer where the agent decides RAG vs. web
+- [ ] Web-search tool (Tavily or Exa) registered on the existing agent, with the key read server-side from `.env`
+- [ ] Tool-choice behaviour where the agent decides reference-corpus vs. web — a system-prompt and tool-description problem, not a separate router component
 - [ ] Source-type tagging in the output
 - [ ] New eval slice measuring **routing correctness** (did it pick the right lane?), separate from answer correctness
 - [ ] Basic web-result hygiene (dedupe, source filtering)
@@ -318,10 +395,11 @@ web-sourced answer — and the system chose the right lane on its own.
 
 ### Phase 3 — Add structured-API tools
 
-Wrap the Marketplace API (plan/drug/provider lookups), openFDA (drug facts/recalls), and NPPES
-(provider lookup) as typed tools. Now it's genuinely tri-modal. The interesting failure mode to
-eval here: the agent reaching for web search when a deterministic API would've given an exact
-answer, or vice versa.
+Grow the agent with the third lane: the Marketplace API (plan/drug/provider lookups), openFDA
+(drug facts/recalls), and NPPES (provider lookup), wrapped as **typed tools** — Pydantic models
+in and out, so a malformed API response is a validation error rather than plausible-looking
+prose. Now it's genuinely tri-modal. The interesting failure mode to eval here: the agent
+reaching for web search when a deterministic API would've given an exact answer, or vice versa.
 
 **Milestone / acceptance test:** you can ask for exact facts about a specific plan, drug, or
 provider and get a deterministic answer, not prose from a document.
@@ -344,11 +422,14 @@ provider and get a deterministic answer, not prose from a document.
 
 ### Phase 4 — Multi-step agent + provenance
 
-Let it chain: decompose a compound question, hit multiple tools, synthesize. Build in the habit
-from the start of tagging every claim in the final answer by **source type** (indexed-reference
-vs. structured-API vs. web) with the retrieval/URL behind it. For a health tool this isn't
-optional polish — it's what makes it trustworthy and what makes it evaluable. Same loop-safety
-pattern as the appetite-engine reroute loop.
+The agent has been calling tools since Phase 1; what it hasn't done is *plan*. Now it decomposes a
+compound question into sub-questions, routes each to its own lane, and synthesizes one answer
+from several tool results. Build in the habit from the start of tagging every claim in the final
+answer by **source type** (indexed-reference vs. structured-API vs. web) with the retrieval/URL
+behind it. For a health tool this isn't optional polish — it's what makes it trustworthy and what
+makes it evaluable. Loop safety *tightens* here rather than appearing here: the step limits went
+in with the agent in Phase 1-a, and this phase adds cycle detection and a hop ceiling on top of
+them. Same loop-safety pattern as the appetite-engine reroute loop.
 
 **Milestone / acceptance test:** you can ask a compound question that needs several lookups and
 get one synthesized answer where every claim is traceable.
@@ -359,7 +440,7 @@ get one synthesized answer where every claim is traceable.
 - [ ] Every claim carries a source-type label and the retrieval/URL behind it
 
 **Software capability**
-- [ ] Multi-step agent loop (plan → act → observe → synthesize) with usage/step limits
+- [ ] Multi-step loop (plan → act → observe → synthesize) on the existing agent, within the Phase 1-a usage/step limits
 - [ ] Question decomposition
 - [ ] Per-claim provenance tagging
 - [ ] Observability / tracing (Logfire or similar): tool calls, latencies, token usage
@@ -395,18 +476,19 @@ comparisons, cost breakdowns, and scheduled monitoring.
 ## Suggested build order recap
 
 ```
-           backend                              frontend
-Phase 0    corpus + gold eval set               API contract frozen, UI on a stub
-Phase 1a   cited answers, full-text search      stub → real agent    [SHIPPABLE MVP]
-Phase 1b   cited answers, vector retrieval      eval run comparison
-Phase 2    RAG-vs-web routing                   web badge + routing metrics
-Phase 3    typed API tools                      API badge    [tri-modal core complete]
-Phase 4    multi-hop + full provenance          multi-hop trace, per-claim highlight
-Phase 5    comparisons, cost, monitoring        tables + monitor    [product, not bot]
+           agent capability                     backend                        frontend
+Phase 0    (no agent yet)                       corpus + gold eval set         contract frozen, UI on a stub
+Phase 1a   the agent + full-text toolset        BM25 in memory, no DB          stub → real agent   [SHIPPABLE MVP]
+Phase 1b   + vector search alongside            LanceDB                        eval run comparison
+Phase 2    + web search (Tavily / Exa)          search API                     web badge + routing metrics
+Phase 3    + typed structured-API tools         Marketplace / openFDA / NPPES  API badge   [tri-modal core complete]
+Phase 4    + planning & decomposition           tracing / observability        multi-hop trace, per-claim highlight
+Phase 5    (same agent, more domain tools)      DuckDB over the PUFs           tables + monitor    [product, not bot]
 ```
 
-The tri-modal core is complete at the end of Phase 3 — everything after that is additive and
-should not disturb the core.
+Read the first column downward: it is one agent gaining tools, never a rewrite. The tri-modal
+core is complete at the end of Phase 3 — everything after that is additive and should not disturb
+the core.
 
 The frontend column is a schedule, not a spec. Stack, API schemas, UI layout, and the
 corresponding F0–F4 checklists live in [frontend_plan.md](frontend_plan.md).

@@ -27,10 +27,11 @@ mid-stream.
   `.env`) and `config.py` (everything else, from a committed `config.yaml`), and `ChunkParams` has
   been consolidated into the latter. **No code in this repo calls an LLM yet.**
 - **Next up:** **the Phase 1a agent itself** —
-  [plan.md](plan.md#phase-1-a--rag-without-a-vector-database-full-text-search). The seams are cut
+  [plan.md](plan.md#phase-1-a--full-text-tools-no-database). The seams are cut
   and the config is now there to hang it on: replace `api/stub.py`'s `stub_answer()` with a
-  PydanticAI agent behind a single `retrieve` tool over `data/processed/*/chunks.jsonl` —
-  **stdlib BM25, no database of any kind** (settled 2026-08-14; see the log) — pass the
+  PydanticAI agent over `data/processed/*/chunks.jsonl`, carrying a **small full-text toolset**
+  (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`) rather than a single
+  `retrieve` — **stdlib BM25, no database of any kind** (settled 2026-08-14; see the log) — pass the
   real answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
   `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on their
   own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not need to
@@ -89,6 +90,43 @@ Beyond the F0 list, because implementation made them the cheaper order:
 ---
 
 ## Log
+
+### 2026-08-14 — the plan is reframed: an agent that grows tools, not a RAG app that grows features
+
+**Did:** rewrote [plan.md](plan.md)'s Phase 1–4 framing. No code changed and no phase moved; what
+changed is what each phase is understood to be *adding*. Phase 1 is no longer "RAG-only MVP" but
+"the agent itself, over the reference corpus" — the phase that builds the one PydanticAI agent
+every later phase registers more tools on. `plan.md`'s new *One agent, more tools* cross-cutting
+principle states it: a phase that would require rewriting the agent loop is a sign the phase is
+wrong, not the loop.
+
+**Decided (1a):** the agent gets a **small toolset it composes itself** — `list_documents`,
+`grep_corpus`, `search_corpus` (BM25), `get_chunk` — not one `retrieve(query)`. A single call
+would hide the search strategy inside a ranking function, which is the part of the exercise worth
+doing; with narrow tools, a bad query and a recovery are both visible in the trace. It also makes
+Phase 2's lane routing a change of degree — the agent is already choosing between tools before a
+second lane exists. Cost, accepted: more surface for the agent to get wrong, and the trace becomes
+load-bearing UI in 1a rather than 4.
+
+**Decided (1b):** vector search **joins** the lexical tools instead of replacing them behind a
+shared `retrieve` interface. The A/B gets messier — the comparison is now lexical-only /
+vector-only / both, with toolset composition as an eval axis rather than two runs of one
+signature — but "both" is the configuration the product would actually ship, so it should be the
+one measured. LanceDB carrying vector and BM25 in one table (see [lancedb.md](lancedb.md)) is what
+makes that cheap.
+
+**Decided (2):** web search is an **agent-oriented search API — Tavily or Exa**, chosen by
+measuring both on the gold set's out-of-corpus slice, not a scraped SERP. They return extracted
+page content with source URLs in one call, which is what per-claim provenance needs; scraping
+would mean owning an extraction pipeline unrelated to this project.
+
+**Also:** loop safety moves earlier. Step/usage limits go in with the agent in 1a; Phase 4 adds
+cycle detection and a hop ceiling on top rather than introducing the idea.
+
+**Unchanged on purpose:** the frozen API contract, the three lane values (`reference`,
+`structured_api`, `web`), the phase order, and every acceptance test. The `reference` lane is
+still the corpus — 1a and 1b are two ways of searching it, which is why widening 1b did not touch
+the contract.
 
 ### 2026-08-14 — configuration splits in two, and the Phase 1a dependencies land
 
