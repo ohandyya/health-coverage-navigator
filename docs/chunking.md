@@ -60,6 +60,11 @@ of a document and move the first cut.
 
 ## 3. Parameters, and where each number comes from
 
+These live in [`config.yaml`](../config.yaml) under `chunking:`, validated by `ChunkParams` in
+`config.py`. They carry no Python defaults — the committed file is the only source, so a value here
+and a value in code cannot drift. Changing any of them invalidates `params_sha256` and every
+`snapshot_id` in the committed manifests; run `make chunk` in the same change.
+
 | param | value | derivation |
 |---|---|---|
 | `max_chars` | 1,200 | ≈300 tokens. The NCD median section body (832) and the healthcare_gov median doc (904) both fit, so the typical retrieval unit survives whole and only the tail splits. |
@@ -199,7 +204,7 @@ way, and breaking any of them breaks the manifest:
 - iterate the corpus in file order; never let set/dict iteration order reach the output,
 - no clock, no randomness, no filesystem ordering inside the build,
 - every regex precompiled at module scope,
-- every tunable flows from one `ChunkParams`, never read ad hoc.
+- every tunable flows from one `ChunkParams` (loaded from `config.yaml`), never read ad hoc.
 
 `chunks.jsonl` is written `.part`-then-renamed (the `part_d_spuf` lesson: a crash must not leave a
 truncated file a later run's manifest vouches for), and `chunks_meta.json` is rewritten only when

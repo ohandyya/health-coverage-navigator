@@ -36,6 +36,28 @@ Health Coverage Navigator: an agent that answers health-insurance questions ("is
 
 Getting the agent to classify a sub-question into the correct lane (and combine lanes for compound questions) is the central thing being built and evaluated.
 
+## Configuration (secrets vs. everything else)
+
+Configuration is split by **where a value is allowed to live** — a git-ignored machine-local
+credential versus a committed, reproducible input — not by how sensitive it feels. That axis is
+what settles the environment-variable question.
+
+- **Secrets** → `.env` (git-ignored), read through `Secrets` in `src/health_coverage_navigator/settings.py`. `.env.example` is the committed template and must never hold a real value.
+- **Everything else** → `config.yaml` (committed), read through `Config` in `src/health_coverage_navigator/config.py`. Model choice, retrieval parameters, and chunking parameters all live there.
+
+**Never add a tunable to `Secrets`.** Any field on a `BaseSettings` subclass is populated by an
+environment variable of the same name, and an env var is invisible to git — so an eval run
+configured by one cannot be reproduced from the repo, and the score is worth less for it.
+`tests/test_settings.py` asserts the field set for exactly this reason. Conversely, **never put a
+secret in `config.yaml`**: it is committed, and `make scan` treats a credential-shaped assignment
+there as a blocking error.
+
+Three rules that are easy to break by accident:
+
+- **`config.yaml` is mandatory, and its fields carry no Python defaults.** A default in code beside a value in YAML is two sources of truth that drift silently. A missing key is an error that names the key; an unknown key is rejected rather than ignored.
+- **`config.py` must not import from `chunking/`.** `chunking/__init__.py` imports `pipeline`, which imports `config`, so the reverse direction is a cycle. This is why `ChunkParams` is *defined* in `config.py`. `CHUNKER_VERSION` deliberately stayed in `chunking/params.py`: it describes what the *code* does rather than how it is tuned, so it must not sit in a file users are invited to edit.
+- **The five `chunking:` values are pinned by `data/processed/*/chunks_meta.json`.** They feed `params_sha256` and every `snapshot_id`. Changing one without running `make chunk` in the same change leaves three committed manifests describing chunks nobody can rebuild.
+
 ## Frontend (see docs/frontend_plan.md — do not re-derive these decisions)
 
 The agent is fronted by a local web UI. **[docs/frontend_plan.md](docs/frontend_plan.md) is authoritative** for stack, API schemas, repo layout, UI specifics, and the F0–F4 build phases; read it before touching anything under `src/health_coverage_navigator/api/` or `frontend/`. Settled decisions, so they aren't relitigated:
@@ -105,7 +127,7 @@ Terms that gate what may be committed — CPT, CDT, HCPCS, ICD, NCD, LCD, PII, P
 The plan is staged so each phase ships something usable before adding complexity. Do not jump ahead of the current phase's scope unless asked. Each phase's *frontend* slice is noted below; the corresponding F-phase in [docs/frontend_plan.md](docs/frontend_plan.md) §6 has the detail.
 
 - **Phase 0 — Corpus + eval scaffold.** Ingestion pipeline (download → parse → chunk → store to `data/processed`; **no embeddings, no vector store yet** — that's Phase 1b), plus a ~30-question gold eval set (question, expected source-type, expected answer) and an eval runner reporting recall@k/MRR over a **pluggable answerer** (Phase 0 grades the stub and labels every run `runner: "stub"`; Phase 1a swaps one function). Build the harness before the agent. *Frontend (F0): freeze the API contract, FastAPI skeleton with a stubbed answer endpoint, UI scaffolded and rendering that stub — the whole interface proven before an agent exists.*
-- **Phase 1 — RAG-only MVP.** Single `retrieve(query)` tool. Agent answers with citations, abstains when out-of-corpus. Extend eval to answer correctness + groundedness/faithfulness. Split into **1a** (lexical/full-text retrieval, no vector DB) and **1b** (embeddings + vector store behind the same `retrieve` interface, compared against the 1a baseline). *Frontend (F1): the Phase 0 stub is swapped for the real agent, streaming wired up, eval dashboard over real runs. 1b adds only an eval run-comparison view — the chat UI is untouched by design.*
+- **Phase 1 — RAG-only MVP.** Single `retrieve(query)` tool. Agent answers with citations, abstains when out-of-corpus. Extend eval to answer correctness + groundedness/faithfulness. Split into **1a** (lexical/full-text retrieval, **no database of any kind** — no vector store, no DuckDB/SQLite FTS; stdlib BM25 over an in-memory inverted index, since BM25 is a ranking formula rather than a storage engine) and **1b** (embeddings + vector store behind the same `retrieve` interface, compared against the 1a baseline). *Frontend (F1): the Phase 0 stub is swapped for the real agent, streaming wired up, eval dashboard over real runs. 1b adds only an eval run-comparison view — the chat UI is untouched by design.*
 - **Phase 2 — Add web search.** Agent now chooses between RAG and web. Add a routing-correctness eval slice, separate from answer correctness. Tag each answer with its source type. *Frontend (F2): the `web` source badge goes live; routing accuracy joins the eval dashboard.*
 - **Phase 3 — Add structured-API tools.** Typed (Pydantic) wrappers for Marketplace API, openFDA, NPPES. Needs API-key/secrets management, rate-limit/retry handling, response caching, and synthetic fixtures so tests/evals don't depend on live APIs. Tri-modal routing eval (reference vs. API vs. web). *Frontend (F2): the `structured_api` badge goes live, completing the three-lane vocabulary.*
 - **Phase 4 — Multi-step agent + provenance.** Plan → act → observe → synthesize loop with decomposition of compound questions, per-claim source-type tagging (indexed-reference / structured-API / web) with the retrieval chunk or URL behind each claim, observability/tracing (Logfire or similar), multi-hop correctness evals, and a hop ceiling / cycle detection for loop safety. *Frontend (F3): trace panel handles nested multi-hop steps; per-claim provenance highlighting.*

@@ -23,9 +23,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from health_coverage_navigator.chunking.models import Chunk
-from health_coverage_navigator.chunking.params import CHUNKER_VERSION, DEFAULT_PARAMS, ChunkParams
+from health_coverage_navigator.chunking.params import CHUNKER_VERSION
 from health_coverage_navigator.chunking.splitter import split_span
 from health_coverage_navigator.chunking.strategies import build_context, doc_metadata, plan_sections
+from health_coverage_navigator.config import ChunkParams, get_config
 from health_coverage_navigator.corpus import (
     CorpusName,
     chunks_meta_path,
@@ -59,8 +60,15 @@ class BuildResult:
         return "".join(json.dumps(c.model_dump(), ensure_ascii=False) + "\n" for c in self.chunks)
 
 
-def build_chunks(source: CorpusName, params: ChunkParams = DEFAULT_PARAMS) -> BuildResult:
-    """Chunk one corpus in memory. Touches no output file."""
+def build_chunks(source: CorpusName, params: ChunkParams | None = None) -> BuildResult:
+    """Chunk one corpus in memory. Touches no output file.
+
+    `params` resolves from `config.yaml` at **call time**, not as a bound default. docs/progress.md
+    records the bug that makes this non-negotiable: `runs_dir: Path = EVAL_RUNS_DIR` in
+    `evals/runner.py` bound at definition, so a monkeypatched value was never seen and tests wrote
+    into the real data tree.
+    """
+    params = get_config().chunking if params is None else params
     docs = load_corpus(source)
     ctx = build_context(source, docs)
 

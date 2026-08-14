@@ -238,9 +238,15 @@ possible retrieval, then swap in a vector database behind the same interface.
 #### Phase 1-a — RAG without a vector database (full-text search)
 
 Retrieve using plain full-text techniques over `data/processed` — `ls`, `grep`, keyword/BM25-style
-lexical search — **no vector database and no embeddings**. The point is to stand up the whole
-agent → retrieve → cite → abstain loop against the simplest retrieval backend, and to have a
-lexical baseline you can later compare the vector approach against.
+lexical search — with **no database of any kind**: not a vector store, and not an embedded SQL or
+full-text engine either. Python's standard library and the command line are the whole toolbox. The
+point is to stand up the entire agent → retrieve → cite → abstain loop against the simplest
+retrieval backend imaginable, and to have a lexical baseline the vector approach must beat.
+
+BM25 stays in scope, because **BM25 is a ranking formula, not a storage engine**: term frequencies
+in a `dict`, an inverted index built at startup, ~40 lines of stdlib. Measured over the real 6,722
+chunks — 214 ms to build the index, 3–4 ms per query. Anything that would require a database to
+implement is out; BM25 is not that.
 
 **Milestone / acceptance test:** you can ask a coverage/terminology question **in the browser**
 and get a cited answer sourced from full-text search over `data/processed`, and it abstains when
@@ -257,7 +263,7 @@ which is the point of having frozen the contract first. Frontend detail:
 - [ ] Expand any citation to see the retrieved text behind it
 
 **Software capability**
-- [ ] PydanticAI agent with a single `retrieve` tool backed by full-text search (grep / lexical / BM25) over `data/processed` — no vector DB, no embeddings
+- [ ] PydanticAI agent with a single `retrieve` tool backed by full-text search (grep / lexical / BM25) over `data/processed` — **no database at all**: no vector store, no DuckDB/SQLite FTS, no embeddings. Stdlib only.
 - [ ] Structured output (answer + citation list)
 - [ ] Chunk → source provenance plumbing
 - [ ] Grounding guardrail: answer only from retrieved context

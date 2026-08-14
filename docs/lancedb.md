@@ -33,9 +33,16 @@ full-text search onto vector retrieval, without changing the agent or the eval s
   corpus/embedding snapshot to a specific eval run, so a later re-ingest can't silently
   change what an old eval score was measured against.
 - **Built-in hybrid search.** Vector *and* full-text (BM25-style) search live in the same
-  table. That means the Phase 1-a lexical baseline and the Phase 1-b vector backend can
-  share one store, making the comparison cleaner than swapping between two separate
-  systems.
+  table — useful later if Phase 2+ wants hybrid retrieval without adding a second system.
+
+  > **Superseded, 2026-08-14.** This bullet originally argued that the Phase 1-a lexical
+  > baseline and the Phase 1-b vector backend could *share one store*, making the
+  > comparison cleaner. That is no longer true and is no longer a reason to pick LanceDB:
+  > **Phase 1-a uses no database at all** — stdlib BM25 over an in-memory inverted index
+  > (see [plan.md](plan.md) §1-a). The 1-a-vs-1-b comparison therefore does straddle two
+  > systems, deliberately. It is not a confound: both read the same `chunks.jsonl` at the
+  > same `snapshot_id`, and the gold set is unchanged, so what differs between the runs is
+  > the retrieval method — which is the thing being measured.
 - **SQL-style metadata filtering in the same call.** `.where("plan_year = 2026")`
   combined with the vector search directly enforces our "pin the plan year" principle,
   rather than filtering after the fact.

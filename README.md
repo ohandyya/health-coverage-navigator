@@ -52,11 +52,14 @@ of reshaping the response.
 | **Frontend** | React 19 + Vite 8 + TS + Tailwind 4 + shadcn — chat page with source badges, expandable citation cards, collapsible agent-trace panel, abstention state, and an eval dashboard |
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
-| **Gates** | 64 Python tests + 11 Vitest, ruff, pyright, tsc, oxlint — all wired into one `make check-all` |
+| **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
+| **Gates** | 84 Python tests + 11 Vitest, ruff, pyright, tsc, oxlint — all wired into one `make check-all` |
 
 ### What does not work yet
 
-- **There is no agent.** `api/stub.py` returns canned responses. Phase 1a replaces it.
+- **There is no agent.** `api/stub.py` returns canned responses. Phase 1a replaces it. `pydantic-ai`
+  is installed and an API key is read from `.env`, but **nothing in this repo calls an LLM** —
+  the dependency landing is not the capability landing.
 - **No retrieval.** No BM25, no embeddings, no vector store. Phase 1a is lexical; 1b is LanceDB.
 - **No web search and no live API tools.** Phases 2 and 3.
 - **Eval metrics are honestly terrible**, because they grade the stub: recall@5 = `0.033`,
@@ -336,15 +339,17 @@ acronym.
 health_coverage_navigator/
 ├── CLAUDE.md                     # invariants the assistant must obey
 ├── Makefile                      # every gate and workflow — `make help`
+├── config.yaml                   # ⭐ every non-secret tunable — committed, never env-overridable
+├── .env.example                  # secrets template; the real .env is git-ignored
 ├── src/health_coverage_navigator/
 │   ├── api/
 │   │   ├── models.py             # ⭐ the frozen HTTP contract
 │   │   ├── app.py                # app factory, static mount, SPA fallback
 │   │   ├── routes/               # health · chat · evals · corpus
 │   │   └── stub.py               # canned responses ← Phase 1a replaces this
-│   ├── chunking/                 # params · splitter · per-source strategies
+│   ├── chunking/                 # splitter · per-source strategies · pipeline
 │   ├── evals/                    # gold-set models, loader, runner
-│   └── corpus.py, paths.py
+│   └── config.py, settings.py, corpus.py, paths.py
 ├── frontend/src/
 │   ├── api/{client,stream,schema.d.ts}   # schema.d.ts is GENERATED
 │   ├── hooks/useChat.ts

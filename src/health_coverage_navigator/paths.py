@@ -9,6 +9,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+#: Non-secret, committed configuration (`config.py`). Committed on purpose: it is an *input* to
+#: every eval score, so it has to be reviewable and pinnable to a git SHA. Secrets live in `.env`,
+#: which is git-ignored — that split is the whole design, see `config.py`.
+CONFIG_PATH = REPO_ROOT / "config.yaml"
+
 DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"

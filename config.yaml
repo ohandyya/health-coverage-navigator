@@ -1,0 +1,65 @@
+# Non-secret configuration. Committed on purpose: every value here is an input to an eval score,
+# so it must be reviewable in a diff and pinnable to a git SHA.
+#
+# Secrets do NOT belong here — they live in `.env`, which is git-ignored. `make scan` treats a
+# credential-shaped assignment in a committed file as a blocking error, so this file is checked.
+#
+# Nothing here is readable from an environment variable, by design: an env var is invisible to git,
+# so a run configured by one cannot be reproduced from the repo. For a one-off experiment, pass an
+# explicit flag that the run record captures rather than exporting a variable.
+#
+# Schema and rationale: src/health_coverage_navigator/config.py
+
+agent:
+  # PydanticAI model string, `provider:model`.
+  #
+  # A FLOATING ALIAS, AND THAT IS A KNOWN COST. An eval score is a measurement, and the repo pins
+  # the other half of the pairing — docs/lancedb.md chose LanceDB partly for versioned writes, so a
+  # score could be tied to the corpus snapshot it was measured against. A dated model snapshot
+  # (`gpt-5.4-mini-2026-03-17`) closes the same hole from the model side.
+  #
+  # OpenAI publishes no dated snapshot for the `gpt-5.6-*` family — only the bare alias — so this
+  # choice accepts that a rerun can silently differ from its baseline. The mitigation is to record
+  # `Config.fingerprint()` and the resolved model on every eval run. Models that *do* publish a
+  # snapshot should be pinned to it; see ALLOWED_FLOATING_MODELS in tests/test_config.py.
+  model: openai:gpt-5.6-luna
+
+retrieval:
+  # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
+  # cannot drift apart.
+  top_k: 5
+
+  # BM25 term-frequency saturation. The standard 1.2 is a starting point, not a measured value.
+  bm25_k1: 1.2
+
+  # BM25 length normalisation, 0 = off, 1 = full. THIS IS THE ONE TO TUNE FIRST: docs/chunking.md
+  # §5 hands forward that 505 of 2,256 NCD chunks are under 200 chars, and that BM25 length
+  # normalisation may over-favour them. That is a scoring question to measure against the gold set
+  # — not a chunking bug, and not a reason to reopen the section-merge decision.
+  bm25_b: 0.75
+
+# WARNING: these five keys, their names, and their values are pinned by the committed
+# `data/processed/*/chunks_meta.json` manifests via `params_sha256` and `snapshot_id`. Changing any
+# of them invalidates all three; run `make chunk` in the same change or `make chunk-check` fails.
+# Measurements behind each value: docs/chunking.md.
+chunking:
+  # ~300 tokens. The NCD median section body (832) and the healthcare_gov median doc (904) both
+  # fit, so the typical retrieval unit survives whole and only the tail splits.
+  max_chars: 1200
+
+  # Set by the gold set, not by taste: the longest `expected_snippet` is 279 chars, so an overlap
+  # above that makes "a snippet is wholly inside at least one chunk" a guarantee rather than an
+  # observation. See `splitter.split_span` for why the snap direction matters.
+  overlap_chars: 320
+
+  # A trailing sliver shorter than this is merged back into its predecessor (never across a
+  # section heading).
+  min_tail_chars: 300
+
+  # A boundary is only used if it fills at least this much of the budget; otherwise the ladder
+  # falls to the next rung. Stops one early sentence break from emitting a 60-char chunk.
+  min_fill_chars: 480
+
+  # Whitespace-normalized floor for a *document* to be chunked at all. Drops the 29 medicare_pubs
+  # pages that extract to "Notes" or a cover fragment, and nothing else.
+  min_doc_chars: 40
