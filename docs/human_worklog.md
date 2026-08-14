@@ -9,9 +9,19 @@
 ### Aug 14, 2026
 
 #### To Dos
-1. Ask AI to move `src/health_coverage_navigator/agent/prompt.py` into a markdown file and stored in in a `prompts` directory. It should be versioned, and which prompt to load should be defined by the `config.yaml`
+1. [FOR FUTURE] Ask AI to move `src/health_coverage_navigator/agent/prompt.py` into a markdown file and stored in in a `prompts` directory. It should be versioned, and which prompt to load should be defined by the `config.yaml`
 
 2. Write a integration test for agent and use Pytest to annotate `integration_test`
+
+3. Create a skill to walk through the changes. Step by Step.
+   
+   - Sample prompts
+    ```
+    1. what changes you made
+    2. What's the purpose of the change
+    3. The files I should be looking
+    4. PAUSE. I will then read the files myself, and may ask you follow up questions.
+    ```
 
 
 ### Aug 13, 2026
