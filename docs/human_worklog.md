@@ -6,6 +6,14 @@
 
 ## Work Log
 
+### Aug 14, 2026
+
+#### To Dos
+1. Ask AI to move `src/health_coverage_navigator/agent/prompt.py` into a markdown file and stored in in a `prompts` directory. It should be versioned, and which prompt to load should be defined by the `config.yaml`
+
+2. Write a integration test for agent and use Pytest to annotate `integration_test`
+
+
 ### Aug 13, 2026
 
 #### Questions

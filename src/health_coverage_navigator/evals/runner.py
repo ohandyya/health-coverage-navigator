@@ -1,15 +1,20 @@
 """Run the gold set against an answerer, score it, and persist the result.
 
-The answerer is a parameter, not a hardcoded import. That is the whole design: at Phase 0 it is
-`api/stub.py`, so a run measures canned answers and every run record says `runner="stub"` — the
+The answerer is a parameter, not a hardcoded import. That is the whole design: at Phase 0 it was
+`api/stub.py`, so a run measured canned answers and every run record said `runner="stub"` — the
 dashboard renders that as a badge, because a metric measured against a stub must never read as a
 real score. Phase 1a passes the PydanticAI agent instead and the same machinery, the same storage
-format, and the same UI start reporting real numbers. Nothing else changes.
+format, and the same UI report real numbers. Nothing else changed; the choices live in
+`evals/answerers.py`.
 
 The metrics themselves are **genuinely computed**, not faked. `recall@5` and `MRR` come from
 comparing the `doc_id`s a run actually cited against `expected_doc_ids`; `abstention_accuracy`
 compares the `abstained` boolean against `expected_abstain`. The stub simply scores badly on the
 first two and well on the third, which is the honest picture of what it is.
+
+Anything needing more than the gold labels — the corpus, or a model — is a **grader**, passed in
+from `evals/grading.py`. Keeping those out of this module is what lets the free ones run always and
+the paid one run only behind `--judge`.
 
 `expected_doc_ids` is **any-of**, matching how the gold set was authored (docs/progress.md,
 2026-08-03): the three corpora are genuinely redundant, so `recall@k` counts a hit if *any* listed
@@ -23,18 +28,20 @@ import argparse
 import json
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from health_coverage_navigator.api.models import (
-    ChatRequest,
     ChatResponse,
     EvalQuestionResult,
     EvalRun,
     EvalRunSummary,
 )
+from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import CORPUS_NAMES, chunks_meta_path
+from health_coverage_navigator.evals.answerers import AnswerFn
+from health_coverage_navigator.evals.grading import Grader
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
 from health_coverage_navigator.paths import EVAL_RUNS_DIR
@@ -43,15 +50,12 @@ from health_coverage_navigator.paths import EVAL_RUNS_DIR
 #: below that is not one a reader would find.
 RECALL_K = 5
 
-AnswerFn = Callable[[GoldQuestion], ChatResponse]
+#: Per-question metric keys `aggregate()` handles itself. Everything else a grader reports is
+#: averaged generically, which is what lets a new grader appear in the dashboard without touching
+#: this module, the API, or the storage format.
+_INTERNAL_METRICS = frozenset({"reciprocal_rank"})
+
 ProgressFn = Callable[[EvalQuestionResult], None]
-
-
-def stub_answer_fn(question: GoldQuestion) -> ChatResponse:
-    """The Phase 0 answerer: the same canned responses the chat endpoint serves."""
-    from health_coverage_navigator.api.stub import stub_answer
-
-    return stub_answer(ChatRequest(message=question.question, plan_year=question.plan_year))
 
 
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:
@@ -119,6 +123,20 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
         metrics["false_abstention_rate"] = sum(1 for r in in_corpus if r.abstained) / len(in_corpus)
     if abstentions:
         metrics["abstention_accuracy"] = sum(1 for r in abstentions if r.passed) / len(abstentions)
+
+    # Every other per-question metric key — whatever the graders reported — averaged over the
+    # questions that reported it. Averaging over *reporters* rather than over the whole set is the
+    # point: a grader returns `{}` for a question it does not apply to (groundedness of an
+    # abstention that cited nothing), and counting those as zero would report a number about
+    # nothing as if it were a failure.
+    reported: dict[str, list[float]] = {}
+    for result in results:
+        for name, value in result.metrics.items():
+            if name not in _INTERNAL_METRICS:
+                reported.setdefault(name, []).append(value)
+    for name, values in sorted(reported.items()):
+        metrics[name] = sum(values) / len(values)
+
     return metrics
 
 
@@ -165,12 +183,18 @@ def run_gold_set(
     runner: str,
     run_id: str | None = None,
     on_progress: ProgressFn | None = None,
+    graders: Sequence[Grader] = (),
+    model: str | None = None,
 ) -> EvalRun:
     """Answer every gold question, score it, and return the run.
 
     `on_progress` is called after each question so a caller can stream progress. It is a plain
     callback rather than a generator because the HTTP route needs to buffer events for replay,
     and a callback lets the runner stay a synchronous function usable from a CLI.
+
+    A grader that raises is recorded on the result and does not abort the run, for the same reason
+    a failing answer does not: a judge that times out on question 12 must not throw away the other
+    34 measurements.
     """
     gold = gold or load_gold_set()
     run_id = run_id or new_run_id()
@@ -179,7 +203,10 @@ def run_gold_set(
     results: list[EvalQuestionResult] = []
     for question in gold.questions:
         try:
-            result = score_question(question, answer_fn(question))
+            response = answer_fn(question)
+            result = score_question(question, response)
+            for grader in graders:
+                result.metrics.update(grader(question, response))
         except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
             result = EvalQuestionResult(
                 question_id=question.id,
@@ -195,6 +222,12 @@ def run_gold_set(
         id=run_id,
         created_at=datetime.now(UTC),
         runner=runner,
+        # Both pin the score to what produced it. docs/progress.md asks for these specifically
+        # because `config.yaml`'s model is a floating alias — OpenAI publishes no dated snapshot
+        # for that family — so a rerun can differ from its baseline with nothing in the repo to
+        # say why. `None` when no model was involved (a stub or retrieval-only run).
+        config_fingerprint=get_config().fingerprint(),
+        model=model,
         chunker_snapshot_id=chunker_snapshots(),
         n_questions=len(results),
         n_passed=sum(1 for r in results if r.passed),
@@ -254,19 +287,73 @@ def list_runs(runs_dir: Path | None = None) -> list[EvalRunSummary]:
 # ---- CLI ----
 
 
+def _build(runner: str, judge: bool) -> tuple[AnswerFn, GoldSet, list[Grader], str | None]:
+    """Resolve `--runner` into an answerer, the questions to ask it, and how to grade it.
+
+    The gold *set* varies by runner, which is the non-obvious part. A retrieval-only run is asked
+    only the in-corpus questions: a bare retriever always returns its top k and can never abstain,
+    so scoring it on the five abstention questions would report a guaranteed zero as if it were a
+    finding.
+    """
+    from health_coverage_navigator.evals.answerers import (
+        agent_answerer,
+        bm25_answerer,
+        stub_answerer,
+    )
+    from health_coverage_navigator.evals.grading import (
+        groundedness_grader,
+        key_fact_coverage_grader,
+    )
+
+    gold = load_gold_set()
+    if runner == "stub":
+        if judge:
+            raise SystemExit("--judge on the stub runner would only measure canned text")
+        return stub_answerer(), gold, [key_fact_coverage_grader()], None
+
+    from health_coverage_navigator.agent.index import get_corpus_index
+
+    index = get_corpus_index()
+    graders: list[Grader] = [groundedness_grader(index), key_fact_coverage_grader()]
+
+    if runner == "bm25":
+        if judge:
+            raise SystemExit("--judge on the bm25 runner has no answer to judge")
+        return bm25_answerer(index), GoldSet(questions=gold.in_corpus()), graders, None
+
+    if judge:
+        from health_coverage_navigator.evals.judge import judge_grader
+
+        graders.append(judge_grader())
+    return agent_answerer(index), gold, graders, get_config().agent.model
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the gold eval set and write the result to data/eval_runs/."
     )
     parser.add_argument(
         "--runner",
-        default="stub",
-        help="label recorded on the run (default: stub, the Phase 0 canned answerer)",
+        default="agent",
+        choices=("agent", "bm25", "stub"),
+        help=(
+            "agent: the Phase 1a agent (costs a model call per question). "
+            "bm25: retrieval only, no model, no key, sub-second. "
+            "stub: the Phase 0 canned answerer, kept as the baseline. Default: agent."
+        ),
+    )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="grade answer correctness with an LLM judge (agent runner only; costs a second "
+        "model call per question)",
     )
     parser.add_argument("--no-write", action="store_true", help="print the run instead of saving")
     args = parser.parse_args()
 
-    run = run_gold_set(stub_answer_fn, runner=args.runner)
+    answer_fn, gold, graders, model = _build(args.runner, args.judge)
+    run = run_gold_set(answer_fn, gold, runner=args.runner, graders=graders, model=model)
+
     if args.no_write:
         print(run.model_dump_json(indent=2))
     else:
@@ -274,8 +361,16 @@ def main() -> int:
         print(f"Wrote {path}", file=sys.stderr)
 
     print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed")
+    if run.model:
+        print(f"  model                    {run.model}")
     for name, value in sorted(run.metrics.items()):
         print(f"  {name:<24} {value:.3f}")
+
+    errored = [r for r in run.results if r.error]
+    if errored:
+        print(f"\n{len(errored)} question(s) errored:", file=sys.stderr)
+        for result in errored[:5]:
+            print(f"  {result.question_id}: {result.error}", file=sys.stderr)
     return 0
 
 

@@ -24,19 +24,55 @@ agent:
   # snapshot should be pinned to it; see ALLOWED_FLOATING_MODELS in tests/test_config.py.
   model: openai:gpt-5.6-luna
 
+  # How many times a rejected answer may be re-attempted. This is the GROUNDING GUARDRAIL'S BUDGET,
+  # not generic error handling: agent/runtime.py's output validator rejects a citation of a chunk
+  # no tool returned, a snippet that is not verbatim in its chunk, or a [cN] marker pointing at
+  # nothing — and hands the model the reason. Two covers the realistic slips (a mistyped chunk id,
+  # a paraphrased quotation) and stops short of burning a run on a model that has decided to cite
+  # something it never read.
+  retries: 2
+
+  # Loop safety, in from day one rather than with Phase 4 (docs/plan.md §1a: cheap now, painful to
+  # retrofit). Phase 4 adds cycle detection ON TOP of these.
+  #
+  # request_limit counts model calls in one run: one to plan the first search, a few to read
+  # results and search again, one to answer, plus the retry budget above. tool_calls_limit is the
+  # real ceiling on a model that keeps reformulating a query it will never satisfy — without it the
+  # failure is a spinner until the request times out, instead of an answer or an honest abstention.
+  request_limit: 8
+  tool_calls_limit: 12
+
 retrieval:
   # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
   # cannot drift apart.
   top_k: 5
 
-  # BM25 term-frequency saturation. The standard 1.2 is a starting point, not a measured value.
-  bm25_k1: 1.2
+  # BM25 term-frequency saturation. Swept 0.6/0.9/1.2/1.5/2.0 x b 0.0..1.0 against the 30
+  # in-corpus gold questions (`make eval-retrieval`). 2.0 was best at every k and on both metrics
+  # — recall@5 0.567 vs 0.500 at the standard 1.2, MRR 0.416 vs 0.386 — but the margin is TWO
+  # QUESTIONS out of thirty, which a set this small cannot resolve. Read it as "no evidence the
+  # standard value is better here", not as a tuned optimum, and do not chase further decimals on
+  # this set. Re-measure when the gold set grows.
+  bm25_k1: 2.0
 
-  # BM25 length normalisation, 0 = off, 1 = full. THIS IS THE ONE TO TUNE FIRST: docs/chunking.md
-  # §5 hands forward that 505 of 2,256 NCD chunks are under 200 chars, and that BM25 length
-  # normalisation may over-favour them. That is a scoring question to measure against the gold set
-  # — not a chunking bug, and not a reason to reopen the section-merge decision.
+  # BM25 length normalisation, 0 = off, 1 = full. docs/chunking.md §5 handed this forward as THE
+  # ONE TO TUNE FIRST, on the worry that 505 of 2,256 NCD chunks are under 200 chars and length
+  # normalisation may over-favour them. Measured: it does not. Sweeping b from 0.0 to 1.0 moves
+  # recall@5 by at most one question at any k1, so the worry did not materialise and the standard
+  # value stands. That closes the question chunking.md opened; the short NCD sections are fine.
   bm25_b: 0.75
+
+evals:
+  # The LLM judge behind `make eval-judge`, which grades each answer against the gold set's
+  # `answer_key_facts`. Deliberately a SEPARATE KEY from agent.model rather than a reuse of it: a
+  # judge that is the same model as the thing it grades marks its own homework, and the failure is
+  # invisible — it agrees with itself most confidently exactly where both are wrong. Point this at
+  # a different family when the budget allows.
+  #
+  # Not reachable from the UI, by design. A button that spends money on every click is the wrong
+  # affordance; `make eval-judge` is an explicit act. The deterministic graders (groundedness,
+  # citation resolution) run on every `make eval` and cost nothing.
+  judge_model: openai:gpt-5.6-sol
 
 # WARNING: these five keys, their names, and their values are pinned by the committed
 # `data/processed/*/chunks_meta.json` manifests via `params_sha256` and `snapshot_id`. Changing any

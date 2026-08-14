@@ -23,13 +23,16 @@ A `Makefile` wraps every gate — `make help` lists them all.
 
 | Target | What it does |
 |---|---|
-| `make check-all` | ruff, pyright, pytest, **and** the frontend gate (`tsc`, lint, Vitest). |
+| `make check-all` | ruff, pyright, pytest, **and** the frontend gate (`tsc`, lint, Vitest, `types-check`). |
 | `make dev` | Both servers (uvicorn + Vite). |
 | `make serve` | Single process — FastAPI serving the built bundle. |
 | `make types` / `make types-check` | OpenAPI → TypeScript codegen (`frontend/src/api/schema.d.ts`). |
 | `make ui-install` / `ui-dev` / `ui-build` / `ui-test` | Frontend equivalents. |
 | `make chunk` / `make chunk-check` | Rebuild `chunks.jsonl`; verify committed manifests still describe it. |
-| `make eval` | Run the gold set → `data/eval_runs/`. |
+| `make eval` | Run the gold set through the agent → `data/eval_runs/`. **35 model calls.** |
+| `make eval-retrieval` | Score BM25 retrieval alone — free, instant, no key. The `bm25_b`/`k1` sweep loop. |
+| `make eval-judge` | `eval` plus an LLM judge over answer correctness. **70 model calls.** |
+| `make eval-stub` | Re-measure the Phase 0 canned answerer, the baseline real scores are read against. |
 | `make scan` | Secrets / PII / licensing scan — run before publishing anything under `data/`. |
 
 `make check-all` runs green on a fresh clone: the frontend gate **skips with a message** when
@@ -46,5 +49,11 @@ A `Makefile` wraps every gate — `make help` lists them all.
 - **TypeScript is pinned to `~5.9`, not the 6.x `create-vite` scaffolds.** `openapi-typescript`
   peer-requires 5.x, and that codegen is the contract-enforcement mechanism between Python and
   TypeScript, so it wins. Revisit when `openapi-typescript` supports 6.
+- **The test suite never reaches a model provider.** `tests/conftest.py` sets
+  `ALLOW_MODEL_REQUESTS = False` suite-wide, so `make check-all` needs no `OPENAI_API_KEY` and
+  costs nothing. Only the `eval*` targets spend money, and they are outside `check-all`.
+- **The agent needs the OpenAI Responses API, not Chat Completions.** The `gpt-5.6-*` family
+  returns a hard 400 for function tools on `/v1/chat/completions`; `agent/runtime.py` builds an
+  `OpenAIResponsesModel`. See [`agent.md`](agent.md) §7.
 
 Frontend stack rationale in full: [`frontend_plan.md`](frontend_plan.md) §1 and §7.

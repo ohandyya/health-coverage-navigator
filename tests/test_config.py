@@ -33,8 +33,14 @@ def _write(tmp_path, data: dict):
 def valid() -> dict:
     """A minimal valid config, independent of whatever the committed one currently says."""
     return {
-        "agent": {"model": "openai:gpt-5.4-mini-2026-03-17"},
+        "agent": {
+            "model": "openai:gpt-5.4-mini-2026-03-17",
+            "retries": 2,
+            "request_limit": 8,
+            "tool_calls_limit": 12,
+        },
         "retrieval": {"top_k": 5, "bm25_k1": 1.2, "bm25_b": 0.75},
+        "evals": {"judge_model": "openai:gpt-5.4-mini-2026-03-17"},
         "chunking": {
             "max_chars": 1200,
             "overlap_chars": 320,
@@ -147,6 +153,32 @@ def test_committed_model_is_pinned_or_a_known_exception() -> None:
     assert re.search(r"-\d{4}-\d{2}-\d{2}$", model), (
         f"{model!r} is neither pinned to a dated snapshot nor a listed floating-alias exception"
     )
+
+
+def test_committed_judge_model_is_pinned_or_a_known_exception() -> None:
+    """Same rule as the answering model: a judge on a floating alias makes a correctness score
+    unattributable in exactly the way the answering model would."""
+    provider, _, model = get_config().evals.judge_model.partition(":")
+    assert provider == "openai"
+    assert model in ALLOWED_FLOATING_MODELS or re.search(r"-\d{4}-\d{2}-\d{2}$", model)
+
+
+def test_the_judge_is_not_the_model_it_grades() -> None:
+    """A judge sharing the model it grades marks its own homework, and the failure is invisible —
+    it agrees with itself most confidently exactly where both are wrong."""
+    config = get_config()
+    assert config.evals.judge_model != config.agent.model
+
+
+def test_the_agent_loop_has_ceilings() -> None:
+    """Loop safety goes in with the agent, not with Phase 4 (docs/plan.md §1a). A missing ceiling
+    is a spinner until the request times out rather than an answer or an abstention."""
+    agent = get_config().agent
+    assert agent.request_limit > 0
+    assert agent.tool_calls_limit >= agent.request_limit, (
+        "a tool-call ceiling below the request ceiling makes the request ceiling unreachable"
+    )
+    assert agent.retries >= 1, "the grounding guardrail needs at least one retry to be useful"
 
 
 def test_committed_chunking_matches_the_manifests() -> None:

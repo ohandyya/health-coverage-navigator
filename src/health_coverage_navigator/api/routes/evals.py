@@ -35,19 +35,46 @@ from health_coverage_navigator.api.models import (
     EvalRunStarted,
     EvalRunSummary,
 )
+from health_coverage_navigator.config import get_config
+from health_coverage_navigator.evals.answerers import AnswerFn, agent_answerer, stub_answerer
+from health_coverage_navigator.evals.grading import (
+    Grader,
+    groundedness_grader,
+    key_fact_coverage_grader,
+)
 from health_coverage_navigator.evals.models import GoldQuestion
 from health_coverage_navigator.evals.runner import (
     list_runs,
     load_run,
     new_run_id,
     run_gold_set,
-    stub_answer_fn,
     write_run,
 )
 
 router = APIRouter()
 
 EvalEvent = EvalRunStarted | EvalRunProgress | EvalRunFinished | EvalRunFailed
+
+
+def _run_config(ctx: AppContext) -> tuple[AnswerFn, list[Grader], str | None]:
+    """Which answerer a browser-triggered run measures, and how it is graded.
+
+    Mirrors `evals/runner.py`'s CLI, minus the `bm25` option: a retrieval-only run is a tuning
+    tool for whoever is changing `bm25_b`, not something the dashboard offers, and adding it would
+    put a run that cannot abstain next to runs that can with nothing on screen to explain the gap.
+    The `runner` label the record carries still distinguishes them, so a CLI `bm25` run and a
+    browser `agent` run sit in the same table honestly.
+
+    The **LLM judge is deliberately not reachable over HTTP.** A button that quietly spends money
+    on every click is the wrong affordance; `make eval-judge` is an explicit act.
+    """
+    if ctx.stub or ctx.index is None:
+        return stub_answerer(), [key_fact_coverage_grader()], None
+    return (
+        agent_answerer(ctx.index),
+        [groundedness_grader(ctx.index), key_fact_coverage_grader()],
+        get_config().agent.model,
+    )
 
 
 class EvalQuestionsResponse(BaseModel):
@@ -144,15 +171,19 @@ async def post_run(ctx: Annotated[AppContext, Depends(get_context)]) -> EvalRunS
             ),
         )
 
+    answer_fn, graders, model = _run_config(ctx)
+
     async def execute() -> None:
         try:
             run = await asyncio.to_thread(
                 run_gold_set,
-                stub_answer_fn,
+                answer_fn,
                 ctx.gold,
-                runner="stub" if ctx.stub else "agent",
+                runner="stub" if ctx.stub or ctx.index is None else "agent",
                 run_id=run_id,
                 on_progress=on_progress,
+                graders=graders,
+                model=model,
             )
             await asyncio.to_thread(write_run, run)
             state.emit(EvalRunFinished(run=run))

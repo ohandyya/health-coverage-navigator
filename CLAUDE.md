@@ -21,6 +21,7 @@ Four docs, four jobs — keep material in the one that owns it:
 
 Reference docs: [development.md](docs/development.md) (commands, gates, toolchain) ·
 [configuration.md](docs/configuration.md) · [chunking.md](docs/chunking.md) ·
+[agent.md](docs/agent.md) (toolset, grounding guardrail, loop limits, grading) ·
 [lancedb.md](docs/lancedb.md) · per-source data guides (`*_data.md`) ·
 [data/README.md](data/README.md) (layout + per-source licensing).
 

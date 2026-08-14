@@ -19,27 +19,27 @@ mid-stream.
 
 *Updated 2026-08-14.*
 
-- **Phase:** **0 is complete, both halves**, and **Phase 1a's groundwork is in but the agent is
-  not.** Phase 0 delivered five bulk sources, the `make scan` guardrail, 35 gold questions, 6,722
-  chunks, the frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval
-  runner with HTTP-triggered runs, and a React UI rendering all of it. Since then: `pydantic-ai`
-  and `pydantic-settings` are installed, configuration is split into `settings.py` (secrets, from
-  `.env`) and `config.py` (everything else, from a committed `config.yaml`), and `ChunkParams` has
-  been consolidated into the latter. **No code in this repo calls an LLM yet.**
-- **Next up:** **the Phase 1a agent itself** —
-  [plan.md](plan.md#phase-1-a--full-text-tools-no-database). The seams are cut
-  and the config is now there to hang it on: replace `api/stub.py`'s `stub_answer()` with a
-  PydanticAI agent over `data/processed/*/chunks.jsonl`, carrying a **small full-text toolset**
-  (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`) rather than a single
-  `retrieve` — **stdlib BM25, no database of any kind** (settled 2026-08-14; see the log) — pass the
-  real answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
-  `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on their
-  own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not need to
-  change — if they do, that is a signal worth stopping on. Two things to carry in:
-  **`Agent("openai:...")` will not see `Secrets`** (pass `OpenAIProvider(api_key=...)` explicitly —
-  see the log), and the eval run record should start carrying `Config.fingerprint()` and the
-  resolved model, since the default model is a floating alias.
+- **Phase:** **1a is complete and shippable.** One PydanticAI agent answers coverage questions from
+  the reference corpus with a four-tool full-text toolset over stdlib BM25 — no database of any
+  kind — abstains when the question is out of corpus, and streams its answer and its tool trace to
+  the browser. The Phase 0 stub is still reachable behind `create_app(stub=True)` as a baseline.
+  Measured on the 35-question gold set: **recall@5 0.700, MRR 0.667, abstention accuracy 1.000,
+  groundedness 1.000, answer correctness 0.739** (LLM judge). Retrieval alone scores 0.567/0.416,
+  so the gap is what the agent's query reformulation buys. Design: [agent.md](agent.md).
+- **Next up:** **Phase 1b — `vector_search` alongside the 1a tools** —
+  [plan.md](plan.md#phase-1-b--add-vector-search-alongside-the-full-text-tools) and
+  [lancedb.md](lancedb.md). Register the tool on the **same** agent rather than replacing anything;
+  the comparison is three-way (lexical-only / vector-only / both) with toolset composition as an
+  eval axis, so it should be one runner with a flag, not three code paths. `make eval-retrieval`
+  already gives the lexical baseline to beat, and the frontend slice is a run-comparison view — the
+  chat UI is untouched by design.
 - **Open questions:**
+  - **`new_run_id()` collides when two runs start the same day concurrently.** It counts existing
+    files at call time, so two runs launched together both claim `run_YYYY-MM-DD_1` and the second
+    overwrites the first. Hit for real this session. A monotonic suffix or a lock would fix it.
+  - **`make types-check` is still outside `check-all`,** so a stale `schema.d.ts` is unflagged until
+    someone else hits it. It writes nothing and takes a second; the argument that put `tsc` in the
+    gate applies to it too.
   - **`make chunk`'s `--max-chars` / `--overlap-chars` flags override `config.yaml` and are recorded
     nowhere.** The same invisible-override hole the config split just closed, on a smaller scale.
     Either drop the flags or have the manifest record that an override was used.
@@ -87,9 +87,150 @@ Beyond the F0 list, because implementation made them the cheaper order:
 - [x] `evals/runner.py` with a pluggable answerer — the Phase 1a swap point
 - [x] `GET /api/corpus/{doc_id}` citation drill-down against the real corpus
 
+### Phase 1a checklist
+
+Backend (plan.md, Phase 1a):
+
+- [x] PydanticAI `Agent` — model from `config.yaml`, typed deps, structured output, grounding prompt
+- [x] Full-text toolset over `data/processed` — `search_corpus` / `grep_corpus` / `get_chunk` /
+  `list_documents`, **no database at all**
+- [x] BM25 inverted index built in-process at startup from `chunks.jsonl` (~200 ms, 6,722 chunks)
+- [x] Structured output populating the frozen contract (answer + citations + claims + `abstained`)
+- [x] Chunk → source provenance; citations rebuilt from the real `Chunk`, never from the model
+- [x] Grounding guardrail — an output validator, not a prompt instruction
+- [x] Step / usage limits from day one (`request_limit`, `tool_calls_limit`, `retries`)
+- [x] Tool-call trace captured and surfaced through `trace`, with real arguments and durations
+- [x] Eval extended to answer correctness (LLM judge) and groundedness (deterministic)
+- [x] Stub endpoint replaced by the real agent; streaming wired through to the UI
+- [x] Eval dashboard over real runs
+
+Frontend (frontend_plan.md, Phase F1):
+
+- [x] Stub swapped for the agent — the banner removes itself, driven by `health.stub`
+- [x] Abstention wired to the real guardrail
+- [x] Trace panel shows the agent's real tool sequence
+- [x] Eval dashboard against real runs, with `model` and `config_fingerprint`
+
+Beyond the F1 list, because the real agent made them necessary:
+
+- [x] A working state while the agent searches — several seconds pass before the first token
+- [x] Abstentions render through `AnswerBody`, since the agent can abstain *and* cite
+
 ---
 
 ## Log
+
+### 2026-08-14 — Phase 1a: the agent, and the first real eval numbers
+
+**Did:** built the Phase 1a agent — `agent/` (stdlib BM25, `CorpusIndex`, the four tools, the
+prompt, the grounding validator, the streaming runtime), swapped it in behind `/api/chat`, and
+extended the eval slice with three answerers and three graders. Reference doc:
+[agent.md](agent.md). **The repo now calls an LLM.**
+
+The numbers, all on the same gold set and the same chunk snapshots:
+
+| runner | recall@5 | MRR | abstention acc. | groundedness | answer correctness |
+|---|---|---|---|---|---|
+| `stub` (Phase 0) | 0.033 | 0.033 | 0.400 | — | — |
+| `bm25` (retrieval only) | 0.567 | 0.416 | — | 1.000 | — |
+| `agent` | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
+
+**Decided: the grounding rule is enforced in code, not asked for in the prompt.** Every chunk a
+tool returns lands in `deps.seen_chunks`, and an output validator rejects a citation of anything
+else, a snippet that is not verbatim in its chunk, or a dangling `[cN]` — handing the model the
+reason via `ModelRetry`. The prompt was written *not* to duplicate any of it: whatever a guardrail
+can enforce, the guardrail enforces. `groundedness` and `citation_resolution` came back at 1.000,
+which is the only value they should ever have — a number below 1.0 is a bug in the validator, not a
+score to improve. They are measured anyway, because a guardrail nobody checks is one that has
+already stopped working.
+
+**Decided: citations are rebuilt from the corpus.** The model contributes `chunk_id` and `snippet`,
+both validated; title, url, `doc_id` and `source_type` are read off the real `Chunk`. There is no
+path by which an invented title reaches the browser. Same instinct made `claims` **derived** rather
+than requested — `AnswerClaim.text` must be a verbatim substring of the answer, and a model
+reproducing its own prose character-for-character is a coin flip that fails the contract validator
+when it loses.
+
+**Decided: `answer_question()` is `stream_answer()` drained.** Phase 0's
+`test_stream_done_payload_equals_the_non_streaming_response` compared two independent code paths
+for equality, which a nondeterministic model makes unassertable by re-running. Rather than delete
+the property, it moved into the code: one path, two shapes. The stub still has two paths, so that
+test survives for it.
+
+**Decided: three eval runners, one scorer.** `bm25` answers nothing — it retrieves and stops — but
+it goes through the same scorer, run file and dashboard, so its `recall@5` is directly comparable
+to the agent's. That comparison is the phase's most useful number: **0.567 → 0.700 is what the
+agent's query reformulation is worth**, and it separates "the retriever cannot find it" from "the
+agent did not look properly", which are different bugs. It costs nothing to run, which is what
+makes it the `bm25_b`/`k1` sweep loop.
+
+**Decided: the LLM judge is opt-in and unreachable over HTTP.** `make eval` stays free and
+reproducible from the repo; `make eval-judge` is an explicit act. A button that spends money on
+every click is the wrong affordance. The judge runs on a *different* model
+(`evals.judge_model`) from the one it grades — a judge marking its own homework agrees with itself
+most confidently exactly where both are wrong.
+
+**Measured, closing a question chunking.md opened:** [chunking.md](chunking.md) §5 handed forward
+the worry that BM25 length normalisation would over-favour the 505 NCD chunks under 200 chars.
+**It does not** — sweeping `b` from 0.0 to 1.0 moves recall@5 by at most one question at any `k1`.
+That question is closed. The sweep also confirmed §6's claim that the context header is real
+lexical signal: 0.567 with it, 0.500 without, and higher MRR at every cell. `bm25_k1` moved 1.2 →
+2.0, but read that as "no evidence 1.2 is better here" rather than a tuned optimum — the margin is
+two questions out of thirty, which a set this size cannot resolve, and `tests/test_corpus_index.py`
+asserts a floor of 0.40 rather than the measured value for exactly that reason.
+
+**Decided: a missing `chunks.jsonl` fails loudly.** The lane reports `configured: false` and
+`/api/chat` returns a 503 naming `make chunk`. Deliberately *not* a fallback to the stub: canned
+output must never be mistakable for a real answer, which is the whole reason `HealthResponse.stub`
+is a boolean. Booting still succeeds, because `make types` imports the app and the eval dashboard
+must work without a corpus.
+
+**Rejected:** a BM25 library, again and for the same reasons as before. Also rejected asking the
+model for `claims`, and asking it to only cite what it retrieved (that is `seen_chunks`'s job).
+
+**Dead end: `_resolve_model`'s first draft built the wrong model class by hand.** It needs to
+construct the model object explicitly regardless — see the `Secrets` dead end above — but the
+first draft picked `OpenAIChatModel` on an unchecked assumption. PydanticAI's own inference of a
+bare `openai:` string already resolves to `OpenAIResponsesModel` (`infer_model` maps the plain
+`openai` prefix to Responses; only `openai-chat:` gets Chat Completions), so this was a
+self-inflicted mismatch, not a framework default working against us. `gpt-5.6-luna` rejects tool
+calls on Chat Completions outright — *"Function tools with reasoning_effort are not supported ...
+in /v1/chat/completions. To use function tools, use /v1/responses"* — a hard 400 on the first tool
+call. Fixed by building `OpenAIResponsesModel` instead, which is what inference would have chosen
+anyway.
+
+**Dead end: `build_agent()` and `build_agent(None)` were different `lru_cache` keys**, so they
+returned two different `Agent` objects — and `agent.override(model=...)` in a test applied to only
+one, sending the run to the real provider. Caught only because `ALLOW_MODEL_REQUESTS = False`
+turned it into a loud failure instead of a bill. The default is now resolved *before* the cache
+lookup. Worth remembering: an `lru_cache` on a function with a default argument has two keys for
+the same call.
+
+**Dead end: `FunctionModel` asserts on a streamed request unless given a `stream_function`.** Since
+the runtime only ever streams, every scripted test model needs both halves. The streaming half
+emits arguments in 17-character JSON fragments deliberately aligned to nothing — that is what
+exercises the partial-JSON parsing behind token streaming, and a single-chunk script would have
+left the whole streaming path untested while appearing to pass.
+
+**Dead end (found in the browser, not by a test):** the agent can abstain **and** cite — declining
+to name a provider while pointing at HealthCare.gov on how to check a plan's directory is a better
+answer, not a contradiction. `AbstentionNotice` printed raw text, so a dead `[c1]` sat above a
+citation card it did not link to. frontend_plan §5.1's "no citation section" described the Phase 0
+stub, whose abstention cited nothing. The panel now renders through `AnswerBody`.
+
+**Also:** `tests/conftest.py` is the repo's first, and exists mainly to set
+`ALLOW_MODEL_REQUESTS = False` suite-wide — `make check-all` needs no API key and costs nothing.
+Two additive contract fields (`config_fingerprint`, `model` on `EvalRunSummary`) are the only
+contract change; the chat UI, the streaming plumbing and the eval dashboard needed nothing, which
+was the stated success criterion.
+
+**Stopped at:** clean and verified where it counts. `make check-all` (200 tests, pyright 0 errors),
+`make types-check`, `make chunk-check` and `make scan` all pass with every advisory count at
+baseline. Verified in a real browser against the live agent: the stub banner gone, a cited answer,
+an abstention, the trace showing real tool arguments and durations, citation drill-down, and all
+three runners side by side on the dashboard. Two things noticed and **not** fixed, both minor:
+`new_run_id()` collides when two runs start the same day concurrently (an agent run overwrote a
+`bm25` run mid-session), and `make types-check` is still outside `check-all`.
 
 ### 2026-08-14 — CLAUDE.md condensed to invariants; two reference docs split out
 

@@ -8,10 +8,24 @@
  *
  * Note what this component does not do: it never inspects the answer text. It renders because
  * `ChatResponse.abstained` is true, which is why that field is a first-class boolean.
+ *
+ * The body goes through `AnswerBody` rather than being printed raw. §5.1's "no citation section"
+ * meant the Phase 0 stub, whose abstention cited nothing. The real agent can abstain *and* point
+ * somewhere — declining to name a provider while citing HealthCare.gov on how to check a plan's
+ * directory is a better answer, not a contradiction — and printing raw text left a dead `[c1]` in
+ * the prose above a citation card it did not link to. The panel is still visually distinct, which
+ * is the requirement that actually matters.
  */
 import { CircleSlash } from 'lucide-react'
+import { AnswerBody } from '@/components/AnswerBody'
 
-export function AbstentionNotice({ answer }: { answer: string }) {
+export function AbstentionNotice({
+  answer,
+  onCite,
+}: {
+  answer: string
+  onCite?: (id: string) => void
+}) {
   return (
     <div className="flex gap-3 rounded-lg border border-dashed border-border bg-muted/50 px-4 py-3">
       <CircleSlash className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -19,7 +33,9 @@ export function AbstentionNotice({ answer }: { answer: string }) {
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Not in my reference material
         </p>
-        <p className="text-sm text-muted-foreground">{answer}</p>
+        <div className="text-muted-foreground">
+          <AnswerBody answer={answer} onCite={onCite ?? (() => {})} />
+        </div>
       </div>
     </div>
   )

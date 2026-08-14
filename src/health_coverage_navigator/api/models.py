@@ -341,8 +341,19 @@ class EvalRunSummary(BaseModel):
     created_at: datetime
 
     runner: str
-    """Which answerer produced this run — `"stub"` at Phase 0. Surfaced as a badge in the
-    dashboard, because a metric measured against canned answers must never read as a real score."""
+    """Which answerer produced this run — `"stub"` at Phase 0, then `"bm25"` (retrieval only) or
+    `"agent"`. Surfaced as a badge in the dashboard, because a metric measured against canned
+    answers, or against a retriever with no model behind it, must never read as a real score."""
+
+    config_fingerprint: str | None = None
+    """`Config.fingerprint()` — a sha256 over every value in `config.yaml`. The answer to "what
+    was this score measured under" for everything the repo *can* pin."""
+
+    model: str | None = None
+    """The model actually behind the answers, `None` when none was. Recorded separately from
+    `config_fingerprint` because `config.yaml`'s model is a **floating alias** — OpenAI publishes
+    no dated snapshot for that family — so the fingerprint proves which alias was configured but
+    not what it resolved to on the day."""
 
     chunker_snapshot_id: dict[str, str] = Field(default_factory=dict)
     """Per-source `chunks_meta.json` snapshot ids, pinning a score to the chunk parameters it was

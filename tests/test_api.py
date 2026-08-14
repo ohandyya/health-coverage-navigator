@@ -1,13 +1,25 @@
-"""End-to-end checks on the HTTP surface, against the Phase 0 stub.
+"""End-to-end checks on the HTTP surface.
 
-There is no agent yet, so what is testable here is the *contract* and the *plumbing*: that the
-stub exercises every UI branch, that the streaming and non-streaming paths cannot drift apart,
-that citation drill-down resolves against the real corpus, and that the static mount does not eat
-the API. That last one is the reason `create_app` takes a `dist_dir` — it is an order-dependent
-failure whose only symptom is the wrong response body.
+Two apps are under test here, because the server has two answering modes and both are real:
 
-Structural invariants of the models themselves (dangling citation ids, orphan markers) are
-enforced by the pydantic validator in `api/models.py` and tested in `tests/test_contract.py`.
+- **`client`** — `create_app(stub=True)`, serving `api/stub.py`. Most of this file uses it, and
+  that is deliberate rather than left over. The stub is a *fixture with known content*: it fills
+  every UI branch on purpose (two citations of different shapes, a trace covering all four `kind`
+  values, an all-lanes variant), so it is what the contract and the plumbing can be asserted
+  against exactly. An agent's output cannot be asserted exactly, by definition.
+- **`agent_client`** — `create_app(stub=False)` with the model scripted, for what only the real
+  path has: the 503 when the corpus was never chunked, the health lane tracking the index, and the
+  agent's answer reaching the browser through the same SSE grammar.
+
+What is testable here is the *contract* and the *plumbing*: that every UI branch is exercised, that
+citation drill-down resolves against the real corpus, and that the static mount does not eat the
+API — the reason `create_app` takes a `dist_dir`, since that is an order-dependent failure whose
+only symptom is the wrong response body. The agent's own behaviour is `tests/test_agent.py`'s.
+
+One Phase 0 test is deliberately gone. `test_stream_done_payload_equals_the_non_streaming_response`
+compared two independent code paths for equality; `answer_question()` is now `stream_answer()`
+drained to its `done` event, so they cannot differ and the property is asserted structurally in
+`tests/test_agent_stream.py`. It survives here for the stub, which is still two paths.
 """
 
 import json
@@ -16,6 +28,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from health_coverage_navigator.agent.runtime import build_agent
 from health_coverage_navigator.api.app import create_app
 from health_coverage_navigator.api.models import MARKER_RE, ChatRequest, ChatResponse
 from health_coverage_navigator.api.stub import stub_answer
@@ -25,7 +38,30 @@ from health_coverage_navigator.evals.models import GoldSet
 
 @pytest.fixture(scope="session")
 def client():
-    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"))) as c:
+    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=True)) as c:
+        yield c
+
+
+@pytest.fixture
+def agent_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
+    """The real answering path, with the two-chunk fixture corpus and a scripted model.
+
+    The index is substituted rather than loaded: the app's lifespan would otherwise build all 6,722
+    chunks, and these tests are about the HTTP wiring, not about retrieval.
+    """
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: agent_kit.index)
+    with (
+        build_agent().override(model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())),
+        TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c,
+    ):
+        yield c
+
+
+@pytest.fixture
+def no_corpus_client(monkeypatch: pytest.MonkeyPatch):
+    """A server that booted on a fresh clone, where `make chunk` has never run."""
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: None)
+    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
         yield c
 
 
@@ -55,15 +91,32 @@ def _parse_sse(body: str) -> list[dict]:
 def test_health_reports_stub_mode(client: TestClient):
     body = client.get("/api/health").json()
     assert body["status"] == "ok"
-    assert body["stub"] is True, "Phase 0 answers are canned; the UI must be able to say so"
+    assert body["stub"] is True, "canned answers must never be mistakable for real ones"
 
     lanes = {lane["source_type"]: lane for lane in body["lanes"]}
     assert set(lanes) == {"reference", "structured_api", "web"}, (
         "the three-lane vocabulary exists from Phase 0 even though two lanes are empty"
     )
-    assert lanes["reference"]["configured"] is True
     assert lanes["structured_api"]["configured"] is False
     assert lanes["web"]["configured"] is False
+
+
+def test_health_drops_the_stub_flag_when_the_agent_answers(agent_client: TestClient):
+    """This is what removes the UI's stub banner — `App.tsx` renders it off `health.stub` alone."""
+    body = agent_client.get("/api/health").json()
+    assert body["stub"] is False
+    lanes = {lane["source_type"]: lane for lane in body["lanes"]}
+    assert lanes["reference"]["configured"] is True
+
+
+def test_health_reports_the_reference_lane_down_without_chunks(no_corpus_client: TestClient):
+    """`configured` tracks the *index*, not the document count. Citation drill-down works off the
+    committed corpus either way, so reporting off `docs` would show a live lane on a server that
+    can only 503."""
+    body = no_corpus_client.get("/api/health").json()
+    lanes = {lane["source_type"]: lane for lane in body["lanes"]}
+    assert lanes["reference"]["configured"] is False
+    assert "make chunk" in lanes["reference"]["detail"]
 
 
 def test_health_counts_come_from_the_committed_manifests(client: TestClient):
@@ -169,6 +222,9 @@ def test_stream_emits_the_documented_event_sequence(client: TestClient):
 
 
 def test_stream_done_payload_equals_the_non_streaming_response(client: TestClient):
+    """Still two independent code paths for the stub, so equality is still assertable here. The
+    agent has one path (`answer_question` drains `stream_answer`), asserted structurally in
+    `tests/test_agent_stream.py`."""
     payload = {"message": "What is a deductible?", "plan_year": 2026}
     plain = client.post("/api/chat", json=payload).json()
     events = _parse_sse(client.post("/api/chat/stream", json=payload).text)
@@ -183,6 +239,61 @@ def test_stream_tokens_reconstruct_the_answer(client: TestClient):
     streamed = "".join(e["delta"] for e in events if e["type"] == "token").strip()
     done = next(e for e in events if e["type"] == "done")
     assert streamed == done["response"]["answer"]
+
+
+# ---------------------------------------------------------------- 3b. the agent path --------
+
+
+def test_the_agent_answers_over_http(agent_client: TestClient):
+    body = agent_client.post("/api/chat", json={"message": "What is a deductible?"}).json()
+    assert body["abstained"] is False
+    assert body["citations"], "an answer with no sources should never reach the browser"
+    assert body["usage"]["model"], "the run must record which model produced it"
+    assert set(MARKER_RE.findall(body["answer"])) <= {c["id"] for c in body["citations"]}
+
+
+def test_the_agent_stream_uses_the_same_grammar_as_the_stub(agent_client: TestClient):
+    """The UI has not changed since Phase 0 and must not need to. This is what that rests on."""
+    response = agent_client.post("/api/chat/stream", json={"message": "What is a deductible?"})
+    assert response.headers["content-type"].startswith("text/event-stream")
+
+    events = _parse_sse(response.text)
+    types = [e["type"] for e in events]
+    assert types[0] == "start"
+    assert types[-1] == "done"
+    assert "step" in types and "token" in types and "citation" in types
+
+    done = next(e for e in events if e["type"] == "done")
+    streamed = "".join(e["delta"] for e in events if e["type"] == "token")
+    assert streamed == done["response"]["answer"]
+
+
+def test_chat_is_503_when_the_corpus_was_never_chunked(no_corpus_client: TestClient):
+    """Deliberately not a fallback to the stub: canned output must never be mistakable for a real
+    answer, and a silently degraded answer is worse than an error that names the fix."""
+    for path in ("/api/chat", "/api/chat/stream"):
+        response = no_corpus_client.post(path, json={"message": "What is a deductible?"})
+        assert response.status_code == 503, path
+        assert "make chunk" in response.json()["detail"], path
+
+
+def test_an_agent_failure_arrives_as_an_error_frame(agent_kit, monkeypatch: pytest.MonkeyPatch):
+    """A `StreamingResponse` has already sent its 200 by the time the first tool runs, so a later
+    failure cannot become a status code — it would truncate the body and the browser would report a
+    network error for what was really a step limit or a rate limit. `useChat.ts` already renders
+    `ErrorEvent`; this is what feeds it."""
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: agent_kit.index)
+    # A script that never produces a final answer, so the run trips its tool-call ceiling.
+    with (
+        build_agent().override(model=agent_kit.script(agent_kit.SEARCH)),
+        TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as client,
+    ):
+        response = client.post("/api/chat/stream", json={"message": "loop forever"})
+
+    assert response.status_code == 200
+    events = _parse_sse(response.text)
+    assert events[-1]["type"] == "error"
+    assert events[-1]["code"] == "internal"
 
 
 # ---------------------------------------------------------------- 4. corpus -----------------

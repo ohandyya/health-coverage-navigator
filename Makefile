@@ -1,6 +1,7 @@
 .PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
         chunk chunk-check scan scan-staged scan-unstaged scan-selftest \
-        ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check eval
+        ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
+        eval eval-retrieval eval-judge eval-stub
 
 .DEFAULT_GOAL := help
 
@@ -63,7 +64,13 @@ ui-test: ## Vitest over the SSE parser (the one frontend module with real logic)
 # frontend module with real logic, and the bugs its tests cover (a frame or a multi-byte character
 # split across a chunk boundary) are invisible in normal use, so the suite is the only feedback
 # there is. It writes nothing and takes about a second. `make ui-test` still runs it alone.
-ui-check: ## Typecheck, lint, and test the frontend (skipped when deps aren't installed)
+#
+# `types-check` runs last, for the same reason: sub-second, writes only to /tmp, and it is what
+# catches the one seam tsc cannot — `client.ts` hand-writes its route strings, so a renamed
+# FastAPI route compiles clean and 404s at runtime. Folded in here rather than added to
+# check-all's own dependency list so it shares this same node_modules skip-guard instead of
+# duplicating it.
+ui-check: ## Typecheck, lint, test, and verify schema.d.ts is current (skipped when deps aren't installed)
 	@if [ -d frontend/node_modules ]; then \
 		$(NODE_ENV_PREFIX) cd frontend \
 			&& npx tsc --noEmit -p tsconfig.app.json \
@@ -72,6 +79,12 @@ ui-check: ## Typecheck, lint, and test the frontend (skipped when deps aren't in
 	else \
 		echo "frontend/node_modules missing — run 'make ui-install'; skipping ui-check"; \
 	fi
+	@# A fresh recipe line, not backslash-joined to the block above: that block ends inside
+	@# `frontend/` (the `cd` carries across a single shell), and `$(MAKE)` run from there would
+	@# look for a Makefile in `frontend/` instead of here. A new line starts a new shell back at
+	@# this Makefile's own directory. Silently skipped alongside the block above — no need for a
+	@# second "node_modules missing" message.
+	@if [ -d frontend/node_modules ]; then $(MAKE) types-check; fi
 
 api-dev: ## FastAPI with autoreload (:8000). Binds 127.0.0.1: there is no auth.
 	uv run uvicorn health_coverage_navigator.api.app:app --reload --host 127.0.0.1 --port 8000
@@ -93,9 +106,26 @@ types-check: ## Verify schema.d.ts is current with the Pydantic models (writes n
 		&& echo "schema.d.ts is current" \
 		|| { echo "schema.d.ts is stale — run 'make types'"; exit 1; }
 
-# Writes to data/eval_runs/, so deliberately not in check-all for the same reason as `chunk`.
-eval: ## Run the gold eval set and save the result to data/eval_runs/
-	uv run python -m health_coverage_navigator.evals.runner
+# All three write to data/eval_runs/, so deliberately not in check-all for the same reason as
+# `chunk`. `eval` and `eval-judge` also cost money — 35 model calls each, doubled with the judge —
+# which is the second reason a fast inner-loop gate must not run them.
+eval: ## Run the gold set through the agent (35 model calls) -> data/eval_runs/
+	uv run python -m health_coverage_navigator.evals.runner --runner agent
+
+# The loop for tuning bm25_b / bm25_k1: no agent, no model, no key, sub-second over all 30
+# in-corpus questions. Sweeping those parameters through the agent would cost 35 model calls per
+# data point AND entangle retrieval quality with the agent's tool-choice behaviour, which are the
+# two things this separation exists to keep apart.
+eval-retrieval: ## Score BM25 retrieval alone against the gold set — free and instant
+	uv run python -m health_coverage_navigator.evals.runner --runner bm25
+
+# Answer correctness, graded per key fact by a second model. Opt-in and deliberately unreachable
+# from the UI: a button that spends money on every click is the wrong affordance.
+eval-judge: ## Run the gold set through the agent AND grade answers with the LLM judge
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --judge
+
+eval-stub: ## Re-measure the Phase 0 canned answerer — the baseline real scores are read against
+	uv run python -m health_coverage_navigator.evals.runner --runner stub
 
 # Also deliberately not part of check-all: chunk writes files, and check-all is a read-only gate.
 # The correctness is already covered — `make test` builds the chunks in memory and checks them
