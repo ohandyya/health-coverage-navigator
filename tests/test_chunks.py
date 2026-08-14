@@ -21,8 +21,8 @@ import re
 import pytest
 
 from health_coverage_navigator.chunking import Chunk, build_chunks
-from health_coverage_navigator.chunking.params import DEFAULT_PARAMS
 from health_coverage_navigator.chunking.pipeline import build_manifest
+from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import CORPUS_NAMES, chunks_meta_path, load_corpus
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldSet
@@ -145,7 +145,7 @@ def test_ordinals_are_dense_and_ordered(chunks: dict[str, list[Chunk]]):
 
 
 def test_chunk_size_budget(all_chunks: list[Chunk]):
-    ceiling = DEFAULT_PARAMS.max_chars + DEFAULT_PARAMS.overlap_chars
+    ceiling = get_config().chunking.max_chars + get_config().chunking.overlap_chars
     for c in all_chunks:
         assert c.n_chars <= ceiling, f"{c.id}: {c.n_chars} chars exceeds the {ceiling} ceiling"
         assert c.text.strip(), f"{c.id}: blank text"
@@ -166,7 +166,7 @@ def test_overlap_guarantee(chunks: dict[str, list[Chunk]]):
                 if prev.heading != nxt.heading or nxt.char_start >= prev.char_end:
                     continue  # different section: no overlap is expected across a heading
                 overlap = prev.char_end - nxt.char_start
-                assert overlap >= DEFAULT_PARAMS.overlap_chars, (
+                assert overlap >= get_config().chunking.overlap_chars, (
                     f"{nxt.id}: only {overlap} chars of overlap with {prev.id}"
                 )
 
@@ -176,7 +176,7 @@ def test_every_non_trivial_doc_yields_a_chunk(chunks: dict[str, list[Chunk]], co
         chunked = {c.doc_id for c in chunks[name]}
         skipped = set(build_chunks(name).skipped_ids)
         for doc_id, rec in corpus_docs[name].items():
-            long_enough = len(_normalize(rec["text"])) >= DEFAULT_PARAMS.min_doc_chars
+            long_enough = len(_normalize(rec["text"])) >= get_config().chunking.min_doc_chars
             if long_enough:
                 assert doc_id in chunked, f"{doc_id}: above the size floor but produced no chunk"
             else:

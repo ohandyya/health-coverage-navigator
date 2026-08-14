@@ -32,7 +32,7 @@ and it silently breaks that guarantee.
 
 import re
 
-from health_coverage_navigator.chunking.params import ChunkParams
+from health_coverage_navigator.config import ChunkParams
 
 #: (start, end) half-open offsets into the text the splitter was handed.
 Span = tuple[int, int]

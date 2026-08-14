@@ -17,13 +17,13 @@ import json
 import sys
 from typing import cast
 
-from health_coverage_navigator.chunking.params import ChunkParams
 from health_coverage_navigator.chunking.pipeline import (
     _summarize,
     build_chunks,
     build_manifest,
     write_chunks,
 )
+from health_coverage_navigator.config import ChunkParams, get_config
 from health_coverage_navigator.corpus import CORPUS_NAMES, CorpusName, chunks_meta_path
 
 
@@ -43,9 +43,14 @@ def main() -> int:
         action="store_true",
         help="Rebuild in memory and fail if it disagrees with the committed manifest",
     )
-    p.add_argument("--max-chars", type=int, default=None, help="Chunk size budget (default: 1200)")
     p.add_argument(
-        "--overlap-chars", type=int, default=None, help="Overlap between chunks (default: 320)"
+        "--max-chars", type=int, default=None, help="Chunk size budget (default: from config.yaml)"
+    )
+    p.add_argument(
+        "--overlap-chars",
+        type=int,
+        default=None,
+        help="Overlap between chunks (default: from config.yaml)",
     )
     args = p.parse_args()
 
@@ -55,7 +60,9 @@ def main() -> int:
         for k, v in (("max_chars", args.max_chars), ("overlap_chars", args.overlap_chars))
         if v is not None
     }
-    params = ChunkParams(**overrides)
+    # Re-validated through the model rather than `model_copy(update=...)`, which skips validation —
+    # a `--max-chars 0` from the command line must fail the same way it would in config.yaml.
+    params = ChunkParams(**(get_config().chunking.model_dump() | overrides))
 
     results = []
     for i, source in enumerate(sources, 1):

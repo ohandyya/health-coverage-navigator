@@ -17,24 +17,31 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-13.*
+*Updated 2026-08-14.*
 
-- **Phase:** **0 is complete, both halves.** The backend half was already done (five bulk sources,
-  the `make scan` guardrail, 35 gold questions, 6,722 chunks). The frontend half now is too: the
-  frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval runner with
-  HTTP-triggered runs, and a React UI rendering all of it. `make dev` gives a working end-to-end
-  loop with no agent behind it, which is exactly what F0 was for. `check-all` now covers the
-  frontend fully — `tsc`, lint, and vitest — and the `sync-frontend` skill carries the procedure
-  for keeping the two sides of the contract in step.
-- **Next up:** **Phase 1a** — [plan.md](plan.md#phase-1-a--rag-without-a-vector-database-full-text-search).
-  The swap is deliberately small and the seams are already cut: replace `api/stub.py`'s
-  `stub_answer()` with a PydanticAI agent behind a single `retrieve` tool over
-  `data/processed/*/chunks.jsonl` (lexical/BM25, no vector DB — that is 1b), pass the real
-  answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
-  `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on
-  their own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not
-  need to change — if they do, that is a signal worth stopping on.
+- **Phase:** **0 is complete, both halves**, and **Phase 1a's groundwork is in but the agent is
+  not.** Phase 0 delivered five bulk sources, the `make scan` guardrail, 35 gold questions, 6,722
+  chunks, the frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval
+  runner with HTTP-triggered runs, and a React UI rendering all of it. Since then: `pydantic-ai`
+  and `pydantic-settings` are installed, configuration is split into `settings.py` (secrets, from
+  `.env`) and `config.py` (everything else, from a committed `config.yaml`), and `ChunkParams` has
+  been consolidated into the latter. **No code in this repo calls an LLM yet.**
+- **Next up:** **the Phase 1a agent itself** —
+  [plan.md](plan.md#phase-1-a--rag-without-a-vector-database-full-text-search). The seams are cut
+  and the config is now there to hang it on: replace `api/stub.py`'s `stub_answer()` with a
+  PydanticAI agent behind a single `retrieve` tool over `data/processed/*/chunks.jsonl` —
+  **stdlib BM25, no database of any kind** (settled 2026-08-14; see the log) — pass the
+  real answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
+  `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on their
+  own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not need to
+  change — if they do, that is a signal worth stopping on. Two things to carry in:
+  **`Agent("openai:...")` will not see `Secrets`** (pass `OpenAIProvider(api_key=...)` explicitly —
+  see the log), and the eval run record should start carrying `Config.fingerprint()` and the
+  resolved model, since the default model is a floating alias.
 - **Open questions:**
+  - **`make chunk`'s `--max-chars` / `--overlap-chars` flags override `config.yaml` and are recorded
+    nowhere.** The same invisible-override hole the config split just closed, on a smaller scale.
+    Either drop the flags or have the manifest record that an override was used.
   - **nvm is installed at `~/.nvm` but not wired into the shell profile**, so an interactive
     `node`/`npm` still resolves to the old v20.7.0 while `make ui-*` (which sources nvm itself)
     gets 22. Adding `export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`
@@ -82,6 +89,101 @@ Beyond the F0 list, because implementation made them the cheaper order:
 ---
 
 ## Log
+
+### 2026-08-14 — configuration splits in two, and the Phase 1a dependencies land
+
+**Did:** added `pydantic-ai` and `pydantic-settings`, then split configuration along the line the
+first one exposed: secrets from the environment (`settings.py`), everything else from a committed
+`config.yaml` (`config.py`). `ChunkParams` moved into the new config module as part of that. No
+agent yet — this is the wiring the agent will sit on.
+
+**Decided:** **the axis is committed-reproducible-input vs git-ignored credential, not
+secret vs non-secret.** That reframing is what settles the env-var question, which is otherwise a
+matter of taste: a secret *must* come from the environment because it cannot be committed, and
+anything that changes an eval result must *not*, because an env var is invisible to git — a run
+configured by an unrecorded `AGENT_MODEL=...` cannot be reproduced from the repo, and the score is
+worth less for it. So `Secrets` inherits `BaseSettings` and the config models are plain
+`BaseModel`s, which have no environment source to accidentally re-enable.
+
+**Decided:** **two accessors, `get_config()` and `get_secrets()`, never composed into one object.**
+A chunking run or a retrieval test needs `top_k` and no credentials; composing them would make
+every such caller fail when `OPENAI_API_KEY` is unset. Verified by running `get_config()` with the
+variable cleared.
+
+**Decided:** **no field defaults in `config.py`; `config.yaml` is mandatory.** A default in Python
+beside a value in YAML is two sources of truth that drift silently. The file is committed so it is
+always present, and a missing key is an error that names the key. `extra="forbid"` makes a typo'd
+key fail at load rather than being ignored.
+
+**Decided:** **`ChunkParams` moved rather than being imported.** `chunking/__init__.py` imports
+`pipeline`, so `config.py` importing `chunking.params` is a cycle — the same shape as the
+`api/__init__.py` note in the F0 entry below. `CHUNKER_VERSION` deliberately stayed behind: it
+describes what the *code* does, not how it is tuned, so it must not live in a file users are
+invited to edit.
+
+**Decided:** the model default is `openai:gpt-5.6-luna`, **a floating alias, knowingly.** OpenAI
+publishes no dated snapshot for that family (checked against the live account — only the three bare
+aliases exist), so a rerun can differ from its baseline. `Config.fingerprint()` exists to mitigate
+it: the eval run record should carry it and the resolved model. `tests/test_config.py` keeps the
+dated-snapshot rule for every family that *does* publish one, with these three as named exceptions.
+
+**Decided:** `min_length=1` on the API key, and `.env.example` ships it **blank**. A non-empty
+placeholder passes a "is it set" check, boots cleanly, and fails with a 401 on the first question —
+which is precisely the deferred failure `pydantic-settings` was chosen over `python-dotenv` to
+avoid.
+
+**Decided (later the same day, superseding a wrong turn):** **Phase 1a uses no database at all.**
+The session first proposed DuckDB's FTS extension — already a dependency, Porter stemming,
+query-time `k`/`b` — and recorded a conflict with the LanceDB rationale, which had chosen LanceDB
+partly so the 1a lexical baseline and the 1b vector run would share one store. Both were the wrong
+frame. **BM25 is a ranking formula, not a storage engine**: an inverted index in a `dict` over the
+6,722 chunks builds in 214 ms and answers in 3–4 ms, on the standard library alone. So the choice
+was never "which database" — it was a database nobody needed. `plan.md` §1a now says *no database
+of any kind* rather than *no vector database*, and `lancedb.md`'s shared-store bullet is marked
+superseded: the 1a-vs-1b comparison straddles two systems deliberately, which is not a confound
+because both read the same `chunks.jsonl` at the same `snapshot_id` against the same gold set.
+
+**Rejected:** a BM25 *library*. `rank-bm25` is unmaintained and `bm25s` drags in numpy/scipy, and
+neither earns a dependency over ~40 lines of stdlib — which also keeps `b`/`k1` directly in hand,
+which is what chunking.md §5 hands forward as the thing to tune against the gold set.
+
+**Rejected:** `pydantic-evals`, which arrived inside the full `pydantic-ai` bundle. `evals/runner.py`
+is already the pluggable swap point; a second eval framework would pull Phase 1a sideways.
+Also rejected a `config.local.yaml` override — it reintroduces exactly the invisible-override hole
+this split closes. One-off experiments should be an explicit flag the run record captures.
+
+**Dead end:** `Agent("openai:...")` **does not see `Secrets`.** PydanticAI reads `OPENAI_API_KEY`
+from the process environment, and `uv run` does not load `.env`, so the obvious wiring raises
+`UserError` even though the settings object loaded the key correctly. The fix is to pass
+`OpenAIProvider(api_key=...)` explicitly, which is the better shape anyway — the credential flows
+through one audited place instead of ambient global state. Worth knowing before writing the agent.
+
+**Dead end:** two pyright frictions with `pydantic-settings`, both fixed rather than suppressed.
+`Secrets()` — the only correct way to call it — is a `reportCallIssue` for a missing argument, so
+the field uses `Field(default=...)`, which reads as "required" to pydantic and "has a default" to
+pyright's `dataclass_transform`. And the documented `_env_file=None` test keyword is invisible to
+pyright, so the tests use an `IsolatedSecrets` subclass overriding `model_config` instead.
+
+**Dead end:** the first draft's fake key in `tests/test_settings.py` was a **blocking**
+`cred:assignment` hit. It was a hyphenated phrase that read as obviously fake to a human but began
+with a word `PLACEHOLDER_RE` does not know, and that regex anchors at the *start* of the value — so
+only a value **beginning** with `placeholder`, `dummy`, `fake`, `test` (etc.) is recognised. The
+guardrail catching the assistant's own fixture is the system working; the constant was fixed and
+carries a comment saying why for whoever writes the next one. Then this very entry tripped the same
+marker by quoting the bad literal — the 2026-07-31 entry below already records the rule that
+prevents it (**write the pattern, never the specimen**), which is worth re-reading before
+documenting any blocking shape.
+
+**Also:** full `pydantic-ai` was chosen over `pydantic-ai-slim[openai]` on request. The cost is
+concrete — it pulls `google-genai`, which pins `websockets<17.0` and downgraded it from 17.0.1 to
+16.1.1. Nothing breaks (`uvicorn[standard]` needs only `>=13.0`, and SSE uses no websockets), but
+it is a transitive pin from a provider the repo never calls.
+
+**Stopped at:** clean, and verified where it counts. `make check-all` (84 tests, pyright 0 errors),
+`make scan`, and `make chunk-check` all pass — the last one reproducing all three committed
+manifests with identical `snapshot_id`s, which was the real risk in moving `ChunkParams`. The
+`params_sha256` was confirmed byte-identical *before* any downstream file was touched. A live
+OpenAI call was made by hand to prove the key path end to end; **no code in the repo calls an LLM.**
 
 ### 2026-08-13 — a skill for contract sync, and vitest joins the gate
 

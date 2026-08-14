@@ -9,13 +9,13 @@ the Phase 1a retriever consume it.
 """
 
 from health_coverage_navigator.chunking.models import Chunk, ChunkSet
-from health_coverage_navigator.chunking.params import DEFAULT_PARAMS, ChunkParams
 from health_coverage_navigator.chunking.pipeline import build_chunks, write_chunks
 
+#: `ChunkParams` is deliberately **not** re-exported here. It now lives in `config.py`, and
+#: importing it through this package would recreate the cycle that moving it resolved. Import it
+#: from `health_coverage_navigator.config`, alongside the rest of the configuration.
 __all__ = [
-    "DEFAULT_PARAMS",
     "Chunk",
-    "ChunkParams",
     "ChunkSet",
     "build_chunks",
     "write_chunks",
