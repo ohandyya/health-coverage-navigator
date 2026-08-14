@@ -150,15 +150,35 @@ structured source is **never** chunked or embedded. See [data/README.md](data/RE
 
 ## Screenshots
 
-*Coming — the F0 UI runs today (`make dev`); the captures are not in the repo yet.*
+Both pages are live today. The amber banner across the top of each is the app declining to
+overstate itself — *"Stub mode. Every answer is canned — no agent and no retrieval exist yet.
+Eval runs are labelled `stub` for the same reason."* It disappears on its own at Phase 1a,
+because it is driven by the same `stub` flag that labels the eval runs.
 
-<!-- TODO: run `make dev`, screenshot the chat page and the eval dashboard, save them to
-     docs/img/, then delete this comment and uncomment the table below.
+### Chat — the full provenance surface, rendering a canned answer
 
-| Chat page | Eval dashboard |
-|---|---|
-| ![Chat page](docs/img/chat-page.png) | ![Eval dashboard](docs/img/eval-dashboard.png) |
--->
+![The chat page: a stubbed answer to "what is a deductible?" with a reference source badge, inline citation markers, two expandable citation cards, and the agent trace panel open on the right](docs/img/chat-page.png)
+
+Everything the contract carries is already rendered: the **source badge** (`reference` — blue;
+green and amber arrive with Phases 2 and 3), inline `[c1]`/`[c2]` markers that link to their
+cards, **expandable citation cards** showing the retrieved snippet with a drill-down into the
+real corpus document, and the **agent trace** with per-step timings and token counts. The two
+citations have deliberately different shapes — one carries an external link and a retrieval
+score, the other neither — so the components are proven against both branches rather than
+against a convenient fixture. The plan-year selector sits beside the input and is sent on every
+request, per the domain's most common correctness bug.
+
+### Evals — genuine metrics, honestly labelled
+
+![The eval dashboard: five runs each tagged "stub", showing abstention accuracy 0.400, MRR 0.033 and recall@5 0.033 at 3/35 passed, above the 35-question gold set with corpus, difficulty and expected-lane columns](docs/img/eval-dashboard.png)
+
+`recall@5` of `0.033` and `3/35` passed is what grading a canned answerer *should* look like.
+The numbers are really computed — the runner scores the stub's output against the gold set the
+same way it will score the agent — and every run wears a `stub` badge so no future reader
+mistakes the baseline for a result. Phase 1a swaps one function and these columns start meaning
+something; the table, the storage format, and this page do not change. Below the runs sits the
+gold set itself, with the `expected lane` column that Phase 2's routing-correctness metric will
+be scored against.
 
 ---
 
