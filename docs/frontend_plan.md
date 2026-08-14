@@ -368,6 +368,9 @@ comes back. No agent involved. The entire UI is proven before there's anything r
 - [ ] `POST /api/chat/stream` + `stream.ts` + its unit tests
 - [ ] Abstention state wired to the real guardrail
 - [ ] Citation drill-down against the real corpus
+- [ ] Trace panel shows the agent's real tool sequence — 1a's agent calls several search tools
+      per question, so the panel renders a genuine multi-step list from the first agent phase
+      (still flat; nesting is F3's problem)
 - [ ] Eval dashboard against real runs
 
 **Phase F2 — Routing visible (with Phase 2/3)**

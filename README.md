@@ -14,15 +14,22 @@ Most "chat with your documents" projects treat health coverage as a retrieval pr
 Nearly every real question decomposes into sub-questions that need **fundamentally different
 kinds of lookup**, and picking the wrong one produces an answer that is fluent, cited, and wrong.
 
-| Sub-question type | Example | Lane | Why RAG alone fails |
+| Sub-question type | Example | Lane | Why retrieval alone fails |
 |---|---|---|---|
-| *"What does the rule say?"* | What is a deductible? | **Reference** (RAG) | — this is the one RAG is for |
+| *"What does the rule say?"* | What is a deductible? | **Reference** | — this is the one retrieval is for |
 | *"What's the fact for this plan/drug/provider?"* | Is drug X covered under plan Y? | **Structured API** | The answer is a row in a database, not a passage. Retrieval will find a *plausible* passage. |
 | *"What's happening now?"* | Any recent recall on drug X? | **Web search** | The corpus is a snapshot. It cannot know it is stale. |
 
 So the core engineering problem is **tool routing**, and routing correctness is graded as its own
 metric, separate from answer correctness. That framing drives everything else in the repo: the
 API contract, the eval harness, and the phase order.
+
+It also decides the shape of the build. This is **one agent that grows a toolset**, not a RAG app
+that grows features: Phase 1 stands up a single PydanticAI agent over the reference corpus, and
+every phase after it registers more tools on that same agent — vector search, then web search,
+then typed API tools — rather than adding a pipeline beside it. Nothing anywhere chains
+retrieve → stuff-context → generate; the agent chooses its own tools, and choosing is the thing
+being graded.
 
 Full reasoning: [docs/plan.md](docs/plan.md).
 
@@ -60,7 +67,9 @@ of reshaping the response.
 - **There is no agent.** `api/stub.py` returns canned responses. Phase 1a replaces it. `pydantic-ai`
   is installed and an API key is read from `.env`, but **nothing in this repo calls an LLM** —
   the dependency landing is not the capability landing.
-- **No retrieval.** No BM25, no embeddings, no vector store. Phase 1a is lexical; 1b is LanceDB.
+- **No retrieval.** No BM25, no embeddings, no vector store. Phase 1a gives the agent a lexical
+  toolset (list / grep / BM25 search / expand) with no database of any kind; 1b adds a LanceDB
+  vector tool beside it.
 - **No web search and no live API tools.** Phases 2 and 3.
 - **Eval metrics are honestly terrible**, because they grade the stub: recall@5 = `0.033`,
   abstention accuracy = `0.40`. Every run record carries `runner: "stub"` and the dashboard
@@ -77,27 +86,34 @@ of reshaping the response.
 flowchart TD
     Q["User question"] --> AG["Agent<br/>(decompose + route)"]
 
-    AG -.->|Phase 1| R["retrieve()<br/>reference lane"]
+    AG -.->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
+    AG -.->|Phase 1b| V["vector_search()<br/>reference lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
     AG -.->|Phase 3| S["typed API tools<br/>structured_api lane"]
 
     R -.-> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
+    V -.-> C1
     W -.-> C2["Live web"]
     S -.-> C3["Marketplace API · openFDA · NPPES"]
 
     R --> SY["Synthesize<br/>every claim tagged with its lane + source"]
+    V --> SY
     W --> SY
     S --> SY
     SY --> RESP["ChatResponse<br/>answer · citations · claims · trace · abstained"]
 
     style AG stroke-dasharray: 5 5
     style R stroke-dasharray: 5 5
+    style V stroke-dasharray: 5 5
     style W stroke-dasharray: 5 5
     style S stroke-dasharray: 5 5
 ```
 
 *Dashed = not built yet. Today a stub sits where the agent will go, and `ChatResponse` — the solid
-box — is already frozen and fully rendered by the UI.*
+box — is already frozen and fully rendered by the UI. Each phase label is a set of tools added to
+the same agent; the box marked `Agent` is never rebuilt after Phase 1a. Note that 1a and 1b both
+point at the reference lane — they are two ways of searching one corpus, and 1b's vector tool
+joins the lexical ones rather than replacing them.*
 
 ### What runs today
 
@@ -303,8 +319,10 @@ So the split is enforced:
 | [`docs/glossary.md`](docs/glossary.md) | *What the words mean* | Schedule, design, or status |
 
 **[`CLAUDE.md`](CLAUDE.md) holds only invariants** — the conventions that are true regardless of
-how far along the build is. Guardrails stay legible because a status change never shows up in the
-diff as a rules change.
+how far along the build is, and *only* the ones worth spending context on in every session.
+Rationale and detail live in `docs/` behind links (`development.md`, `configuration.md`, the
+per-source guides), so the always-loaded file stays short. Guardrails stay legible because a
+status change never shows up in the diff as a rules change.
 
 **The progress log records dead ends, not just wins.** Every session appends *Did / Decided /
 Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves later:
@@ -358,7 +376,8 @@ health_coverage_navigator/
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
 ├── evals/gold/questions.yaml     # 35 hand-authored, corpus-verified questions
 ├── data/{raw,processed}/         # committed — see the licensing rules
-└── docs/                         # plan · frontend_plan · progress · glossary + per-source guides
+└── docs/                         # plan · frontend_plan · progress · glossary
+                                  #   + development · configuration + per-source guides
 ```
 
 ---
@@ -389,9 +408,9 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | Phase | Backend | Frontend | Status |
 |---|---|---|---|
 | **0** | Corpus + eval scaffold | Contract frozen, UI on a stub | ✅ **Complete** |
-| **1a** | Cited answers, full-text retrieval | Stub → real agent, streaming | ⏭️ **Next** |
-| **1b** | Vector retrieval (LanceDB) behind the same interface | Eval run-comparison view | ⬜ |
-| **2** | Web-search tool + routing eval | `web` badge, routing accuracy | ⬜ |
+| **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ⏭️ **Next** |
+| **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ⬜ |
+| **2** | Web-search tool (Tavily / Exa) + routing eval | `web` badge, routing accuracy | ⬜ |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |
 | **5** | Plan comparison, drug costs, "what changed" monitor | Tables + monitor view | ⬜ |

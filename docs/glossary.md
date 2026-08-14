@@ -19,6 +19,38 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 
 ---
 
+## Maintaining this glossary
+
+**Standing rule, not a one-time task: when a change introduces a domain term this file does not
+already carry, add the entry in the same change** — not later, not in a follow-up. That applies
+equally to docs, code, comments, commit messages, and new data sources. A new source in particular
+almost always drags in several terms at once (its publisher, its file format, its identifiers);
+glossing them is part of adding the source, not a separate chore.
+
+- **What qualifies:** health, medical, insurance, pharmacy, and US-healthcare-regulatory
+  vocabulary — agencies, programs, coverage vehicles, code systems, benefit-design concepts,
+  dataset and identifier names, clinical service categories.
+- **What does not:** general software terms, library and framework names, and project-internal
+  jargon that [`plan.md`](plan.md) or [`frontend_plan.md`](frontend_plan.md) already owns. Don't
+  grow this into a second copy of those docs.
+- **What an entry must contain:** the expansion, and — the load-bearing part — what the term means
+  *in this repo*: its licensing status, which routing lane it belongs to, which schema field or
+  dataset column it maps to, or the correctness rule it carries. A bare dictionary expansion is
+  not a useful entry.
+- **What not to duplicate:** the 256 vendored HealthCare.gov consumer definitions. Point at them;
+  don't restate them.
+
+Terms that gate what may be committed — CPT, CDT, HCPCS, ICD, NCD, LCD, PII, PHI — are glossed
+with their consequence spelled out. Keep it that way: a glossary that softens the
+[public-repo guardrail](../CLAUDE.md#public-repo-data-guardrail-action-required-before-committing-data)
+is worse than no glossary.
+
+Read this file when an unfamiliar acronym appears rather than re-deriving the meaning, and treat
+its entries as the repo's settled usage — if a doc and this file disagree, that is a bug in one of
+them, not a matter of taste.
+
+---
+
 ## Agencies and organizations
 
 | Term | Expansion | What it means in this repo |
@@ -95,7 +127,7 @@ carries a consequence (a public-repo blocklist, a correctness rule), the entry s
 | **Service Area PUF** | — | Maps each plan's `ServiceAreaId` to the counties/ZIP codes it's actually sold in. Not named in `docs/plan.md`'s original two-PUF description, but included in `exchange_puf` anyway: without it, `ServiceAreaId` alone can't answer "which plans are available in ZIP 30076" — the plan's own canonical structured-lookup example. |
 | **Rate PUF** | — | Per-plan premium rates by rating area and age. Not currently vendored — Phase 5 territory. |
 | **NPPES** | National Plan and Provider Enumeration System | CMS's registry of every US healthcare provider identifier. Published both as a 4 GB+ bulk file and as a live per-provider API; **this repo uses the API only and vendors nothing** — provider lookup is inherently one record at a time, so a mirror would buy staleness and storage for nothing. Consequence worth remembering: no provider-level data ever enters `data/`. |
-| **NPI** | National Provider Identifier | The 10-digit ID NPPES assigns to a provider. The lookup key for *"what is this NPI's specialty"* — a `structured_api` question, never a RAG one. Self-validating: the tenth digit is a Luhn check over the prefix `80840` plus the first nine, which is how `scripts/scan_sensitive.py` tells a real NPI from any other ten-digit run. |
+| **NPI** | National Provider Identifier | The 10-digit ID NPPES assigns to a provider. The lookup key for *"what is this NPI's specialty"* — a `structured_api` question, never a `reference` one. Self-validating: the tenth digit is a Luhn check over the prefix `80840` plus the first nine, which is how `scripts/scan_sensitive.py` tells a real NPI from any other ten-digit run. |
 | **HIOS** | Health Insurance Oversight System | CMS's system for identifying issuers and plans on the Marketplace. A **HIOS Issuer ID** identifies a company (`IssuerId` in the Exchange PUFs); a **HIOS Product ID** identifies a product line. The base for both plan identifiers below. |
 | **Standard Component ID** | — | The 14-character HIOS plan identifier (5-digit issuer ID + 2-letter state + a 7-digit product/plan number, e.g. `21989AK0030001`). `StandardComponentId` in both Exchange PUF tables — one row per underlying plan design, before splitting into its CSR variants (see `CSRVariationType` in **Benefit design and cost sharing**). |
 | **Plan ID** | — | The Standard Component ID with a 2-digit **CSR-variant suffix** appended (`21989AK0030001-01`), distinguishing (for example) a plan's standard design from its 73%/87%/94% AV silver cost-sharing-reduction variants. `PlanId` in the Benefits and Cost Sharing PUF — the join key back to `StandardComponentId` in Plan Attributes. |
@@ -234,7 +266,7 @@ the schema.
 | Term | What it means in this repo |
 |---|---|
 | **lane** | One of the three routing destinations a sub-question can go to. Choosing correctly is the central engineering problem of the project. |
-| **`reference`** | The RAG lane, over the static public corpus. Answers "what does the rule or benefit say". |
+| **`reference`** | The indexed-corpus lane, over the static public corpus. Answers "what does the rule or benefit say". Phase 1-a searches it lexically and Phase 1-b adds vector search; both are this one lane. |
 | **`structured_api`** | The deterministic-lookup lane. Answers "what is the specific fact for this plan, drug, or provider". Written `structured-API` in prose, `structured_api` as a value. |
 | **`web`** | The general-web-search lane. Answers "what is happening now" or anything outside the corpus. |
 | **source type** | Which lane produced a claim. A first-class field on every answer, not a guess. |
