@@ -189,6 +189,16 @@ would leave the whole streaming path untested while appearing to pass.
 Guardrail tests are written as *what would a model do wrong*, and assert the retry **message** as
 well as the rejection: a retry the model cannot act on is a retry wasted.
 
+**One thing that suite structurally cannot check, so `make smoke` does.** `_partial_answer` parses
+the output as a **real provider fragments it**, and `FunctionModel` can only approximate that. If
+OpenAI changes how `/v1/responses` chops output deltas, every test stays green, the final flush
+still delivers a correct answer in one lump, and incremental streaming is silently dead — a long
+pause then a wall of text. `make smoke` makes one live call and fails when a run produces a single
+token event. It stays out of pytest deliberately: a failing test means this repo is wrong, a failing
+smoke check might mean the provider changed, and one command that means either teaches you to shrug
+at red. `make smoke-abstain` runs the same checks over an out-of-corpus question, where an invented
+citation would be the worst failure this tool has.
+
 ## 9. Grading
 
 Three tiers, split by cost, which is why the graders are a list the caller composes rather than a
@@ -199,6 +209,9 @@ fixed pipeline:
 | `make eval-retrieval` | free, instant, no key | retrieval alone — the `bm25_b`/`k1` sweep loop |
 | `make eval` | 35 model calls | the whole phase, plus deterministic groundedness |
 | `make eval-judge` | +35 model calls | answer correctness, per key fact |
+
+`make smoke` (§8) sits below all of these: one call, and it asks whether the live path works at all
+rather than how well it answers.
 
 `groundedness` and `citation_resolution` should be **1.000 on every agent run**. The output
 validator rejects either failure before the response is built, so a number below 1.0 is a bug in

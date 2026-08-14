@@ -29,6 +29,8 @@ A `Makefile` wraps every gate — `make help` lists them all.
 | `make types` / `make types-check` | OpenAPI → TypeScript codegen (`frontend/src/api/schema.d.ts`). |
 | `make ui-install` / `ui-dev` / `ui-build` / `ui-test` | Frontend equivalents. |
 | `make chunk` / `make chunk-check` | Rebuild `chunks.jsonl`; verify committed manifests still describe it. |
+| `make smoke` | One real question through the live agent — checks the streaming path. **1 model call.** |
+| `make smoke-abstain` | Same, out-of-corpus: the agent must decline rather than invent sources. |
 | `make eval` | Run the gold set through the agent → `data/eval_runs/`. **35 model calls.** |
 | `make eval-retrieval` | Score BM25 retrieval alone — free, instant, no key. The `bm25_b`/`k1` sweep loop. |
 | `make eval-judge` | `eval` plus an LLM judge over answer correctness. **70 model calls.** |
@@ -51,7 +53,9 @@ A `Makefile` wraps every gate — `make help` lists them all.
   TypeScript, so it wins. Revisit when `openapi-typescript` supports 6.
 - **The test suite never reaches a model provider.** `tests/conftest.py` sets
   `ALLOW_MODEL_REQUESTS = False` suite-wide, so `make check-all` needs no `OPENAI_API_KEY` and
-  costs nothing. Only the `eval*` targets spend money, and they are outside `check-all`.
+  costs nothing. Only the `smoke*` and `eval*` targets spend money, and they are outside
+  `check-all`. That invariant is why the live check is `make smoke` rather than a pytest marker —
+  see [`agent.md`](agent.md) §8.
 - **The agent needs the OpenAI Responses API, not Chat Completions.** The `gpt-5.6-*` family
   returns a hard 400 for function tools on `/v1/chat/completions`; `agent/runtime.py` builds an
   `OpenAIResponsesModel`. See [`agent.md`](agent.md) §7.

@@ -1,7 +1,7 @@
 .PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
         chunk chunk-check scan scan-staged scan-unstaged scan-selftest \
         ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
-        eval eval-retrieval eval-judge eval-stub
+        eval eval-retrieval eval-judge eval-stub smoke smoke-abstain
 
 .DEFAULT_GOAL := help
 
@@ -105,6 +105,20 @@ types-check: ## Verify schema.d.ts is current with the Pydantic models (writes n
 		&& diff -u src/api/schema.d.ts /tmp/hcn-schema.d.ts \
 		&& echo "schema.d.ts is current" \
 		|| { echo "schema.d.ts is stale — run 'make types'"; exit 1; }
+
+# One real model call against the live provider. Outside check-all for the same reason `eval` is,
+# and kept out of pytest deliberately: the test suite asserts our code is correct and is guaranteed
+# never to reach a provider, while this asks whether the provider wiring still works — a question
+# whose answer changes for reasons outside this repo. Mixing the two teaches you to ignore red.
+#
+# It covers the one property no offline test can: that `_partial_answer` still parses the output as
+# a *real* provider fragments it. If that breaks, every test stays green and streaming silently
+# degrades to one lump. See the module docstring.
+smoke: ## Ask the live agent one real question and check the streaming path (1 model call)
+	uv run python -m health_coverage_navigator.agent.smoke
+
+smoke-abstain: ## Same, but out-of-corpus — the agent must decline, not invent sources
+	uv run python -m health_coverage_navigator.agent.smoke --abstain
 
 # All three write to data/eval_runs/, so deliberately not in check-all for the same reason as
 # `chunk`. `eval` and `eval-judge` also cost money — 35 model calls each, doubled with the judge —

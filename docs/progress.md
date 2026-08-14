@@ -37,9 +37,6 @@ mid-stream.
   - **`new_run_id()` collides when two runs start the same day concurrently.** It counts existing
     files at call time, so two runs launched together both claim `run_YYYY-MM-DD_1` and the second
     overwrites the first. Hit for real this session. A monotonic suffix or a lock would fix it.
-  - **`make types-check` is still outside `check-all`,** so a stale `schema.d.ts` is unflagged until
-    someone else hits it. It writes nothing and takes a second; the argument that put `tsc` in the
-    gate applies to it too.
   - **`make chunk`'s `--max-chars` / `--overlap-chars` flags override `config.yaml` and are recorded
     nowhere.** The same invisible-override hole the config split just closed, on a smaller scale.
     Either drop the flags or have the manifest record that an override was used.
@@ -134,6 +131,18 @@ The numbers, all on the same gold set and the same chunk snapshots:
 | `stub` (Phase 0) | 0.033 | 0.033 | 0.400 | — | — |
 | `bm25` (retrieval only) | 0.567 | 0.416 | — | 1.000 | — |
 | `agent` | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
+
+**Decided: the live check is `make smoke`, not a pytest marker.** The suite is guaranteed never to
+reach a provider, and that guarantee is worth more than the convenience of `pytest -m live` — a
+marker plus a deselect in `addopts` replaces "certain" with "correct as long as two mechanisms stay
+in sync." So one live call lives in `agent/smoke.py` behind its own Make target, alongside `eval`
+and `scan`. The reasoning that matters more than the mechanism: a failing test means this repo is
+wrong, a failing smoke check might mean the provider changed, and a single command meaning either
+teaches you to ignore red. It exists because `_partial_answer` parses output as a **real provider
+fragments it**, which `FunctionModel` can only approximate — if that breaks, every test stays green
+and streaming silently degrades to the final flush. First live run: 138 token events for a
+four-sentence answer, so the partial-JSON path is genuinely load-bearing rather than theoretical.
+`make types-check` folded into `ui-check` the same way, closing the open question above.
 
 **Decided: the grounding rule is enforced in code, not asked for in the prompt.** Every chunk a
 tool returns lands in `deps.seen_chunks`, and an output validator rejects a citation of anything
