@@ -34,7 +34,7 @@ dev = [
 ]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"

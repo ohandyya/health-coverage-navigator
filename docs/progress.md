@@ -135,8 +135,11 @@ The numbers, all on the same gold set and the same chunk snapshots:
 **Decided: the live check is `make smoke`, not a pytest marker.** The suite is guaranteed never to
 reach a provider, and that guarantee is worth more than the convenience of `pytest -m live` — a
 marker plus a deselect in `addopts` replaces "certain" with "correct as long as two mechanisms stay
-in sync." So one live call lives in `agent/smoke.py` behind its own Make target, alongside `eval`
-and `scan`. The reasoning that matters more than the mechanism: a failing test means this repo is
+in sync." So one live call lives in `scripts/smoke.py` behind its own Make target, alongside
+`scan_sensitive.py` — the same animal, and `tests/` is the one place it must not go, since that
+directory's stated invariant is that nothing in it reaches a provider. `scripts` joined pyright's
+`include` in the same change (it was already clean), so the five downloaders are now checked by
+decision rather than by accident. The reasoning that matters more than the mechanism: a failing test means this repo is
 wrong, a failing smoke check might mean the provider changed, and a single command meaning either
 teaches you to ignore red. It exists because `_partial_answer` parses output as a **real provider
 fragments it**, which `FunctionModel` can only approximate — if that breaks, every test stays green

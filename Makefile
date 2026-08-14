@@ -115,10 +115,10 @@ types-check: ## Verify schema.d.ts is current with the Pydantic models (writes n
 # a *real* provider fragments it. If that breaks, every test stays green and streaming silently
 # degrades to one lump. See the module docstring.
 smoke: ## Ask the live agent one real question and check the streaming path (1 model call)
-	uv run python -m health_coverage_navigator.agent.smoke
+	uv run python scripts/smoke.py
 
 smoke-abstain: ## Same, but out-of-corpus — the agent must decline, not invent sources
-	uv run python -m health_coverage_navigator.agent.smoke --abstain
+	uv run python scripts/smoke.py --abstain
 
 # All three write to data/eval_runs/, so deliberately not in check-all for the same reason as
 # `chunk`. `eval` and `eval-judge` also cost money — 35 model calls each, doubled with the judge —

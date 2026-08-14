@@ -11,6 +11,15 @@ into one command trains you to shrug at red.
 It sits outside `check-all` for the same reason `eval`, `scan` and `chunk` do: it costs money and
 needs the network.
 
+**Why `scripts/` and not `tests/` or `src/`.** Not `src/`, because that is application code and
+this is a check. Not `tests/`, because that directory carries exactly one invariant stated in bold
+— *no test may reach a model provider* — and the one file that deliberately does would undercut it
+for anyone reading, whether or not pytest collects it (it would not; `smoke.py` is not
+`test_*.py`). What is left is `scripts/`, which already holds `scan_sensitive.py`: the same animal,
+a standalone verification gate with its own Make target, deliberately outside the fast inner-loop
+gate. `scripts` is in pyright's `include` so this file is typechecked like the rest — a check that
+only runs when you spend money must not be able to rot silently between runs.
+
 **What it covers that nothing else does.** `make eval` already exercises the agent live, 35 times,
 and grades it — but through `answer_question()`, and the streaming half of `stream_answer()` has
 exactly one property no offline test can assert: `runtime._partial_answer()` parses the output as a
