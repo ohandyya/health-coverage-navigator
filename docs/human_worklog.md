@@ -13,31 +13,7 @@
 
 - [Done] Write a integration test for agent and use Pytest to annotate `integration_test`
 
-- Continue to understand the code
-
-    ```bash
-    12 steps total. You've finished 6 — step 7 is next.
-
-    #	Step	
-    1	BM25 ranking engine	✅
-    2	Corpus index	✅
-    3	Agent types, prompt, tools	✅
-    4	Agent runtime	✅
-    5	API wiring	✅
-    6	Evals	✅
-    7	Config additions (config.py, config.yaml)	← next
-    8	Tests (conftest.py + 6 new files)	
-    9	Frontend (schema.d.ts, 3 components)	
-    10	Makefile	
-    11	Docs	
-    12	Two bug fixes worth seeing in isolation	
-    Worth noting: steps 7 and 10 have both grown since I listed them. Config now also carries agent.request_retries (the 429 fix), and the Makefile picked up smoke / smoke-abstain plus the types-check fold-in. I'll cover the additions when we get there rather than treating them as separate.
-
-    Side work we did between steps, all outside the original 12: make smoke, eval progress logging, --concurrency, the async conversion, and the CLAUDE.md async-first rule.
-
-    Say "go to next step" when you want step 7.
-
-    ```
+- [Done] Continue to understand the code
 
 - Use the app end to end
 
