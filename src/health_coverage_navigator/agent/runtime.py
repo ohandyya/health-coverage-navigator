@@ -75,7 +75,8 @@ def _normalize(text: str) -> str:
 
 
 def _resolve_model(model: str) -> object:
-    """Turn `config.yaml`'s `provider:model` string into a model object with credentials attached.
+    """Turn `config.yaml`'s `provider:model` string into a model object, with the credential and
+    the retry budget attached.
 
     **`Agent("openai:...")` does not see `Secrets`** — docs/progress.md records this as a dead end
     worth not repeating. PydanticAI reads `OPENAI_API_KEY` from the process environment and
@@ -93,24 +94,26 @@ def _resolve_model(model: str) -> object:
     from pydantic_ai.models.openai import OpenAIResponsesModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
-    # **`OpenAIResponsesModel`, not `OpenAIChatModel`.** This has to match what a bare `openai:`
-    # string would infer on its own (`infer_model` maps the plain `openai` provider prefix to
-    # `OpenAIResponsesModel`; only `openai-chat:` gets `OpenAIChatModel`) — the explicit
-    # construction above is only here for the credential, not to pick a different API surface.
-    # Getting this wrong is a live 400, not a lint warning: the first draft built `OpenAIChatModel`
-    # here on an unchecked assumption, and `gpt-5.6-luna` rejects tool calls on that endpoint
-    # outright — *"Function tools with reasoning_effort are not supported ... in
-    # /v1/chat/completions. To use function tools, use /v1/responses"*. An agent with no tools is
-    # not this project, so this construction must track whatever `infer_model` would pick.
-    # The client is constructed here rather than letting the provider build a default one, for one
+    # The client is built by hand rather than letting the provider make a default one, for one
     # reason: `max_retries`. The SDK's default of 2 is not enough under `make eval --concurrency`,
-    # where a token-per-minute limit produces a burst of 429s that each ask to be retried in under
+    # where a tokens-per-minute limit produces a burst of 429s that each ask to be retried in under
     # three seconds. Those are transient by definition, and a transient failure that lands in an
     # eval run as a failed question moves the headline score — a worse outcome than waiting.
     client = AsyncOpenAI(
         api_key=get_secrets().openai_api_key.get_secret_value(),
         max_retries=get_config().agent.request_retries,
     )
+
+    # **`OpenAIResponsesModel`, not `OpenAIChatModel`.** This has to match what a bare `openai:`
+    # string would infer on its own (`infer_model` maps the plain `openai` provider prefix to
+    # `OpenAIResponsesModel`; only `openai-chat:` gets `OpenAIChatModel`). Nothing in this function
+    # is here to pick a different API surface — it exists for the credential and the retry budget,
+    # and the model class must simply track inference.
+    #
+    # Getting it wrong is a live 400, not a lint warning: the first draft built `OpenAIChatModel`
+    # on an unchecked assumption, and `gpt-5.6-luna` rejects tool calls on that endpoint outright —
+    # *"Function tools with reasoning_effort are not supported ... in /v1/chat/completions. To use
+    # function tools, use /v1/responses"*. An agent with no tools is not this project.
     return OpenAIResponsesModel(
         model.removeprefix("openai:"), provider=OpenAIProvider(openai_client=client)
     )
