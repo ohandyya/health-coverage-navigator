@@ -11,9 +11,19 @@ import { ChevronRight, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { type Citation, type CorpusDocument, getDocument } from '@/api/client'
 import { SourceBadge } from '@/components/SourceBadge'
-import { cn } from '@/lib/utils'
+import { citationDomId, cn } from '@/lib/utils'
 
-export function CitationCard({ citation, flashed }: { citation: Citation; flashed: boolean }) {
+export function CitationCard({
+  citation,
+  messageId,
+  flashed,
+}: {
+  citation: Citation
+  /** Which answer this card belongs to. Required, because `citation.id` alone is `c1` in every
+   *  answer — see `citationDomId`. */
+  messageId: string
+  flashed: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [doc, setDoc] = useState<CorpusDocument | null>(null)
   const [loading, setLoading] = useState(false)
@@ -34,7 +44,7 @@ export function CitationCard({ citation, flashed }: { citation: Citation; flashe
 
   return (
     <div
-      id={`cite-${citation.id}`}
+      id={citationDomId(messageId, citation.id)}
       className={cn(
         'scroll-mt-4 rounded-lg border border-border bg-card transition-colors',
         flashed && 'cite-flash',

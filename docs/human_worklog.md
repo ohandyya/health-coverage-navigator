@@ -4,6 +4,12 @@
 - This is a working log for human. 
 - AI (e.g., Claude) should **NOT** read this document.
 
+## Future Enhancements
+
+1. Memory
+
+    - Today, there is no memory on the Chat panel. How do we add memory?
+
 ## Work Log
 
 ### Aug 14, 2026

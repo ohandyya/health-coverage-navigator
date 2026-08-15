@@ -11,6 +11,7 @@ import { AbstentionNotice } from '@/components/AbstentionNotice'
 import { AnswerBody } from '@/components/AnswerBody'
 import { CitationCard } from '@/components/CitationCard'
 import { SourceBadge } from '@/components/SourceBadge'
+import { citationDomId } from '@/lib/utils'
 
 function distinctLanes(message: AssistantMessage) {
   return [...new Set(message.citations.map((c) => c.source_type))]
@@ -20,7 +21,11 @@ function AssistantTurn({ message }: { message: AssistantMessage }) {
   const [flashed, setFlashed] = useState<string | null>(null)
 
   function scrollToCitation(id: string) {
-    document.getElementById(`cite-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // Scoped to this message. `id` here is `c1`, which every answer in the conversation also has;
+    // resolving it globally jumped to whichever answer happened to be first in the document.
+    document
+      .getElementById(citationDomId(message.id, id))
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setFlashed(id)
     window.setTimeout(() => setFlashed(null), 1400)
   }
@@ -66,6 +71,7 @@ function AssistantTurn({ message }: { message: AssistantMessage }) {
             <CitationCard
               key={citation.id}
               citation={citation}
+              messageId={message.id}
               flashed={flashed === citation.id}
             />
           ))}
