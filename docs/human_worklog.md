@@ -15,7 +15,7 @@
 
 - [Done] Continue to understand the code
 
-- Use the app end to end
+- [Done] Use the app end to end
 
 - Create a skill to walk through the changes. Step by Step.
    
