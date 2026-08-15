@@ -25,7 +25,6 @@ both are wrong.
 the repo, which is the same argument `config.py` makes for keeping tunables out of the environment.
 """
 
-import asyncio
 from functools import lru_cache
 
 from pydantic import BaseModel, Field
@@ -95,7 +94,7 @@ def judge_grader() -> Grader:
     """
     judge = build_judge()
 
-    def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
+    async def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
         if question.expected_abstain or not question.answer_key_facts:
             return {}
         # An abstention on an answerable question covers nothing, by definition. Scoring it as 0.0
@@ -104,7 +103,10 @@ def judge_grader() -> Grader:
         if response.abstained:
             return {"answer_correctness": 0.0, "contradiction": 0.0}
 
-        verdict = asyncio.run(judge.run(_prompt(question, response))).output
+        # `await`, not `asyncio.run`. The runner drives graders from inside its own loop, where
+        # `asyncio.run` raises — and it raises at runtime rather than at typecheck, so this is the
+        # kind of thing that would only surface on a paid `make eval-judge`.
+        verdict = (await judge.run(_prompt(question, response))).output
         expected = len(question.answer_key_facts)
         # Denominator from the gold set, numerator clamped to it. A judge that returns four
         # verdicts for a three-item checklist has invented an item, and the score must not be able

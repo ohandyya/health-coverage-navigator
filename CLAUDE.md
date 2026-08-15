@@ -42,9 +42,12 @@ retrieve → stuff-context → generate.
 ## Commands
 
 `uv sync` · `uv run pytest` · `uv run ruff check .` · `make check-all` (ruff, pyright, pytest,
-frontend gate) · `make dev` · `make types` · `make chunk` · `make eval` · `make scan` ·
-`make help` for the rest. Full list, toolchain pins, and the gotchas:
+frontend gate) · `make dev` · `make types` · `make chunk` · `make eval` · `make smoke` ·
+`make scan` · `make help` for the rest. Full list, toolchain pins, and the gotchas:
 [docs/development.md](docs/development.md).
+
+**`check-all` never reaches a model provider** — the suite sets `ALLOW_MODEL_REQUESTS = False`, so
+it needs no key and costs nothing. Only `smoke*` and `eval*` spend money, and both stay outside it.
 
 ## Configuration
 
@@ -137,6 +140,20 @@ rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0�
 
 ## Working conventions
 
+- **Async-first.** This is an I/O-bound application — model calls, and from Phase 2 web search and
+  rate-limited APIs. Anything that can reach the network is `async def`, and so is any **seam** it
+  is called through: if a `Callable` type alias, a protocol, or a registry entry might one day be
+  backed by a network call, declare it `Awaitable` now. Three rules follow, and each has already
+  cost this repo real work:
+  - **Never `asyncio.run()` in library code** — it raises inside a running loop, at *runtime*, not
+    at typecheck. It belongs only at an entrypoint: a CLI `main`, a script, a sync test boundary.
+  - **Bound concurrency with `asyncio.Semaphore`, not a thread pool.** Threads are for genuinely
+    blocking work that has no async form (file I/O — `asyncio.to_thread` is right there).
+  - **A synchronous seam is not a local choice.** Making one async later converts every
+    implementation, every caller, and every test at once — `evals/answerers.py` and
+    `evals/grading.py` had to move together because a sync `Grader` made an async judge impossible.
+    Sync is still correct for code that is purely CPU-bound and will stay that way; say so where it
+    is not obvious.
 - **Eval-first**: build or extend a phase's eval slice alongside the feature, not after.
 - **Provenance is not optional**: every claim traces to a source type *and* the chunk or URL
   behind it. A hard requirement for a health tool, not polish to defer.

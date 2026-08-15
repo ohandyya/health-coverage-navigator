@@ -355,6 +355,10 @@ def test_eval_run_completes_and_is_readable(client: TestClient, tmp_path: Path, 
     assert types[0] == "started"
     assert types[-1] == "finished", f"run did not finish: {types[-1]}"
     assert types.count("progress") == 35, "one progress event per gold question"
+    # The dashboard renders a counter from these, so they have to arrive in order and exactly once
+    # each. The route pins `max_concurrency=1` for this reason; without it the runner's semaphore
+    # would let completions interleave and the counter would jump around.
+    assert [e["completed"] for e in events if e["type"] == "progress"] == list(range(1, 36))
 
     run = events[-1]["run"]
     assert run["runner"] == "stub", "a metric measured against canned answers must say so"

@@ -25,8 +25,7 @@ has to work on a machine that has never set `OPENAI_API_KEY`. That is why the ag
 inside its builder.
 """
 
-import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, Citation, TraceStep
@@ -35,7 +34,14 @@ from health_coverage_navigator.evals.models import GoldQuestion
 
 #: What every answerer looks like from the runner's side. Defined here rather than in `runner.py`
 #: so `runner` can import it alongside the builders without the two modules importing each other.
-AnswerFn = Callable[[GoldQuestion], ChatResponse]
+#:
+#: **Awaitable, because the one answerer that matters is.** `answer_question` is async all the way
+#: down, and the alternative — a synchronous seam with `asyncio.run` inside it — forces the runner
+#: to reach for threads to get any concurrency, and makes an async grader impossible (`asyncio.run`
+#: raises inside a running loop, which is what `judge_grader` would hit). The two free answerers
+#: below never await anything; that is a small cost paid once, against a runner that expresses
+#: "three questions at a time" as a semaphore instead of a thread pool.
+AnswerFn = Callable[[GoldQuestion], Awaitable[ChatResponse]]
 
 #: What a retrieval-only run puts in the `answer` field. Not a real answer, and it says so — the
 #: same reasoning as `HealthResponse.stub`: output that is not an answer must never be mistakable
@@ -54,16 +60,23 @@ def stub_answerer() -> AnswerFn:
     """
     from health_coverage_navigator.api.stub import stub_answer
 
-    def answer(question: GoldQuestion) -> ChatResponse:
+    # `async` without an `await`: this answerer is pure CPU and has nothing to wait for. It is a
+    # coroutine only because `AnswerFn` is, and the seam is worth more than the honesty of two
+    # signatures — see the note on `AnswerFn`.
+    async def answer(question: GoldQuestion) -> ChatResponse:
         return stub_answer(ChatRequest(message=question.question, plan_year=question.plan_year))
 
     return answer
 
 
 def bm25_answerer(index: CorpusIndex) -> AnswerFn:
-    """Retrieval with no model: the top-k chunks, wrapped in the response shape."""
+    """Retrieval with no model: the top-k chunks, wrapped in the response shape.
 
-    def answer(question: GoldQuestion) -> ChatResponse:
+    Synchronous work behind an async signature, like `stub_answerer`. BM25 over 6,722 chunks is
+    ~3 ms and blocks the loop for that long; at 30 questions that is not worth a thread hop.
+    """
+
+    async def answer(question: GoldQuestion) -> ChatResponse:
         retrieval = get_config().retrieval
         hits = index.search(
             question.question,
@@ -123,20 +136,22 @@ def bm25_answerer(index: CorpusIndex) -> AnswerFn:
 def agent_answerer(index: CorpusIndex) -> AnswerFn:
     """The real answerer: the Phase 1a agent, one run per question.
 
-    `asyncio.run` per question rather than one loop over the whole set. `run_gold_set` is
-    deliberately synchronous (docs/progress.md — a plain callback, so the HTTP route can buffer
-    progress events for replay), the gold set is 35 questions, and loop setup is noise next to a
-    model call. Running them concurrently would also deliver progress events out of order, which
-    the dashboard renders as a run that jumps around.
+    The only answerer that genuinely awaits, and the reason the whole seam is awaitable. It hands
+    the agent's coroutine straight to the runner's event loop, so `run_gold_set` can hold several
+    questions open at once with a semaphore rather than a thread pool, and so a grader may be async
+    too — `judge_grader` needs that, because `asyncio.run` cannot be called from inside a running
+    loop.
+
+    Concurrency reorders *progress events*, which is the objection recorded here originally, so it
+    stays opt-in: the dashboard leaves `max_concurrency` at 1, the CLI's `--concurrency` turns it
+    up. Scores are unaffected either way — questions are graded independently and `gather` returns
+    them in gold-set order.
     """
     from health_coverage_navigator.agent.runtime import answer_question
 
-    def answer(question: GoldQuestion) -> ChatResponse:
-        return asyncio.run(
-            answer_question(
-                ChatRequest(message=question.question, plan_year=question.plan_year),
-                index,
-            )
+    async def answer(question: GoldQuestion) -> ChatResponse:
+        return await answer_question(
+            ChatRequest(message=question.question, plan_year=question.plan_year), index
         )
 
     return answer

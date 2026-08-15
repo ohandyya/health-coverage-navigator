@@ -11,12 +11,19 @@ exercised through `tests/test_api.py`'s eval-run test; what is new here is the g
 around it.
 """
 
+import asyncio
+
 import pytest
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from health_coverage_navigator.api.models import ChatResponse, Citation, EvalQuestionResult
-from health_coverage_navigator.evals.answerers import NO_ANSWER, bm25_answerer, stub_answerer
+from health_coverage_navigator.evals.answerers import (
+    NO_ANSWER,
+    AnswerFn,
+    bm25_answerer,
+    stub_answerer,
+)
 from health_coverage_navigator.evals.grading import groundedness_grader, key_fact_coverage_grader
 from health_coverage_navigator.evals.judge import (
     FactVerdict,
@@ -59,8 +66,8 @@ def _response(citations: list[Citation], answer: str = "An answer. [c1]") -> Cha
 # ---------------------------------------------------------------- retrieval-only ------------
 
 
-def test_the_bm25_answerer_cites_real_chunks(agent_kit):
-    response = bm25_answerer(agent_kit.index)(_question())
+async def test_the_bm25_answerer_cites_real_chunks(agent_kit):
+    response = await bm25_answerer(agent_kit.index)(_question())
 
     assert response.citations
     for citation in response.citations:
@@ -69,26 +76,26 @@ def test_the_bm25_answerer_cites_real_chunks(agent_kit):
         assert citation.score is not None
 
 
-def test_the_bm25_answerer_says_it_did_not_answer(agent_kit):
+async def test_the_bm25_answerer_says_it_did_not_answer(agent_kit):
     """Same reasoning as `HealthResponse.stub`: output that is not an answer must never be
     mistakable for one, including by whoever opens the run file six months from now."""
-    response = bm25_answerer(agent_kit.index)(_question())
+    response = await bm25_answerer(agent_kit.index)(_question())
     assert response.answer == NO_ANSWER
     assert "No model was called" in response.answer
 
 
-def test_the_bm25_answerer_never_abstains(agent_kit):
+async def test_the_bm25_answerer_never_abstains(agent_kit):
     """A bare retriever has no notion of "the corpus does not cover this" — it always returns its
     top k, however weak. That is why the CLI runs it over `in_corpus()` only."""
-    response = bm25_answerer(agent_kit.index)(_question(question="unrelated nonsense"))
+    response = await bm25_answerer(agent_kit.index)(_question(question="unrelated nonsense"))
     assert response.abstained is False
 
 
-def test_the_bm25_answerer_scores_through_the_normal_runner(agent_kit):
+async def test_the_bm25_answerer_scores_through_the_normal_runner(agent_kit):
     """The whole reason retrieval-only reuses the answerer seam: recall@5 from a retrieval run and
     recall@5 from an agent run come out of the same scorer and are directly comparable."""
     gold = GoldSet(questions=[_question(expected_doc_ids=["glossary_deductible"])])
-    run = run_gold_set(bm25_answerer(agent_kit.index), gold, runner="bm25")
+    run = await run_gold_set(bm25_answerer(agent_kit.index), gold, runner="bm25")
 
     assert run.runner == "bm25"
     assert run.model is None, "no model was involved; the record must not imply one"
@@ -99,10 +106,10 @@ def test_the_bm25_answerer_scores_through_the_normal_runner(agent_kit):
 # ---------------------------------------------------------------- groundedness --------------
 
 
-def test_groundedness_is_one_when_every_quotation_is_verbatim(agent_kit):
+async def test_groundedness_is_one_when_every_quotation_is_verbatim(agent_kit):
     chunk = agent_kit.index.chunk(agent_kit.DEDUCTIBLE_ID)
     grade = groundedness_grader(agent_kit.index)
-    metrics = grade(
+    metrics = await grade(
         _question(),
         _response(
             [
@@ -119,11 +126,11 @@ def test_groundedness_is_one_when_every_quotation_is_verbatim(agent_kit):
     assert metrics == {"citation_resolution": 1.0, "groundedness": 1.0}
 
 
-def test_groundedness_catches_words_put_in_a_real_source_s_mouth(agent_kit):
+async def test_groundedness_catches_words_put_in_a_real_source_s_mouth(agent_kit):
     """The failure that reads as *more* trustworthy than a fabricated citation: a real document,
     quoted as saying something it does not say."""
     grade = groundedness_grader(agent_kit.index)
-    metrics = grade(
+    metrics = await grade(
         _question(),
         _response(
             [
@@ -141,9 +148,9 @@ def test_groundedness_catches_words_put_in_a_real_source_s_mouth(agent_kit):
     assert metrics["groundedness"] == 0.0
 
 
-def test_citation_resolution_catches_a_fabricated_source(agent_kit):
+async def test_citation_resolution_catches_a_fabricated_source(agent_kit):
     grade = groundedness_grader(agent_kit.index)
-    metrics = grade(
+    metrics = await grade(
         _question(),
         _response(
             [
@@ -160,11 +167,11 @@ def test_citation_resolution_catches_a_fabricated_source(agent_kit):
     assert metrics == {"citation_resolution": 0.0, "groundedness": 0.0}
 
 
-def test_groundedness_tolerates_reflowed_whitespace(agent_kit):
+async def test_groundedness_tolerates_reflowed_whitespace(agent_kit):
     """The corpora wrap mid-sentence. A byte-exact comparison would report genuine quotations as
     ungrounded, which would make the metric useless exactly where it matters."""
     grade = groundedness_grader(agent_kit.index)
-    metrics = grade(
+    metrics = await grade(
         _question(),
         _response(
             [
@@ -181,12 +188,15 @@ def test_groundedness_tolerates_reflowed_whitespace(agent_kit):
     assert metrics["groundedness"] == 1.0
 
 
-def test_an_uncited_response_reports_no_groundedness_at_all(agent_kit):
+async def test_an_uncited_response_reports_no_groundedness_at_all(agent_kit):
     """`{}` and `0.0` are different claims. An abstention that cited nothing has no groundedness to
     measure, and scoring it zero would drag the corpus-wide average down with a number about
     nothing."""
     grade = groundedness_grader(agent_kit.index)
-    assert grade(_question(expected_abstain=True, **_ABSTAIN), _response([], "No sources.")) == {}
+    assert (
+        await grade(_question(expected_abstain=True, **_ABSTAIN), _response([], "No sources."))
+        == {}
+    )
 
 
 #: The shape `GoldQuestion` requires of an abstention: everything else must be null or empty.
@@ -204,20 +214,24 @@ _ABSTAIN = {
 # ---------------------------------------------------------------- key-fact coverage ---------
 
 
-def test_key_fact_coverage_is_lexical_and_says_so():
+async def test_key_fact_coverage_is_lexical_and_says_so():
     """It scores an answer and its exact negation identically, which is precisely why it is named
     *coverage* and why `--judge` exists."""
     grade = key_fact_coverage_grader()
     question = _question(answer_key_facts=["the amount paid before the plan starts paying"])
 
-    positive = grade(question, _response([], "The amount paid before the plan starts paying."))
-    negated = grade(question, _response([], "Not the amount paid before the plan starts paying."))
+    positive = await grade(
+        question, _response([], "The amount paid before the plan starts paying.")
+    )
+    negated = await grade(
+        question, _response([], "Not the amount paid before the plan starts paying.")
+    )
     assert positive == negated == {"key_fact_coverage": 1.0}
 
 
-def test_key_fact_coverage_is_skipped_for_abstentions():
+async def test_key_fact_coverage_is_skipped_for_abstentions():
     grade = key_fact_coverage_grader()
-    assert grade(_question(expected_abstain=True, **_ABSTAIN), _response([], "x")) == {}
+    assert await grade(_question(expected_abstain=True, **_ABSTAIN), _response([], "x")) == {}
 
 
 # ---------------------------------------------------------------- aggregation ---------------
@@ -250,24 +264,24 @@ def test_aggregate_hides_the_runner_s_own_bookkeeping():
     assert "reciprocal_rank" not in aggregate(results)
 
 
-def test_a_failing_grader_does_not_abort_the_run(agent_kit):
+async def test_a_failing_grader_does_not_abort_the_run(agent_kit):
     """A judge that times out on question 12 must not throw away the other 34 measurements."""
 
-    def explode(question, response):
+    async def explode(question, response):
         raise RuntimeError("judge unavailable")
 
     gold = GoldSet(questions=[_question(), _question(id="q2")])
-    run = run_gold_set(bm25_answerer(agent_kit.index), gold, runner="bm25", graders=[explode])
+    run = await run_gold_set(bm25_answerer(agent_kit.index), gold, runner="bm25", graders=[explode])
 
     assert run.n_questions == 2
     assert all("judge unavailable" in (r.error or "") for r in run.results)
 
 
-def test_the_run_record_pins_what_it_was_measured_under(agent_kit):
+async def test_the_run_record_pins_what_it_was_measured_under(agent_kit):
     """`config.yaml`'s model is a floating alias, so the fingerprint says which alias was
     configured and `model` says what it resolved to."""
     gold = GoldSet(questions=[_question()])
-    run = run_gold_set(
+    run = await run_gold_set(
         bm25_answerer(agent_kit.index), gold, runner="agent", model="openai:some-model"
     )
     assert run.model == "openai:some-model"
@@ -284,7 +298,7 @@ def _verdict_model(verdict: JudgeVerdict) -> FunctionModel:
     return FunctionModel(respond)
 
 
-def test_the_judge_scores_the_fraction_of_key_facts_supported():
+async def test_the_judge_scores_the_fraction_of_key_facts_supported():
     question = _question(answer_key_facts=["fact one", "fact two", "fact three"])
     verdict = JudgeVerdict(
         facts=[
@@ -294,13 +308,13 @@ def test_the_judge_scores_the_fraction_of_key_facts_supported():
         ]
     )
     with build_judge().override(model=_verdict_model(verdict)):
-        metrics = judge_grader()(question, _response([], "Some answer."))
+        metrics = await judge_grader()(question, _response([], "Some answer."))
 
     assert metrics["answer_correctness"] == pytest.approx(2 / 3)
     assert metrics["contradiction"] == 0.0
 
 
-def test_the_judge_cannot_score_above_one():
+async def test_the_judge_cannot_score_above_one():
     """Scored over the gold set's count, not the judge's: a judge that returns four verdicts for a
     three-item checklist must not be able to invent credit."""
     question = _question(answer_key_facts=["fact one"])
@@ -311,11 +325,11 @@ def test_the_judge_cannot_score_above_one():
         ]
     )
     with build_judge().override(model=_verdict_model(verdict)):
-        metrics = judge_grader()(question, _response([], "Some answer."))
+        metrics = await judge_grader()(question, _response([], "Some answer."))
     assert metrics["answer_correctness"] == 1.0
 
 
-def test_the_judge_reports_a_contradiction_separately():
+async def test_the_judge_reports_a_contradiction_separately():
     """A contradiction is a worse failure than an omission, so it gets its own number rather than
     being folded into the coverage fraction."""
     question = _question(answer_key_facts=["fact one"])
@@ -325,12 +339,12 @@ def test_the_judge_reports_a_contradiction_separately():
         contradiction="says the opposite later",
     )
     with build_judge().override(model=_verdict_model(verdict)):
-        metrics = judge_grader()(question, _response([], "Some answer."))
+        metrics = await judge_grader()(question, _response([], "Some answer."))
     assert metrics["answer_correctness"] == 1.0
     assert metrics["contradiction"] == 1.0
 
 
-def test_the_judge_is_never_called_for_an_abstention():
+async def test_the_judge_is_never_called_for_an_abstention():
     """Whether an abstention was correct is already settled deterministically by
     `abstention_accuracy`; paying for an opinion on it would be buying an answer twice."""
     called = False
@@ -342,11 +356,11 @@ def test_the_judge_is_never_called_for_an_abstention():
 
     with build_judge().override(model=FunctionModel(respond)):
         question = _question(expected_abstain=True, **_ABSTAIN)
-        assert judge_grader()(question, _response([], "No sources.")) == {}
+        assert await judge_grader()(question, _response([], "No sources.")) == {}
     assert called is False
 
 
-def test_a_false_abstention_scores_zero_without_a_model_call():
+async def test_a_false_abstention_scores_zero_without_a_model_call():
     """An abstention on an answerable question covers nothing, by definition — cheaper and less
     arguable than asking a judge to read "I don't have that" against a checklist."""
     called = False
@@ -360,7 +374,7 @@ def test_a_false_abstention_scores_zero_without_a_model_call():
     abstained.abstained = True
 
     with build_judge().override(model=FunctionModel(respond)):
-        metrics = judge_grader()(_question(), abstained)
+        metrics = await judge_grader()(_question(), abstained)
 
     assert metrics == {"answer_correctness": 0.0, "contradiction": 0.0}
     assert called is False
@@ -369,8 +383,71 @@ def test_a_false_abstention_scores_zero_without_a_model_call():
 # ---------------------------------------------------------------- the stub baseline ---------
 
 
-def test_the_stub_answerer_still_works():
+async def test_the_stub_answerer_still_works():
     """Kept reachable on purpose: Phase 0 measured recall@5 at 0.033 against it, and that is the
     number every real score is read against."""
-    response = stub_answerer()(_question())
+    response = await stub_answerer()(_question())
     assert response.citations
+
+
+# ---------------------------------------------------------------- concurrency ---------------
+#
+# `run_gold_set` runs questions through an `asyncio.Semaphore` and one `gather`, with no separate
+# sequential branch. That collapses two code paths into one, but only because of two properties
+# that are easy to state and easy to break silently — a reordered run record would not fail
+# anything else in this file. Both are asserted against an answerer that finishes in deliberately
+# the wrong order.
+
+
+def _out_of_order_answerer(order: list[str]) -> AnswerFn:
+    """An answerer whose questions finish in reverse: `q0` sleeps longest, `q9` returns first.
+
+    Sleeps are real awaits, so with any concurrency above 1 the event loop genuinely interleaves
+    them. `order` records completion order, which is what distinguishes "results were sorted
+    afterwards" from "results were never reordered".
+    """
+
+    async def answer(question: GoldQuestion) -> ChatResponse:
+        await asyncio.sleep((10 - int(question.id[1:])) * 0.01)
+        order.append(question.id)
+        return _response([])
+
+    return answer
+
+
+async def test_results_stay_in_gold_order_however_they_complete():
+    """`gather` returns in submission order regardless of completion order, which is what keeps a
+    run record identical at any concurrency and therefore diffable against another run."""
+    completion: list[str] = []
+    gold = GoldSet(questions=[_question(id=f"q{i}") for i in range(10)])
+
+    run = await run_gold_set(
+        _out_of_order_answerer(completion), gold, runner="bm25", max_concurrency=5
+    )
+
+    assert [r.question_id for r in run.results] == [f"q{i}" for i in range(10)]
+    assert completion != [f"q{i}" for i in range(10)], (
+        "the answerer was supposed to finish out of order; this test proves nothing if it did not"
+    )
+
+
+async def test_concurrency_one_still_reports_progress_in_gold_order():
+    """The property the dashboard depends on, and the reason it pins `max_concurrency=1`.
+
+    A semaphore with one slot hands it to waiters FIFO, and `gather` schedules tasks in submission
+    order, so `max_concurrency=1` is genuinely sequential rather than merely bounded.
+    """
+    completion: list[str] = []
+    reported: list[str] = []
+    gold = GoldSet(questions=[_question(id=f"q{i}") for i in range(6)])
+
+    await run_gold_set(
+        _out_of_order_answerer(completion),
+        gold,
+        runner="bm25",
+        max_concurrency=1,
+        on_progress=lambda result: reported.append(result.question_id),
+    )
+
+    assert reported == [f"q{i}" for i in range(6)]
+    assert completion == reported

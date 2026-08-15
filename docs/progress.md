@@ -132,6 +132,41 @@ The numbers, all on the same gold set and the same chunk snapshots:
 | `bm25` (retrieval only) | 0.567 | 0.416 | — | 1.000 | — |
 | `agent` | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
 
+**Decided: the eval answerer/grader seam is `async`, and the runner is one semaphore.** The seam was
+synchronous from Phase 0, when the only answerer was a canned function. That forced the concurrency
+above to be a `ThreadPoolExecutor` with index slots, and it capped the graders: `judge_grader` used
+`asyncio.run`, which **raises inside a running loop**, so an async runner would have broken the judge
+at runtime rather than at typecheck — on a paid `make eval-judge`, the worst place to find it.
+`AnswerFn` and `Grader` are now awaitable, `run_gold_set` is a coroutine, and `_grade_all` is an
+`asyncio.Semaphore` plus one `gather`. The two free answerers are `async def` with nothing to await,
+which is the honest cost. Net effect beyond tidiness: the HTTP route dropped its `asyncio.to_thread`
+hop and the `loop.call_soon_threadsafe` dance around progress events, and the sequential/concurrent
+branch collapsed into one path — `max_concurrency=1` *is* sequential, because a one-slot semaphore is
+FIFO and `gather` submits in order. Both ordering properties now have tests, against an answerer that
+deliberately finishes backwards. `pytest-asyncio` in `auto` mode; only the evals suite is async.
+
+**Decided: `make eval` runs 3 questions at a time, and the number is a measurement.** The runner was
+silent and sequential — 284 s with no output, which is indistinguishable from a hang while spending
+money. It now prints a line per question (through the existing `on_progress` seam, so the dashboard
+is untouched) and takes `--concurrency`, threads rather than an event loop because `AnswerFn` is
+synchronous by design. Two invariants keep it safe rather than merely fast: results are assigned by
+index so a run record is identical at any concurrency, and `on_progress` is only ever called from
+the calling thread, so neither callback needs a lock.
+
+**Dead end: `--concurrency 5`.** It finished in 46 s and failed 16 of 35 questions on
+`Rate limit reached ... tokens per min`, dropping recall@5 from 0.867 to 0.433. The binding
+constraint is TPM, not connections: one run is ~6,000 tokens, so the full set is ~210k against a
+200k/minute allowance — **the gold set cannot honestly complete in under about a minute at any
+concurrency**, and asking for more only converts speed into 429s. Fixed by defaulting to 3 (~90 s,
+zero errors, recall@5 0.733) and raising the OpenAI client's `max_retries` to 5 via a new
+`agent.request_retries` in `config.yaml`, which is deliberately *not* the existing `agent.retries` —
+that one governs whether an answer is grounded, this one whether the request arrived.
+
+**Open: recall@5 varies more than the docs admit.** Three agent runs at identical config scored
+0.700, 0.867 and 0.733 — a five-question swing out of thirty, from model nondeterminism alone. The
+README and the table below quote 0.700 as *the* number; it is one sample. Either quote a mean with
+its spread or say plainly that a single run is noisy.
+
 **Decided: the live check is `make smoke`, not a pytest marker.** The suite is guaranteed never to
 reach a provider, and that guarantee is worth more than the convenience of `pytest -m live` — a
 marker plus a deselect in `addopts` replaces "certain" with "correct as long as two mechanisms stay

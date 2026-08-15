@@ -65,6 +65,12 @@ class AgentConfig(BaseModel):
     request_limit: int = Field(gt=0)
     tool_calls_limit: int = Field(gt=0)
 
+    #: How many times the HTTP client retries a transport-level failure — a 429 or a 5xx. Nothing
+    #: to do with `retries` above, which is about the *content* of an answer. Lives in config
+    #: rather than in a flag because it decides whether a rate-limited question becomes a delayed
+    #: success or a recorded error, and that changes an eval score.
+    request_retries: int = Field(ge=0, le=10)
+
 
 class EvalsConfig(BaseModel):
     """Grading. Separate from `agent:` because the judge must be swappable without touching what

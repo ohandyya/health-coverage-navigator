@@ -38,6 +38,7 @@ def valid() -> dict:
             "retries": 2,
             "request_limit": 8,
             "tool_calls_limit": 12,
+            "request_retries": 5,
         },
         "retrieval": {"top_k": 5, "bm25_k1": 1.2, "bm25_b": 0.75},
         "evals": {"judge_model": "openai:gpt-5.4-mini-2026-03-17"},

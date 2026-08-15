@@ -30,6 +30,7 @@ dev = [
     "pre-commit>=4.6.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.15.20",
 ]
 
@@ -61,3 +62,13 @@ known-first-party = ["health_coverage_navigator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# `auto`, so an `async def test_` just runs — no per-test decorator. The repo's other async code is
+# driven by `asyncio.run` at the boundary (tests/conftest.py's AgentKit), which stays as it is:
+# those tests exercise a synchronous API and should read as synchronous. Only the evals suite is
+# async, because `run_gold_set` and the answerer/grader seam genuinely are.
+asyncio_mode = "auto"
+# Each test gets a fresh event loop. The alternative (a session-wide loop) leaks state between
+# tests via anything that caches a loop-bound object, which is exactly the kind of order-dependent
+# failure that is miserable to track down.
+asyncio_default_fixture_loop_scope = "function"

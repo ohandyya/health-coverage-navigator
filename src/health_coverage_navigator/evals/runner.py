@@ -25,6 +25,7 @@ at a moment, not a source of truth.
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import time
@@ -56,6 +57,19 @@ RECALL_K = 5
 _INTERNAL_METRICS = frozenset({"reciprocal_rank"})
 
 ProgressFn = Callable[[EvalQuestionResult], None]
+
+#: Default for `--concurrency`, and the number is a measurement rather than a guess.
+#:
+#: **The binding constraint is tokens per minute, not connections.** One agent run costs ~6,000
+#: tokens, so the 35-question gold set is ~210,000 — more than a 200k TPM allowance permits in a
+#: single minute at *any* concurrency. A run therefore cannot honestly finish faster than about a
+#: minute, and asking for more only converts speed into 429s.
+#:
+#: Measured: sequential is ~284 s and never trips the limit; `--concurrency 5` finished in 46 s and
+#: put 16 of 35 questions into an ERR row, dropping recall@5 from 0.867 to 0.433. Three lands near
+#: 135k tokens/minute with headroom, for roughly a 3x speedup. Raise it only alongside a real TPM
+#: allowance, and read the resulting run for errors before trusting its score.
+DEFAULT_CONCURRENCY = 3
 
 
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:
@@ -176,7 +190,69 @@ def new_run_id(now: datetime | None = None, runs_dir: Path | None = None) -> str
     return f"{stem}_{existing + 1}"
 
 
-def run_gold_set(
+async def _grade_one(
+    question: GoldQuestion, answer_fn: AnswerFn, graders: Sequence[Grader]
+) -> EvalQuestionResult:
+    """Answer and score one question, turning any failure into a recorded result.
+
+    Never raises, so `gather` below needs no `return_exceptions` and no second layer of error
+    handling. Same rule the sequential version always had: a judge that times out on question 12
+    must not throw away the other 34 measurements.
+    """
+    try:
+        response = await answer_fn(question)
+        result = score_question(question, response)
+        for grader in graders:
+            result.metrics.update(await grader(question, response))
+    except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
+        result = EvalQuestionResult(
+            question_id=question.id,
+            passed=False,
+            expected_abstain=question.expected_abstain,
+            error=f"{type(exc).__name__}: {exc}",
+        )
+    return result
+
+
+async def _grade_all(
+    questions: Sequence[GoldQuestion],
+    answer_fn: AnswerFn,
+    graders: Sequence[Grader],
+    max_concurrency: int,
+    on_progress: ProgressFn | None,
+) -> list[EvalQuestionResult]:
+    """Every question, at most `max_concurrency` in flight.
+
+    A semaphore and one `gather`, with no branch for the sequential case — `max_concurrency=1`
+    genuinely *is* sequential here, because `asyncio.Semaphore` hands the slot to waiters in FIFO
+    order and `gather` schedules the tasks in gold-set order. That is why this is a single code
+    path rather than a fast one and a safe one that have to be kept agreeing.
+
+    Three properties hold at any concurrency:
+
+    **Results come back in gold-set order**, because that is what `gather` returns regardless of
+    completion order. The run record is identical at any setting, so two runs stay diffable.
+
+    **`on_progress` fires in completion order**, from inside the task. That reorders the *events*
+    at concurrency > 1 — the objection `evals/answerers.py` originally recorded — which is why the
+    default is 1 and the dashboard leaves it there.
+
+    **No callback needs a lock.** Everything runs on one event loop thread; a coroutine is only
+    interrupted where it awaits, and `on_progress` never does.
+    """
+    limit = asyncio.Semaphore(max_concurrency)
+
+    async def graded(question: GoldQuestion) -> EvalQuestionResult:
+        async with limit:
+            result = await _grade_one(question, answer_fn, graders)
+        if on_progress is not None:
+            on_progress(result)
+        return result
+
+    return list(await asyncio.gather(*(graded(question) for question in questions)))
+
+
+async def run_gold_set(
     answer_fn: AnswerFn,
     gold: GoldSet | None = None,
     *,
@@ -185,38 +261,26 @@ def run_gold_set(
     on_progress: ProgressFn | None = None,
     graders: Sequence[Grader] = (),
     model: str | None = None,
+    max_concurrency: int = 1,
 ) -> EvalRun:
     """Answer every gold question, score it, and return the run.
 
     `on_progress` is called after each question so a caller can stream progress. It is a plain
-    callback rather than a generator because the HTTP route needs to buffer events for replay,
-    and a callback lets the runner stay a synchronous function usable from a CLI.
+    callback rather than a generator because the HTTP route needs to buffer events for replay, and
+    because a callback stays callable from inside a task without the caller owning an async
+    iterator.
 
-    A grader that raises is recorded on the result and does not abort the run, for the same reason
-    a failing answer does not: a judge that times out on question 12 must not throw away the other
-    34 measurements.
+    `max_concurrency` defaults to **1 — sequential, and progress events in gold-set order**. A run
+    is almost entirely spent waiting on a model, so raising it is close to a linear speedup until
+    the provider's tokens-per-minute limit binds, but it reorders progress events, and that is a
+    caller's decision rather than this function's: the CLI passes `--concurrency`, the dashboard
+    does not. Scores are unaffected either way.
     """
     gold = gold or load_gold_set()
     run_id = run_id or new_run_id()
     started = time.perf_counter()
 
-    results: list[EvalQuestionResult] = []
-    for question in gold.questions:
-        try:
-            response = answer_fn(question)
-            result = score_question(question, response)
-            for grader in graders:
-                result.metrics.update(grader(question, response))
-        except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
-            result = EvalQuestionResult(
-                question_id=question.id,
-                passed=False,
-                expected_abstain=question.expected_abstain,
-                error=f"{type(exc).__name__}: {exc}",
-            )
-        results.append(result)
-        if on_progress is not None:
-            on_progress(result)
+    results = await _grade_all(gold.questions, answer_fn, graders, max_concurrency, on_progress)
 
     return EvalRun(
         id=run_id,
@@ -365,21 +429,24 @@ def _progress_printer(total: int) -> ProgressFn:
     **stderr, and flushed.** `--no-write` prints the run JSON to stdout, so progress on stdout would
     end up inside a piped payload. Flushing because stderr is block-buffered when it is not a tty,
     which would hold every line until the run finished and defeat the point.
+
+    The clock is **elapsed since the run started**, not per question. Under `--concurrency` the gap
+    between two completions is not how long either took, and a column that silently means something
+    different depending on a flag is worse than one that means less. `_grade_all` guarantees this is
+    only ever called from one thread, so the counter needs no lock.
     """
     index = 0
-    last = time.perf_counter()
+    started = time.perf_counter()
 
     def report(result: EvalQuestionResult) -> None:
-        nonlocal index, last
+        nonlocal index
         index += 1
-        now = time.perf_counter()
-        elapsed, last = now - last, now
 
         correctness = result.metrics.get("answer_correctness")
         suffix = f"  correctness {correctness:.2f}" if correctness is not None else ""
         print(
             f"  {index:>3}/{total}  {_status(result):<4}  {result.question_id:<22} "
-            f"{_detail(result):<22} {elapsed:5.1f}s{suffix}",
+            f"{_detail(result):<22} {time.perf_counter() - started:5.1f}s{suffix}",
             file=sys.stderr,
             flush=True,
         )
@@ -387,7 +454,7 @@ def _progress_printer(total: int) -> ProgressFn:
     return report
 
 
-def main() -> int:
+async def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the gold eval set and write the result to data/eval_runs/."
     )
@@ -407,8 +474,21 @@ def main() -> int:
         help="grade answer correctness with an LLM judge (agent runner only; costs a second "
         "model call per question)",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        metavar="N",
+        help=(
+            "how many questions to run at once. A run is almost all waiting on the model, so this "
+            "is close to a linear speedup until the provider's tokens-per-minute limit binds — "
+            "see the note in the source before raising it. 1 runs sequentially. Default: 3."
+        ),
+    )
     parser.add_argument("--no-write", action="store_true", help="print the run instead of saving")
     args = parser.parse_args()
+    if args.concurrency < 1:
+        raise SystemExit("--concurrency must be at least 1")
 
     answer_fn, gold, graders, model = _build(args.runner, args.judge)
 
@@ -416,9 +496,11 @@ def main() -> int:
     # time to interrupt it.
     total = len(gold.questions)
     calls = 0 if model is None else total * (2 if args.judge else 1)
+    concurrency = args.concurrency if calls else 1  # threads buy nothing without network waits
     print(
         f"{args.runner} runner · {total} questions"
-        + (f" · ~{calls} model calls" if calls else " · no model calls"),
+        + (f" · ~{calls} model calls" if calls else " · no model calls")
+        + (f" · {concurrency} at a time" if concurrency > 1 else ""),
         file=sys.stderr,
     )
     if model:
@@ -426,13 +508,14 @@ def main() -> int:
     if args.judge:
         print(f"  judge  {get_config().evals.judge_model}", file=sys.stderr)
 
-    run = run_gold_set(
+    run = await run_gold_set(
         answer_fn,
         gold,
         runner=args.runner,
         graders=graders,
         model=model,
         on_progress=_progress_printer(total),
+        max_concurrency=concurrency,
     )
 
     if args.no_write:
@@ -441,11 +524,15 @@ def main() -> int:
         path = write_run(run)
         print(f"Wrote {path}", file=sys.stderr)
 
-    print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed")
+    # Under `--no-write` stdout *is* the run, so the human summary has to move aside or it lands
+    # after the closing brace and `... | jq` fails on trailing data. Otherwise the summary is the
+    # command's real output and belongs on stdout.
+    out = sys.stderr if args.no_write else sys.stdout
+    print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed", file=out)
     if run.model:
-        print(f"  model                    {run.model}")
+        print(f"  model                    {run.model}", file=out)
     for name, value in sorted(run.metrics.items()):
-        print(f"  {name:<24} {value:.3f}")
+        print(f"  {name:<24} {value:.3f}", file=out)
 
     errored = [r for r in run.results if r.error]
     if errored:
@@ -456,4 +543,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))

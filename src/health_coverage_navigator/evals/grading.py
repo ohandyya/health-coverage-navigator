@@ -20,14 +20,18 @@ carries no citations, so grading its groundedness would drag the corpus-wide ave
 number about nothing.
 """
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.api.models import ChatResponse
 from health_coverage_navigator.evals.models import GoldQuestion
 
 #: What every grader looks like from the runner's side.
-Grader = Callable[[GoldQuestion, ChatResponse], dict[str, float]]
+#:
+#: Awaitable for the same reason `AnswerFn` is: `judge_grader` has to await a model, and
+#: `asyncio.run` raises inside a running loop. The two deterministic graders below never await —
+#: they are `async def` to fit the one that must be.
+Grader = Callable[[GoldQuestion, ChatResponse], Awaitable[dict[str, float]]]
 
 
 def _normalize(text: str) -> str:
@@ -56,7 +60,7 @@ def groundedness_grader(index: CorpusIndex) -> Grader:
     nobody checks is a guardrail that has already stopped working.
     """
 
-    def grade(_question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
+    async def grade(_question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
         if not response.citations:
             return {}
 
@@ -92,7 +96,7 @@ def key_fact_coverage_grader() -> Grader:
     Never read it as the correctness number. `--judge` produces that one.
     """
 
-    def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
+    async def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
         if question.expected_abstain or not question.answer_key_facts:
             return {}
         answer = _normalize(response.answer)

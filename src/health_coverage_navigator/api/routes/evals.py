@@ -153,30 +153,28 @@ async def post_run(ctx: Annotated[AppContext, Depends(get_context)]) -> EvalRunS
     state = RunState(run_id, total=len(ctx.gold.questions))
     _RUNS[run_id] = state
 
-    loop = asyncio.get_running_loop()
     completed = 0
 
     def on_progress(result) -> None:
         nonlocal completed
         completed += 1
-        # The runner is synchronous and executes off the event loop, so events have to be handed
-        # back across the thread boundary rather than appended directly.
-        loop.call_soon_threadsafe(
-            state.emit,
+        # Called from inside the runner's task, on this same event loop, so the event is appended
+        # directly. This used to need `loop.call_soon_threadsafe` because the runner was synchronous
+        # and executed on a worker thread; it is a coroutine now and there is no boundary to cross.
+        state.emit(
             EvalRunProgress(
                 run_id=run_id,
                 completed=completed,
                 total=len(ctx.gold.questions),
                 result=result,
-            ),
+            )
         )
 
     answer_fn, graders, model = _run_config(ctx)
 
     async def execute() -> None:
         try:
-            run = await asyncio.to_thread(
-                run_gold_set,
+            run = await run_gold_set(
                 answer_fn,
                 ctx.gold,
                 runner="stub" if ctx.stub or ctx.index is None else "agent",
@@ -184,7 +182,11 @@ async def post_run(ctx: Annotated[AppContext, Depends(get_context)]) -> EvalRunS
                 on_progress=on_progress,
                 graders=graders,
                 model=model,
+                # Deliberately left at the default of 1. Progress events drive a live dashboard,
+                # and out-of-order arrival renders as a run that jumps around.
+                max_concurrency=1,
             )
+            # Still a thread: `write_run` is blocking file I/O, and the runner no longer is.
             await asyncio.to_thread(write_run, run)
             state.emit(EvalRunFinished(run=run))
         except Exception as exc:  # noqa: BLE001 - surfaced to the client, not swallowed

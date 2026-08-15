@@ -42,6 +42,17 @@ agent:
   request_limit: 8
   tool_calls_limit: 12
 
+  # Transport-level retries, which is a DIFFERENT THING from `retries` above: that one is about
+  # whether an answer is grounded, this one is about whether the request arrived. The OpenAI SDK
+  # retries 429s and 5xx with backoff and honours the delay the server asks for.
+  #
+  # Five rather than the SDK's default of two, measured: `make eval --concurrency 5` put 16 of 35
+  # questions into an ERR row on `Rate limit reached ... on tokens per min (TPM)`, each one asking
+  # to be retried in under three seconds. A transient rate limit that lands in an eval run as a
+  # failed question does not just lose that question — it moves the headline score, which is worse
+  # than being slow.
+  request_retries: 5
+
 retrieval:
   # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
   # cannot drift apart.
