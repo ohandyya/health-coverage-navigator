@@ -23,6 +23,8 @@
     4. PAUSE. I will then read the files myself, and may ask you follow up questions.
     ```
 
+4. Use the app end to end
+
 
 ### Aug 13, 2026
 

@@ -328,6 +328,65 @@ def _build(runner: str, judge: bool) -> tuple[AnswerFn, GoldSet, list[Grader], s
     return agent_answerer(index), gold, graders, get_config().agent.model
 
 
+def _status(result: EvalQuestionResult) -> str:
+    if result.error:
+        return "ERR"
+    return "PASS" if result.passed else "FAIL"
+
+
+def _detail(result: EvalQuestionResult) -> str:
+    """Why this question scored the way it did, in one column.
+
+    The interesting part is *how* a question failed, which the pass/fail flag alone hides: a
+    question that retrieved nothing and a question that retrieved the right document then abstained
+    anyway are the same `FAIL` and completely different bugs.
+    """
+    if result.error:
+        # Truncated to keep the column aligned; the full message is reprinted after the run.
+        return (result.error[:49] + "…") if len(result.error) > 50 else result.error
+    if result.expected_abstain:
+        return "abstained" if result.abstained else "answered anyway"
+    if result.abstained:
+        return "false abstention"
+    if result.rank is not None:
+        return f"rank {result.rank}"
+    return "not retrieved"
+
+
+def _progress_printer(total: int) -> ProgressFn:
+    """One line per graded question, on stderr.
+
+    `run_gold_set` takes `on_progress` exactly so a caller can do this — the HTTP route already
+    uses it to stream to the dashboard. Without it the CLI is silent for the whole run, and
+    `make eval` is 35 model calls over several minutes: a command that prints nothing for that long
+    is indistinguishable from one that has hung, which is the wrong thing to make someone guess
+    about while they are spending money.
+
+    **stderr, and flushed.** `--no-write` prints the run JSON to stdout, so progress on stdout would
+    end up inside a piped payload. Flushing because stderr is block-buffered when it is not a tty,
+    which would hold every line until the run finished and defeat the point.
+    """
+    index = 0
+    last = time.perf_counter()
+
+    def report(result: EvalQuestionResult) -> None:
+        nonlocal index, last
+        index += 1
+        now = time.perf_counter()
+        elapsed, last = now - last, now
+
+        correctness = result.metrics.get("answer_correctness")
+        suffix = f"  correctness {correctness:.2f}" if correctness is not None else ""
+        print(
+            f"  {index:>3}/{total}  {_status(result):<4}  {result.question_id:<22} "
+            f"{_detail(result):<22} {elapsed:5.1f}s{suffix}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    return report
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the gold eval set and write the result to data/eval_runs/."
@@ -352,7 +411,29 @@ def main() -> int:
     args = parser.parse_args()
 
     answer_fn, gold, graders, model = _build(args.runner, args.judge)
-    run = run_gold_set(answer_fn, gold, runner=args.runner, graders=graders, model=model)
+
+    # Printed before the first call rather than after, so the cost is visible while there is still
+    # time to interrupt it.
+    total = len(gold.questions)
+    calls = 0 if model is None else total * (2 if args.judge else 1)
+    print(
+        f"{args.runner} runner · {total} questions"
+        + (f" · ~{calls} model calls" if calls else " · no model calls"),
+        file=sys.stderr,
+    )
+    if model:
+        print(f"  model  {model}", file=sys.stderr)
+    if args.judge:
+        print(f"  judge  {get_config().evals.judge_model}", file=sys.stderr)
+
+    run = run_gold_set(
+        answer_fn,
+        gold,
+        runner=args.runner,
+        graders=graders,
+        model=model,
+        on_progress=_progress_printer(total),
+    )
 
     if args.no_write:
         print(run.model_dump_json(indent=2))
