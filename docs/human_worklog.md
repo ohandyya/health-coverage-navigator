@@ -1,8 +1,9 @@
 # Human Worklog
 
+AI (e.g., Claude) should **NOT** read this document.
+
 ## What is this document?
 - This is a working log for human. 
-- AI (e.g., Claude) should **NOT** read this document.
 
 ## Future Enhancements
 
@@ -23,7 +24,7 @@
 
 - [Done] Use the app end to end
 
-- Create a skill to walk through the changes. Step by Step.
+- [Done] Create a skill to walk through the changes. Step by Step.
    
    - Sample prompts
     ```
