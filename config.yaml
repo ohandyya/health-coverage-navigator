@@ -83,7 +83,7 @@ evals:
   # Not reachable from the UI, by design. A button that spends money on every click is the wrong
   # affordance; `make eval-judge` is an explicit act. The deterministic graders (groundedness,
   # citation resolution) run on every `make eval` and cost nothing.
-  judge_model: openai:gpt-5.6-sol
+  judge_model: openai:gpt-5.6-terra
 
 # WARNING: these five keys, their names, and their values are pinned by the committed
 # `data/processed/*/chunks_meta.json` manifests via `params_sha256` and `snapshot_id`. Changing any
