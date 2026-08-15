@@ -66,7 +66,7 @@ reshaping the response. Phase 1a cost the contract two optional fields and the c
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 200 Python tests + 11 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
+| **Gates** | 202 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
@@ -79,11 +79,21 @@ in the loop — so the gap between it and `agent` is what the agent's query refo
 | `bm25` — retrieval only, no model | 0.567 | 0.416 | — | 1.000 | — |
 | **`agent`** | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
 
+**The agent row is a mean, and the spread is wide.** Seven runs at effectively one configuration put
+recall@5 anywhere between **0.600 and 0.867** — model nondeterminism alone, on a 30-question
+in-corpus set where one question is worth 0.033. So treat any difference under about 0.100 as noise,
+including the ones this repo will report for Phase 1b. The `bm25` row has no such caveat: no model
+is in the loop, so it returns the same number every time. Abstention accuracy reads 1.000 in every
+run that completed without errored questions; the runs that dipped were runs that lost questions to
+provider rate limits, which is a broken run rather than a weaker guardrail.
+
 Groundedness and citation resolution are deterministic and should always read 1.000 — the output
 validator rejects anything else before an answer is built. They are measured anyway, because a
 guardrail nobody checks is one that has already stopped working. Answer correctness is an LLM judge
 scoring each answer against the gold set's key facts, run on a *different* model from the one it
-grades, behind an opt-in `make eval-judge`.
+grades, behind an opt-in `make eval-judge`. The 0.739 above was graded by the judge model in use at
+the time; that setting has since changed, so the number is a historical sample, not a figure the
+current `config.yaml` reproduces.
 
 ### What does not work yet
 
@@ -92,8 +102,9 @@ grades, behind an opt-in `make eval-judge`.
   tell you it cannot answer. **The tri-modal routing this project is about is not built yet.**
 - **Lexical retrieval only.** No embeddings and no vector store; Phase 1b adds a LanceDB
   `vector_search` tool *beside* the existing ones and measures lexical vs. vector vs. both.
-- **Retrieval is the bottleneck, and the numbers say so.** recall@5 of 0.700 means the agent never
-  saw the right document for 3 of 10 in-corpus questions. That is the gap Phase 1b exists to close.
+- **Retrieval is the bottleneck, and the numbers say so.** A mean recall@5 of 0.700 means the agent
+  never saw the right document for about 3 of 10 in-corpus questions. That is the gap Phase 1b
+  exists to close.
 - **No planning or decomposition.** The agent calls tools in a loop but does not break a compound
   question into sub-questions and route each one — that is Phase 4, along with per-claim provenance.
 - **Single-turn only.** `conversation_id` is carried in the contract but nothing uses it yet.
@@ -380,13 +391,14 @@ Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves
   self-reported an English URL. Deduping in the chunker would have silently stamped Spanish titles
   onto 21 English pages.
 
-**Three custom skills encode procedures that are easy to get wrong**, in
+**Four custom skills encode procedures that are easy to get wrong**, in
 [`.claude/skills/`](.claude/skills/):
 [`scan-sensitive`](.claude/skills/scan-sensitive/SKILL.md) (the pre-publish guardrail),
 [`sync-frontend`](.claude/skills/sync-frontend/SKILL.md) (propagate a contract change through
 codegen — deliberately *not* about `make types`, which is one line, but about the seams codegen
-cannot see), and [`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
-`progress.md`).
+cannot see), [`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
+`progress.md`), and [`walkthrough`](.claude/skills/walkthrough/SKILL.md) (hand a change set over one
+step at a time, pausing after each so the human reads the files rather than a summary of them).
 
 **A standing rule the assistant must obey: keep the glossary current.** Any change introducing a
 domain term adds its entry in the *same* change — and an entry must say what the term means *in

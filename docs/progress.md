@@ -17,26 +17,50 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-14.*
+*Updated 2026-08-15.*
 
 - **Phase:** **1a is complete and shippable.** One PydanticAI agent answers coverage questions from
   the reference corpus with a four-tool full-text toolset over stdlib BM25 — no database of any
   kind — abstains when the question is out of corpus, and streams its answer and its tool trace to
   the browser. The Phase 0 stub is still reachable behind `create_app(stub=True)` as a baseline.
-  Measured on the 35-question gold set: **recall@5 0.700, MRR 0.667, abstention accuracy 1.000,
-  groundedness 1.000, answer correctness 0.739** (LLM judge). Retrieval alone scores 0.567/0.416,
-  so the gap is what the agent's query reformulation buys. Design: [agent.md](agent.md).
+  Measured on the 35-question gold set, and **read it as a distribution, not a number**: seven agent
+  runs put recall@5 between 0.600 and 0.867, with a mean of exactly 0.700 over the four runs at the
+  current config; MRR tracks it. Groundedness and citation resolution are 1.000 in every run, by
+  construction. Abstention accuracy is 1.000 in every run that finished without errored questions.
+  Answer correctness has two samples, 0.739 and 0.770, both from the *previous* judge model.
+  Retrieval alone is a flat, deterministic 0.567/0.416, so the ~0.13 gap to the agent's mean is what
+  query reformulation buys. Design: [agent.md](agent.md).
 - **Next up:** **Phase 1b — `vector_search` alongside the 1a tools** —
   [plan.md](plan.md#phase-1-b--add-vector-search-alongside-the-full-text-tools) and
   [lancedb.md](lancedb.md). Register the tool on the **same** agent rather than replacing anything;
   the comparison is three-way (lexical-only / vector-only / both) with toolset composition as an
   eval axis, so it should be one runner with a flag, not three code paths. `make eval-retrieval`
   already gives the lexical baseline to beat, and the frontend slice is a run-comparison view — the
-  chat UI is untouched by design.
+  chat UI is untouched by design. **Decide the measurement protocol before writing the tool:** the
+  spread at fixed config is 0.200 wide, so a single before/after pair cannot resolve anything
+  smaller than a large effect. Either run each toolset configuration three times and compare means,
+  or say up front that only a large effect is readable. The `bm25` runner is the one number
+  comparable run-to-run, because no model touches it.
 - **Open questions:**
+  - **A single eval run is not evidence, and the repo still quotes single runs.** Seven agent runs
+    at effectively one config span recall@5 0.600–0.867. The README's table and this block name a
+    mean and a range now, but nothing enforces that — the next person to quote "0.700" from one run
+    will be overstating it. Either the runner grows a repeat-and-aggregate mode or the docs keep
+    saying "one sample" by hand.
+  - **`request_retries: 5` reduced the TPM 429s; it did not end them.** Two of the four runs at the
+    current config still lost questions (2 and 4) to `Rate limit reached ... tokens per min`. The
+    ~210k-token gold set against a 200k/minute allowance means the set genuinely cannot complete
+    inside a minute — the retry budget buys headroom, not immunity. Lowering `--concurrency` below
+    3, or pacing between questions, is the untried lever.
+  - **The judge model changed after the only two answer-correctness numbers were measured.**
+    `evals.judge_model` is now `openai:gpt-5.6-terra`; 0.739 and 0.770 were both graded by
+    `gpt-5.6-sol`. Neither is reproducible from the repo as it stands. A `make eval-judge` run on
+    the current config would settle it and costs 70 calls.
   - **`new_run_id()` collides when two runs start the same day concurrently.** It counts existing
     files at call time, so two runs launched together both claim `run_YYYY-MM-DD_1` and the second
-    overwrites the first. Hit for real this session. A monotonic suffix or a lock would fix it.
+    overwrites the first. A monotonic suffix or a lock would fix it. Related and separate: the date
+    in the id is **UTC**, so an evening run is filed under tomorrow — `run_2026-08-15_1` was written
+    at 22:08 local on the 14th. Harmless until someone reads a run id as a local date.
   - **`make chunk`'s `--max-chars` / `--overlap-chars` flags override `config.yaml` and are recorded
     nowhere.** The same invisible-override hole the config split just closed, on a smaller scale.
     Either drop the flags or have the manifest record that an override was used.
@@ -112,10 +136,88 @@ Beyond the F1 list, because the real agent made them necessary:
 
 - [x] A working state while the agent searches — several seconds pass before the first token
 - [x] Abstentions render through `AnswerBody`, since the agent can abstain *and* cite
+- [x] Citation DOM ids scoped by message id — `c1` is unique per answer, not per conversation
 
 ---
 
 ## Log
+
+### 2026-08-15 — a bug the gold set could never catch, and six runs that make 0.700 look like luck
+
+**Did:** fixed the citation-anchor collision in the chat UI and pinned it with the frontend's second
+vitest suite, moved the LLM judge to a different model, reordered `_resolve_model`'s comments to
+match what the function actually does, and added a fourth skill (`walkthrough`). Separately, six
+more agent eval runs accumulated — nobody set out to measure variance, but the run directory now
+does, and it revises the previous entry.
+
+**Decided: the citation DOM id is a function, not a template literal written in two places.**
+`Citation.id` is unique *within one answer* — every assistant turn numbers its sources from `c1` —
+so a four-answer conversation put four elements carrying `id="cite-c1"` in the document. That is
+invalid HTML, and `getElementById` resolves it to the first match in document order, so clicking
+`[c1]` in the newest answer reliably scrolled to the *oldest* answer's first source. `citationDomId(messageId, citationId)`
+in `frontend/src/lib/utils.ts` is now the single place that shape is written, called by both the
+card that renders the anchor and the click handler that looks it up — the point being that the two
+cannot drift apart, which two matching template literals in two components eventually would.
+
+**Worth naming as a class of bug:** this is invisible to everything the repo measures. The gold set
+asks one question per run, so a single-answer conversation is the only shape the eval harness ever
+produces, and `groundedness` and `citation_resolution` both read 1.000 while the link went to the
+wrong place. It was found by using the app. The Phase 1a entry below records the abstention-panel
+bug the same way — **two of the phase's real UI defects were found in a browser and zero by tests**,
+which is worth remembering before trusting a green suite as evidence the UI works.
+
+**Also decided:** no jsdom. `utils.test.ts` asserts the invariant as a property of the *string* —
+distinct across messages, distinct within a message, deterministic, unique across a whole
+conversation — and stays in vitest's node environment. A component-testing stack and a DOM
+implementation to cover one pure function is a large dependency for a small property.
+
+**Measured, and it corrects the previous entry: `request_retries: 5` did not deliver "zero
+errors".** Four agent runs at the current config: two completed clean, two lost 2 and 4 questions
+to `Rate limit reached ... on tokens per min`. The previous entry recorded "defaulting to 3 (~90 s,
+zero errors)" off a single run, which was luck rather than a property. The underlying arithmetic in
+that entry is unchanged and still the reason — ~210k tokens against a 200k/minute allowance — so
+the honest statement is that the retry budget buys headroom, not immunity.
+
+**Measured: recall@5 at fixed config spans 0.600–0.867.** Seven agent runs now exist. The four on
+the current config scored 0.733 / 0.667 / 0.800 / 0.600 — mean exactly 0.700, which is the number
+the README quotes, arrived at from a single run on the older config. So the headline is not wrong,
+but it was never one measurement's to make. **A 0.100 difference between two single runs means
+nothing here**, which matters most for the very next thing this repo does: Phase 1b exists to show
+whether vector search beats lexical, and the effect it is looking for is the size of the noise.
+
+**Measured: abstention accuracy is an error detector, not a judgment metric.** There are five
+abstention questions, so each is worth 0.200 and nothing lands between the fifths. Every run that
+finished clean scored 1.000; the two runs that scored 0.400 and 0.200 were the two that lost the
+most questions to errors. A dip there should be read as "the run broke", not "the guardrail
+weakened" — and since a broken run also drags recall, an ERR-heavy run looks like a quality
+regression in every column at once.
+
+**Dead end, unexplained: a run that lost 17 of 35 questions to `UnexpectedModelBehavior: Exceeded
+maximum output retries (2)`.** That is `agent.retries` — the *grounding validator's* budget,
+exhausted when the model could not produce a citation that passed validation — and it is a
+different failure from the TPM 429s despite occupying the same ERR column in the run record. It has
+not recurred in the four runs since, and there is no record of what was being tried at the time, so
+it is written down as a shape to recognise rather than a diagnosis. If it returns, the validator's
+`ModelRetry` messages are where to look.
+
+**Decided: the judge moves to `gpt-5.6-terra`.** It must be a different model from the one it
+grades — a judge marking its own homework agrees with itself most confidently where both are wrong
+— and `luna` is still the agent, so that constraint holds. The consequence is recorded as an open
+question rather than papered over: both existing answer-correctness numbers (0.739, 0.770) were
+graded by `sol`, so neither is reproducible from the repo as it now stands.
+
+**Also:** `_resolve_model`'s comment block was reordered so the `AsyncOpenAI(max_retries=...)`
+rationale sits with the client construction and the `OpenAIResponsesModel`-vs-`OpenAIChatModel`
+warning sits with the return — the code was right, the explanation was interleaved. And a fourth
+skill, `walkthrough`, which hands a change set over one step at a time and pauses; it exists
+because reading an agent's output as a diff and understanding it are different activities, and the
+default reporting shape serves neither.
+
+**Stopped at:** clean, and not verified beyond that. 202 pytest + 15 vitest collect and pass. The
+citation fix was confirmed in a browser across a multi-answer conversation, which is the only place
+it could be. No eval run has been made since the judge change.
+
+**Commits:** `5b52d95`, `1e1d83e`, `c6c81d6`, `63a5070`, `bc5747d`, `5e48069`
 
 ### 2026-08-14 — Phase 1a: the agent, and the first real eval numbers
 
