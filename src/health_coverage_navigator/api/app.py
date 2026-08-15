@@ -12,7 +12,7 @@ network (§8); the Makefile targets pass the host explicitly and nothing here ev
 
 import importlib.metadata
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -127,8 +127,13 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """
     dist_dir = FRONTEND_DIST if dist_dir is None else dist_dir
 
+    # `AsyncGenerator`, not `AsyncIterator`: `asynccontextmanager` drives the function with
+    # `asend()` and `athrow()`, which are generator methods — `AsyncIterator` only promises
+    # `__anext__`, so the old annotation was a quiet under-specification that typeshed now flags.
+    # Spelled with both parameters because this annotation is evaluated at import time and
+    # `requires-python` is `>=3.12`, where the single-argument form is not universally available.
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # The gold set is 35 questions and loads in milliseconds. Eager because a malformed
         # questions.yaml should fail `make api-dev` at boot rather than on the first page load.
         #
