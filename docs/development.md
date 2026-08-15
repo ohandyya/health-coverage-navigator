@@ -23,13 +23,18 @@ A `Makefile` wraps every gate — `make help` lists them all.
 
 | Target | What it does |
 |---|---|
-| `make check-all` | ruff, pyright, pytest, **and** the frontend gate (`tsc`, lint, Vitest). |
+| `make check-all` | ruff, pyright, pytest, **and** the frontend gate (`tsc`, lint, Vitest, `types-check`). |
 | `make dev` | Both servers (uvicorn + Vite). |
 | `make serve` | Single process — FastAPI serving the built bundle. |
 | `make types` / `make types-check` | OpenAPI → TypeScript codegen (`frontend/src/api/schema.d.ts`). |
 | `make ui-install` / `ui-dev` / `ui-build` / `ui-test` | Frontend equivalents. |
 | `make chunk` / `make chunk-check` | Rebuild `chunks.jsonl`; verify committed manifests still describe it. |
-| `make eval` | Run the gold set → `data/eval_runs/`. |
+| `make smoke` | One real question through the live agent — checks the streaming path. **1 model call.** |
+| `make smoke-abstain` | Same, out-of-corpus: the agent must decline rather than invent sources. |
+| `make eval` | Run the gold set through the agent → `data/eval_runs/`. **35 model calls**, ~90 s at the default `--concurrency 3`. |
+| `make eval-retrieval` | Score BM25 retrieval alone — free, instant, no key. The `bm25_b`/`k1` sweep loop. |
+| `make eval-judge` | `eval` plus an LLM judge over answer correctness. **70 model calls.** |
+| `make eval-stub` | Re-measure the Phase 0 canned answerer, the baseline real scores are read against. |
 | `make scan` | Secrets / PII / licensing scan — run before publishing anything under `data/`. |
 
 `make check-all` runs green on a fresh clone: the frontend gate **skips with a message** when
@@ -37,7 +42,11 @@ A `Makefile` wraps every gate — `make help` lists them all.
 
 ## Toolchain facts that have bitten before
 
-- **Pyright's `include` covers both `src` and `tests`.** A type bug in a test file is a real
+- **`pytest-asyncio` runs in `auto` mode**, so an `async def test_` just runs with no decorator.
+  Only `tests/test_evals.py` is async, because the answerer/grader seam and `run_gold_set` are; the
+  agent tests deliberately stay synchronous and call `asyncio.run` at the boundary
+  (`tests/conftest.py`), since they exercise a synchronous API.
+- **Pyright's `include` covers `src`, `tests`, and `scripts`.** A type bug in a test file is a real
   typecheck failure, not something that only surfaces if the file happens to be open in an editor.
   It covered only `src` for weeks, and real bugs sat in `tests/` behind a green check.
 - **The frontend requires Node 22** (pinned in `.nvmrc`; Vite 8 needs `^20.19.0 || >=22.12.0`).
@@ -46,5 +55,18 @@ A `Makefile` wraps every gate — `make help` lists them all.
 - **TypeScript is pinned to `~5.9`, not the 6.x `create-vite` scaffolds.** `openapi-typescript`
   peer-requires 5.x, and that codegen is the contract-enforcement mechanism between Python and
   TypeScript, so it wins. Revisit when `openapi-typescript` supports 6.
+- **The test suite never reaches a model provider.** `tests/conftest.py` sets
+  `ALLOW_MODEL_REQUESTS = False` suite-wide, so `make check-all` needs no `OPENAI_API_KEY` and
+  costs nothing. Only the `smoke*` and `eval*` targets spend money, and they are outside
+  `check-all`. That invariant is why the live check is `make smoke` rather than a pytest marker —
+  see [`agent.md`](agent.md) §8.
+- **The agent needs the OpenAI Responses API, not Chat Completions.** The `gpt-5.6-*` family
+  returns a hard 400 for function tools on `/v1/chat/completions`; `agent/runtime.py` builds an
+  `OpenAIResponsesModel`. See [`agent.md`](agent.md) §7.
+- **`make eval`'s speed is capped by tokens per minute, not by concurrency.** One agent run is
+  ~6,000 tokens, so the 35-question set is ~210k — more than a 200k TPM allowance permits inside one
+  minute at *any* setting. `--concurrency 5` finished in 46 s and failed 16 questions on 429s,
+  dropping recall@5 from 0.867 to 0.433; the default of 3 takes ~90 s and fails none. **Read a run's
+  error list before trusting its score.**
 
 Frontend stack rationale in full: [`frontend_plan.md`](frontend_plan.md) §1 and §7.

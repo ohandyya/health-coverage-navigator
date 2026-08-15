@@ -343,6 +343,8 @@ export interface components {
             chunker_snapshot_id?: {
                 [key: string]: string;
             };
+            /** Config Fingerprint */
+            config_fingerprint?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -356,6 +358,8 @@ export interface components {
             metrics?: {
                 [key: string]: number;
             };
+            /** Model */
+            model?: string | null;
             /** N Passed */
             n_passed: number;
             /** N Questions */
@@ -430,6 +434,8 @@ export interface components {
             chunker_snapshot_id?: {
                 [key: string]: string;
             };
+            /** Config Fingerprint */
+            config_fingerprint?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -443,6 +449,8 @@ export interface components {
             metrics?: {
                 [key: string]: number;
             };
+            /** Model */
+            model?: string | null;
             /** N Passed */
             n_passed: number;
             /** N Questions */
@@ -674,6 +682,15 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     post_chat_stream_api_chat_stream_post: {
@@ -705,6 +722,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
                 };
             };
         };

@@ -17,29 +17,50 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-14.*
+*Updated 2026-08-15.*
 
-- **Phase:** **0 is complete, both halves**, and **Phase 1a's groundwork is in but the agent is
-  not.** Phase 0 delivered five bulk sources, the `make scan` guardrail, 35 gold questions, 6,722
-  chunks, the frozen contract, a FastAPI app serving canned answers over JSON and SSE, an eval
-  runner with HTTP-triggered runs, and a React UI rendering all of it. Since then: `pydantic-ai`
-  and `pydantic-settings` are installed, configuration is split into `settings.py` (secrets, from
-  `.env`) and `config.py` (everything else, from a committed `config.yaml`), and `ChunkParams` has
-  been consolidated into the latter. **No code in this repo calls an LLM yet.**
-- **Next up:** **the Phase 1a agent itself** —
-  [plan.md](plan.md#phase-1-a--full-text-tools-no-database). The seams are cut
-  and the config is now there to hang it on: replace `api/stub.py`'s `stub_answer()` with a
-  PydanticAI agent over `data/processed/*/chunks.jsonl`, carrying a **small full-text toolset**
-  (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`) rather than a single
-  `retrieve` — **stdlib BM25, no database of any kind** (settled 2026-08-14; see the log) — pass the
-  real answerer to `evals/runner.py` instead of `stub_answer_fn`, and set `stub=False` in
-  `create_app()` so the UI's stub banner and the runs' `runner: "stub"` label both go away on their
-  own. The chat UI, the streaming plumbing, the eval dashboard, and the contract should not need to
-  change — if they do, that is a signal worth stopping on. Two things to carry in:
-  **`Agent("openai:...")` will not see `Secrets`** (pass `OpenAIProvider(api_key=...)` explicitly —
-  see the log), and the eval run record should start carrying `Config.fingerprint()` and the
-  resolved model, since the default model is a floating alias.
+- **Phase:** **1a is complete and shippable.** One PydanticAI agent answers coverage questions from
+  the reference corpus with a four-tool full-text toolset over stdlib BM25 — no database of any
+  kind — abstains when the question is out of corpus, and streams its answer and its tool trace to
+  the browser. The Phase 0 stub is still reachable behind `create_app(stub=True)` as a baseline.
+  Measured on the 35-question gold set, and **read it as a distribution, not a number**: seven agent
+  runs put recall@5 between 0.600 and 0.867, with a mean of exactly 0.700 over the four runs at the
+  current config; MRR tracks it. Groundedness and citation resolution are 1.000 in every run, by
+  construction. Abstention accuracy is 1.000 in every run that finished without errored questions.
+  Answer correctness has two samples, 0.739 and 0.770, both from the *previous* judge model.
+  Retrieval alone is a flat, deterministic 0.567/0.416, so the ~0.13 gap to the agent's mean is what
+  query reformulation buys. Design: [agent.md](agent.md).
+- **Next up:** **Phase 1b — `vector_search` alongside the 1a tools** —
+  [plan.md](plan.md#phase-1-b--add-vector-search-alongside-the-full-text-tools) and
+  [lancedb.md](lancedb.md). Register the tool on the **same** agent rather than replacing anything;
+  the comparison is three-way (lexical-only / vector-only / both) with toolset composition as an
+  eval axis, so it should be one runner with a flag, not three code paths. `make eval-retrieval`
+  already gives the lexical baseline to beat, and the frontend slice is a run-comparison view — the
+  chat UI is untouched by design. **Decide the measurement protocol before writing the tool:** the
+  spread at fixed config is 0.200 wide, so a single before/after pair cannot resolve anything
+  smaller than a large effect. Either run each toolset configuration three times and compare means,
+  or say up front that only a large effect is readable. The `bm25` runner is the one number
+  comparable run-to-run, because no model touches it.
 - **Open questions:**
+  - **A single eval run is not evidence, and the repo still quotes single runs.** Seven agent runs
+    at effectively one config span recall@5 0.600–0.867. The README's table and this block name a
+    mean and a range now, but nothing enforces that — the next person to quote "0.700" from one run
+    will be overstating it. Either the runner grows a repeat-and-aggregate mode or the docs keep
+    saying "one sample" by hand.
+  - **`request_retries: 5` reduced the TPM 429s; it did not end them.** Two of the four runs at the
+    current config still lost questions (2 and 4) to `Rate limit reached ... tokens per min`. The
+    ~210k-token gold set against a 200k/minute allowance means the set genuinely cannot complete
+    inside a minute — the retry budget buys headroom, not immunity. Lowering `--concurrency` below
+    3, or pacing between questions, is the untried lever.
+  - **The judge model changed after the only two answer-correctness numbers were measured.**
+    `evals.judge_model` is now `openai:gpt-5.6-terra`; 0.739 and 0.770 were both graded by
+    `gpt-5.6-sol`. Neither is reproducible from the repo as it stands. A `make eval-judge` run on
+    the current config would settle it and costs 70 calls.
+  - **`new_run_id()` collides when two runs start the same day concurrently.** It counts existing
+    files at call time, so two runs launched together both claim `run_YYYY-MM-DD_1` and the second
+    overwrites the first. A monotonic suffix or a lock would fix it. Related and separate: the date
+    in the id is **UTC**, so an evening run is filed under tomorrow — `run_2026-08-15_1` was written
+    at 22:08 local on the 14th. Harmless until someone reads a run id as a local date.
   - **`make chunk`'s `--max-chars` / `--overlap-chars` flags override `config.yaml` and are recorded
     nowhere.** The same invisible-override hole the config split just closed, on a smaller scale.
     Either drop the flags or have the manifest record that an override was used.
@@ -87,9 +108,278 @@ Beyond the F0 list, because implementation made them the cheaper order:
 - [x] `evals/runner.py` with a pluggable answerer — the Phase 1a swap point
 - [x] `GET /api/corpus/{doc_id}` citation drill-down against the real corpus
 
+### Phase 1a checklist
+
+Backend (plan.md, Phase 1a):
+
+- [x] PydanticAI `Agent` — model from `config.yaml`, typed deps, structured output, grounding prompt
+- [x] Full-text toolset over `data/processed` — `search_corpus` / `grep_corpus` / `get_chunk` /
+  `list_documents`, **no database at all**
+- [x] BM25 inverted index built in-process at startup from `chunks.jsonl` (~200 ms, 6,722 chunks)
+- [x] Structured output populating the frozen contract (answer + citations + claims + `abstained`)
+- [x] Chunk → source provenance; citations rebuilt from the real `Chunk`, never from the model
+- [x] Grounding guardrail — an output validator, not a prompt instruction
+- [x] Step / usage limits from day one (`request_limit`, `tool_calls_limit`, `retries`)
+- [x] Tool-call trace captured and surfaced through `trace`, with real arguments and durations
+- [x] Eval extended to answer correctness (LLM judge) and groundedness (deterministic)
+- [x] Stub endpoint replaced by the real agent; streaming wired through to the UI
+- [x] Eval dashboard over real runs
+
+Frontend (frontend_plan.md, Phase F1):
+
+- [x] Stub swapped for the agent — the banner removes itself, driven by `health.stub`
+- [x] Abstention wired to the real guardrail
+- [x] Trace panel shows the agent's real tool sequence
+- [x] Eval dashboard against real runs, with `model` and `config_fingerprint`
+
+Beyond the F1 list, because the real agent made them necessary:
+
+- [x] A working state while the agent searches — several seconds pass before the first token
+- [x] Abstentions render through `AnswerBody`, since the agent can abstain *and* cite
+- [x] Citation DOM ids scoped by message id — `c1` is unique per answer, not per conversation
+
 ---
 
 ## Log
+
+### 2026-08-15 — a bug the gold set could never catch, and six runs that make 0.700 look like luck
+
+**Did:** fixed the citation-anchor collision in the chat UI and pinned it with the frontend's second
+vitest suite, moved the LLM judge to a different model, reordered `_resolve_model`'s comments to
+match what the function actually does, and added a fourth skill (`walkthrough`). Separately, six
+more agent eval runs accumulated — nobody set out to measure variance, but the run directory now
+does, and it revises the previous entry.
+
+**Decided: the citation DOM id is a function, not a template literal written in two places.**
+`Citation.id` is unique *within one answer* — every assistant turn numbers its sources from `c1` —
+so a four-answer conversation put four elements carrying `id="cite-c1"` in the document. That is
+invalid HTML, and `getElementById` resolves it to the first match in document order, so clicking
+`[c1]` in the newest answer reliably scrolled to the *oldest* answer's first source. `citationDomId(messageId, citationId)`
+in `frontend/src/lib/utils.ts` is now the single place that shape is written, called by both the
+card that renders the anchor and the click handler that looks it up — the point being that the two
+cannot drift apart, which two matching template literals in two components eventually would.
+
+**Worth naming as a class of bug:** this is invisible to everything the repo measures. The gold set
+asks one question per run, so a single-answer conversation is the only shape the eval harness ever
+produces, and `groundedness` and `citation_resolution` both read 1.000 while the link went to the
+wrong place. It was found by using the app. The Phase 1a entry below records the abstention-panel
+bug the same way — **two of the phase's real UI defects were found in a browser and zero by tests**,
+which is worth remembering before trusting a green suite as evidence the UI works.
+
+**Also decided:** no jsdom. `utils.test.ts` asserts the invariant as a property of the *string* —
+distinct across messages, distinct within a message, deterministic, unique across a whole
+conversation — and stays in vitest's node environment. A component-testing stack and a DOM
+implementation to cover one pure function is a large dependency for a small property.
+
+**Measured, and it corrects the previous entry: `request_retries: 5` did not deliver "zero
+errors".** Four agent runs at the current config: two completed clean, two lost 2 and 4 questions
+to `Rate limit reached ... on tokens per min`. The previous entry recorded "defaulting to 3 (~90 s,
+zero errors)" off a single run, which was luck rather than a property. The underlying arithmetic in
+that entry is unchanged and still the reason — ~210k tokens against a 200k/minute allowance — so
+the honest statement is that the retry budget buys headroom, not immunity.
+
+**Measured: recall@5 at fixed config spans 0.600–0.867.** Seven agent runs now exist. The four on
+the current config scored 0.733 / 0.667 / 0.800 / 0.600 — mean exactly 0.700, which is the number
+the README quotes, arrived at from a single run on the older config. So the headline is not wrong,
+but it was never one measurement's to make. **A 0.100 difference between two single runs means
+nothing here**, which matters most for the very next thing this repo does: Phase 1b exists to show
+whether vector search beats lexical, and the effect it is looking for is the size of the noise.
+
+**Measured: abstention accuracy is an error detector, not a judgment metric.** There are five
+abstention questions, so each is worth 0.200 and nothing lands between the fifths. Every run that
+finished clean scored 1.000; the two runs that scored 0.400 and 0.200 were the two that lost the
+most questions to errors. A dip there should be read as "the run broke", not "the guardrail
+weakened" — and since a broken run also drags recall, an ERR-heavy run looks like a quality
+regression in every column at once.
+
+**Dead end, unexplained: a run that lost 17 of 35 questions to `UnexpectedModelBehavior: Exceeded
+maximum output retries (2)`.** That is `agent.retries` — the *grounding validator's* budget,
+exhausted when the model could not produce a citation that passed validation — and it is a
+different failure from the TPM 429s despite occupying the same ERR column in the run record. It has
+not recurred in the four runs since, and there is no record of what was being tried at the time, so
+it is written down as a shape to recognise rather than a diagnosis. If it returns, the validator's
+`ModelRetry` messages are where to look.
+
+**Decided: the judge moves to `gpt-5.6-terra`.** It must be a different model from the one it
+grades — a judge marking its own homework agrees with itself most confidently where both are wrong
+— and `luna` is still the agent, so that constraint holds. The consequence is recorded as an open
+question rather than papered over: both existing answer-correctness numbers (0.739, 0.770) were
+graded by `sol`, so neither is reproducible from the repo as it now stands.
+
+**Also:** `_resolve_model`'s comment block was reordered so the `AsyncOpenAI(max_retries=...)`
+rationale sits with the client construction and the `OpenAIResponsesModel`-vs-`OpenAIChatModel`
+warning sits with the return — the code was right, the explanation was interleaved. And a fourth
+skill, `walkthrough`, which hands a change set over one step at a time and pauses; it exists
+because reading an agent's output as a diff and understanding it are different activities, and the
+default reporting shape serves neither.
+
+**Stopped at:** clean, and not verified beyond that. 202 pytest + 15 vitest collect and pass. The
+citation fix was confirmed in a browser across a multi-answer conversation, which is the only place
+it could be. No eval run has been made since the judge change.
+
+**Commits:** `5b52d95`, `1e1d83e`, `c6c81d6`, `63a5070`, `bc5747d`, `5e48069`
+
+### 2026-08-14 — Phase 1a: the agent, and the first real eval numbers
+
+**Did:** built the Phase 1a agent — `agent/` (stdlib BM25, `CorpusIndex`, the four tools, the
+prompt, the grounding validator, the streaming runtime), swapped it in behind `/api/chat`, and
+extended the eval slice with three answerers and three graders. Reference doc:
+[agent.md](agent.md). **The repo now calls an LLM.**
+
+The numbers, all on the same gold set and the same chunk snapshots:
+
+| runner | recall@5 | MRR | abstention acc. | groundedness | answer correctness |
+|---|---|---|---|---|---|
+| `stub` (Phase 0) | 0.033 | 0.033 | 0.400 | — | — |
+| `bm25` (retrieval only) | 0.567 | 0.416 | — | 1.000 | — |
+| `agent` | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
+
+**Decided: the eval answerer/grader seam is `async`, and the runner is one semaphore.** The seam was
+synchronous from Phase 0, when the only answerer was a canned function. That forced the concurrency
+above to be a `ThreadPoolExecutor` with index slots, and it capped the graders: `judge_grader` used
+`asyncio.run`, which **raises inside a running loop**, so an async runner would have broken the judge
+at runtime rather than at typecheck — on a paid `make eval-judge`, the worst place to find it.
+`AnswerFn` and `Grader` are now awaitable, `run_gold_set` is a coroutine, and `_grade_all` is an
+`asyncio.Semaphore` plus one `gather`. The two free answerers are `async def` with nothing to await,
+which is the honest cost. Net effect beyond tidiness: the HTTP route dropped its `asyncio.to_thread`
+hop and the `loop.call_soon_threadsafe` dance around progress events, and the sequential/concurrent
+branch collapsed into one path — `max_concurrency=1` *is* sequential, because a one-slot semaphore is
+FIFO and `gather` submits in order. Both ordering properties now have tests, against an answerer that
+deliberately finishes backwards. `pytest-asyncio` in `auto` mode; only the evals suite is async.
+
+**Decided: `make eval` runs 3 questions at a time, and the number is a measurement.** The runner was
+silent and sequential — 284 s with no output, which is indistinguishable from a hang while spending
+money. It now prints a line per question (through the existing `on_progress` seam, so the dashboard
+is untouched) and takes `--concurrency`, threads rather than an event loop because `AnswerFn` is
+synchronous by design. Two invariants keep it safe rather than merely fast: results are assigned by
+index so a run record is identical at any concurrency, and `on_progress` is only ever called from
+the calling thread, so neither callback needs a lock.
+
+**Dead end: `--concurrency 5`.** It finished in 46 s and failed 16 of 35 questions on
+`Rate limit reached ... tokens per min`, dropping recall@5 from 0.867 to 0.433. The binding
+constraint is TPM, not connections: one run is ~6,000 tokens, so the full set is ~210k against a
+200k/minute allowance — **the gold set cannot honestly complete in under about a minute at any
+concurrency**, and asking for more only converts speed into 429s. Fixed by defaulting to 3 (~90 s,
+zero errors, recall@5 0.733) and raising the OpenAI client's `max_retries` to 5 via a new
+`agent.request_retries` in `config.yaml`, which is deliberately *not* the existing `agent.retries` —
+that one governs whether an answer is grounded, this one whether the request arrived.
+
+**Open: recall@5 varies more than the docs admit.** Three agent runs at identical config scored
+0.700, 0.867 and 0.733 — a five-question swing out of thirty, from model nondeterminism alone. The
+README and the table below quote 0.700 as *the* number; it is one sample. Either quote a mean with
+its spread or say plainly that a single run is noisy.
+
+**Decided: the live check is `make smoke`, not a pytest marker.** The suite is guaranteed never to
+reach a provider, and that guarantee is worth more than the convenience of `pytest -m live` — a
+marker plus a deselect in `addopts` replaces "certain" with "correct as long as two mechanisms stay
+in sync." So one live call lives in `scripts/smoke.py` behind its own Make target, alongside
+`scan_sensitive.py` — the same animal, and `tests/` is the one place it must not go, since that
+directory's stated invariant is that nothing in it reaches a provider. `scripts` joined pyright's
+`include` in the same change (it was already clean), so the five downloaders are now checked by
+decision rather than by accident. The reasoning that matters more than the mechanism: a failing test means this repo is
+wrong, a failing smoke check might mean the provider changed, and a single command meaning either
+teaches you to ignore red. It exists because `_partial_answer` parses output as a **real provider
+fragments it**, which `FunctionModel` can only approximate — if that breaks, every test stays green
+and streaming silently degrades to the final flush. First live run: 138 token events for a
+four-sentence answer, so the partial-JSON path is genuinely load-bearing rather than theoretical.
+`make types-check` folded into `ui-check` the same way, closing the open question above.
+
+**Decided: the grounding rule is enforced in code, not asked for in the prompt.** Every chunk a
+tool returns lands in `deps.seen_chunks`, and an output validator rejects a citation of anything
+else, a snippet that is not verbatim in its chunk, or a dangling `[cN]` — handing the model the
+reason via `ModelRetry`. The prompt was written *not* to duplicate any of it: whatever a guardrail
+can enforce, the guardrail enforces. `groundedness` and `citation_resolution` came back at 1.000,
+which is the only value they should ever have — a number below 1.0 is a bug in the validator, not a
+score to improve. They are measured anyway, because a guardrail nobody checks is one that has
+already stopped working.
+
+**Decided: citations are rebuilt from the corpus.** The model contributes `chunk_id` and `snippet`,
+both validated; title, url, `doc_id` and `source_type` are read off the real `Chunk`. There is no
+path by which an invented title reaches the browser. Same instinct made `claims` **derived** rather
+than requested — `AnswerClaim.text` must be a verbatim substring of the answer, and a model
+reproducing its own prose character-for-character is a coin flip that fails the contract validator
+when it loses.
+
+**Decided: `answer_question()` is `stream_answer()` drained.** Phase 0's
+`test_stream_done_payload_equals_the_non_streaming_response` compared two independent code paths
+for equality, which a nondeterministic model makes unassertable by re-running. Rather than delete
+the property, it moved into the code: one path, two shapes. The stub still has two paths, so that
+test survives for it.
+
+**Decided: three eval runners, one scorer.** `bm25` answers nothing — it retrieves and stops — but
+it goes through the same scorer, run file and dashboard, so its `recall@5` is directly comparable
+to the agent's. That comparison is the phase's most useful number: **0.567 → 0.700 is what the
+agent's query reformulation is worth**, and it separates "the retriever cannot find it" from "the
+agent did not look properly", which are different bugs. It costs nothing to run, which is what
+makes it the `bm25_b`/`k1` sweep loop.
+
+**Decided: the LLM judge is opt-in and unreachable over HTTP.** `make eval` stays free and
+reproducible from the repo; `make eval-judge` is an explicit act. A button that spends money on
+every click is the wrong affordance. The judge runs on a *different* model
+(`evals.judge_model`) from the one it grades — a judge marking its own homework agrees with itself
+most confidently exactly where both are wrong.
+
+**Measured, closing a question chunking.md opened:** [chunking.md](chunking.md) §5 handed forward
+the worry that BM25 length normalisation would over-favour the 505 NCD chunks under 200 chars.
+**It does not** — sweeping `b` from 0.0 to 1.0 moves recall@5 by at most one question at any `k1`.
+That question is closed. The sweep also confirmed §6's claim that the context header is real
+lexical signal: 0.567 with it, 0.500 without, and higher MRR at every cell. `bm25_k1` moved 1.2 →
+2.0, but read that as "no evidence 1.2 is better here" rather than a tuned optimum — the margin is
+two questions out of thirty, which a set this size cannot resolve, and `tests/test_corpus_index.py`
+asserts a floor of 0.40 rather than the measured value for exactly that reason.
+
+**Decided: a missing `chunks.jsonl` fails loudly.** The lane reports `configured: false` and
+`/api/chat` returns a 503 naming `make chunk`. Deliberately *not* a fallback to the stub: canned
+output must never be mistakable for a real answer, which is the whole reason `HealthResponse.stub`
+is a boolean. Booting still succeeds, because `make types` imports the app and the eval dashboard
+must work without a corpus.
+
+**Rejected:** a BM25 library, again and for the same reasons as before. Also rejected asking the
+model for `claims`, and asking it to only cite what it retrieved (that is `seen_chunks`'s job).
+
+**Dead end: `_resolve_model`'s first draft built the wrong model class by hand.** It needs to
+construct the model object explicitly regardless — see the `Secrets` dead end above — but the
+first draft picked `OpenAIChatModel` on an unchecked assumption. PydanticAI's own inference of a
+bare `openai:` string already resolves to `OpenAIResponsesModel` (`infer_model` maps the plain
+`openai` prefix to Responses; only `openai-chat:` gets Chat Completions), so this was a
+self-inflicted mismatch, not a framework default working against us. `gpt-5.6-luna` rejects tool
+calls on Chat Completions outright — *"Function tools with reasoning_effort are not supported ...
+in /v1/chat/completions. To use function tools, use /v1/responses"* — a hard 400 on the first tool
+call. Fixed by building `OpenAIResponsesModel` instead, which is what inference would have chosen
+anyway.
+
+**Dead end: `build_agent()` and `build_agent(None)` were different `lru_cache` keys**, so they
+returned two different `Agent` objects — and `agent.override(model=...)` in a test applied to only
+one, sending the run to the real provider. Caught only because `ALLOW_MODEL_REQUESTS = False`
+turned it into a loud failure instead of a bill. The default is now resolved *before* the cache
+lookup. Worth remembering: an `lru_cache` on a function with a default argument has two keys for
+the same call.
+
+**Dead end: `FunctionModel` asserts on a streamed request unless given a `stream_function`.** Since
+the runtime only ever streams, every scripted test model needs both halves. The streaming half
+emits arguments in 17-character JSON fragments deliberately aligned to nothing — that is what
+exercises the partial-JSON parsing behind token streaming, and a single-chunk script would have
+left the whole streaming path untested while appearing to pass.
+
+**Dead end (found in the browser, not by a test):** the agent can abstain **and** cite — declining
+to name a provider while pointing at HealthCare.gov on how to check a plan's directory is a better
+answer, not a contradiction. `AbstentionNotice` printed raw text, so a dead `[c1]` sat above a
+citation card it did not link to. frontend_plan §5.1's "no citation section" described the Phase 0
+stub, whose abstention cited nothing. The panel now renders through `AnswerBody`.
+
+**Also:** `tests/conftest.py` is the repo's first, and exists mainly to set
+`ALLOW_MODEL_REQUESTS = False` suite-wide — `make check-all` needs no API key and costs nothing.
+Two additive contract fields (`config_fingerprint`, `model` on `EvalRunSummary`) are the only
+contract change; the chat UI, the streaming plumbing and the eval dashboard needed nothing, which
+was the stated success criterion.
+
+**Stopped at:** clean and verified where it counts. `make check-all` (200 tests, pyright 0 errors),
+`make types-check`, `make chunk-check` and `make scan` all pass with every advisory count at
+baseline. Verified in a real browser against the live agent: the stub banner gone, a cited answer,
+an abstention, the trace showing real tool arguments and durations, citation drill-down, and all
+three runners side by side on the dashboard. Two things noticed and **not** fixed, both minor:
+`new_run_id()` collides when two runs start the same day concurrently (an agent run overwrote a
+`bm25` run mid-session), and `make types-check` is still outside `check-all`.
 
 ### 2026-08-14 — CLAUDE.md condensed to invariants; two reference docs split out
 

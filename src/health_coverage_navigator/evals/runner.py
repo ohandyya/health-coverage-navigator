@@ -1,15 +1,20 @@
 """Run the gold set against an answerer, score it, and persist the result.
 
-The answerer is a parameter, not a hardcoded import. That is the whole design: at Phase 0 it is
-`api/stub.py`, so a run measures canned answers and every run record says `runner="stub"` — the
+The answerer is a parameter, not a hardcoded import. That is the whole design: at Phase 0 it was
+`api/stub.py`, so a run measured canned answers and every run record said `runner="stub"` — the
 dashboard renders that as a badge, because a metric measured against a stub must never read as a
 real score. Phase 1a passes the PydanticAI agent instead and the same machinery, the same storage
-format, and the same UI start reporting real numbers. Nothing else changes.
+format, and the same UI report real numbers. Nothing else changed; the choices live in
+`evals/answerers.py`.
 
 The metrics themselves are **genuinely computed**, not faked. `recall@5` and `MRR` come from
 comparing the `doc_id`s a run actually cited against `expected_doc_ids`; `abstention_accuracy`
 compares the `abstained` boolean against `expected_abstain`. The stub simply scores badly on the
 first two and well on the third, which is the honest picture of what it is.
+
+Anything needing more than the gold labels — the corpus, or a model — is a **grader**, passed in
+from `evals/grading.py`. Keeping those out of this module is what lets the free ones run always and
+the paid one run only behind `--judge`.
 
 `expected_doc_ids` is **any-of**, matching how the gold set was authored (docs/progress.md,
 2026-08-03): the three corpora are genuinely redundant, so `recall@k` counts a hit if *any* listed
@@ -20,21 +25,24 @@ at a moment, not a source of truth.
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from health_coverage_navigator.api.models import (
-    ChatRequest,
     ChatResponse,
     EvalQuestionResult,
     EvalRun,
     EvalRunSummary,
 )
+from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import CORPUS_NAMES, chunks_meta_path
+from health_coverage_navigator.evals.answerers import AnswerFn
+from health_coverage_navigator.evals.grading import Grader
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
 from health_coverage_navigator.paths import EVAL_RUNS_DIR
@@ -43,15 +51,25 @@ from health_coverage_navigator.paths import EVAL_RUNS_DIR
 #: below that is not one a reader would find.
 RECALL_K = 5
 
-AnswerFn = Callable[[GoldQuestion], ChatResponse]
+#: Per-question metric keys `aggregate()` handles itself. Everything else a grader reports is
+#: averaged generically, which is what lets a new grader appear in the dashboard without touching
+#: this module, the API, or the storage format.
+_INTERNAL_METRICS = frozenset({"reciprocal_rank"})
+
 ProgressFn = Callable[[EvalQuestionResult], None]
 
-
-def stub_answer_fn(question: GoldQuestion) -> ChatResponse:
-    """The Phase 0 answerer: the same canned responses the chat endpoint serves."""
-    from health_coverage_navigator.api.stub import stub_answer
-
-    return stub_answer(ChatRequest(message=question.question, plan_year=question.plan_year))
+#: Default for `--concurrency`, and the number is a measurement rather than a guess.
+#:
+#: **The binding constraint is tokens per minute, not connections.** One agent run costs ~6,000
+#: tokens, so the 35-question gold set is ~210,000 — more than a 200k TPM allowance permits in a
+#: single minute at *any* concurrency. A run therefore cannot honestly finish faster than about a
+#: minute, and asking for more only converts speed into 429s.
+#:
+#: Measured: sequential is ~284 s and never trips the limit; `--concurrency 5` finished in 46 s and
+#: put 16 of 35 questions into an ERR row, dropping recall@5 from 0.867 to 0.433. Three lands near
+#: 135k tokens/minute with headroom, for roughly a 3x speedup. Raise it only alongside a real TPM
+#: allowance, and read the resulting run for errors before trusting its score.
+DEFAULT_CONCURRENCY = 3
 
 
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:
@@ -119,6 +137,20 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
         metrics["false_abstention_rate"] = sum(1 for r in in_corpus if r.abstained) / len(in_corpus)
     if abstentions:
         metrics["abstention_accuracy"] = sum(1 for r in abstentions if r.passed) / len(abstentions)
+
+    # Every other per-question metric key — whatever the graders reported — averaged over the
+    # questions that reported it. Averaging over *reporters* rather than over the whole set is the
+    # point: a grader returns `{}` for a question it does not apply to (groundedness of an
+    # abstention that cited nothing), and counting those as zero would report a number about
+    # nothing as if it were a failure.
+    reported: dict[str, list[float]] = {}
+    for result in results:
+        for name, value in result.metrics.items():
+            if name not in _INTERNAL_METRICS:
+                reported.setdefault(name, []).append(value)
+    for name, values in sorted(reported.items()):
+        metrics[name] = sum(values) / len(values)
+
     return metrics
 
 
@@ -158,43 +190,108 @@ def new_run_id(now: datetime | None = None, runs_dir: Path | None = None) -> str
     return f"{stem}_{existing + 1}"
 
 
-def run_gold_set(
+async def _grade_one(
+    question: GoldQuestion, answer_fn: AnswerFn, graders: Sequence[Grader]
+) -> EvalQuestionResult:
+    """Answer and score one question, turning any failure into a recorded result.
+
+    Never raises, so `gather` below needs no `return_exceptions` and no second layer of error
+    handling. Same rule the sequential version always had: a judge that times out on question 12
+    must not throw away the other 34 measurements.
+    """
+    try:
+        response = await answer_fn(question)
+        result = score_question(question, response)
+        for grader in graders:
+            result.metrics.update(await grader(question, response))
+    except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
+        result = EvalQuestionResult(
+            question_id=question.id,
+            passed=False,
+            expected_abstain=question.expected_abstain,
+            error=f"{type(exc).__name__}: {exc}",
+        )
+    return result
+
+
+async def _grade_all(
+    questions: Sequence[GoldQuestion],
+    answer_fn: AnswerFn,
+    graders: Sequence[Grader],
+    max_concurrency: int,
+    on_progress: ProgressFn | None,
+) -> list[EvalQuestionResult]:
+    """Every question, at most `max_concurrency` in flight.
+
+    A semaphore and one `gather`, with no branch for the sequential case — `max_concurrency=1`
+    genuinely *is* sequential here, because `asyncio.Semaphore` hands the slot to waiters in FIFO
+    order and `gather` schedules the tasks in gold-set order. That is why this is a single code
+    path rather than a fast one and a safe one that have to be kept agreeing.
+
+    Three properties hold at any concurrency:
+
+    **Results come back in gold-set order**, because that is what `gather` returns regardless of
+    completion order. The run record is identical at any setting, so two runs stay diffable.
+
+    **`on_progress` fires in completion order**, from inside the task. That reorders the *events*
+    at concurrency > 1 — the objection `evals/answerers.py` originally recorded — which is why the
+    default is 1 and the dashboard leaves it there.
+
+    **No callback needs a lock.** Everything runs on one event loop thread; a coroutine is only
+    interrupted where it awaits, and `on_progress` never does.
+    """
+    limit = asyncio.Semaphore(max_concurrency)
+
+    async def graded(question: GoldQuestion) -> EvalQuestionResult:
+        async with limit:
+            result = await _grade_one(question, answer_fn, graders)
+        if on_progress is not None:
+            on_progress(result)
+        return result
+
+    return list(await asyncio.gather(*(graded(question) for question in questions)))
+
+
+async def run_gold_set(
     answer_fn: AnswerFn,
     gold: GoldSet | None = None,
     *,
     runner: str,
     run_id: str | None = None,
     on_progress: ProgressFn | None = None,
+    graders: Sequence[Grader] = (),
+    model: str | None = None,
+    max_concurrency: int = 1,
 ) -> EvalRun:
     """Answer every gold question, score it, and return the run.
 
     `on_progress` is called after each question so a caller can stream progress. It is a plain
-    callback rather than a generator because the HTTP route needs to buffer events for replay,
-    and a callback lets the runner stay a synchronous function usable from a CLI.
+    callback rather than a generator because the HTTP route needs to buffer events for replay, and
+    because a callback stays callable from inside a task without the caller owning an async
+    iterator.
+
+    `max_concurrency` defaults to **1 — sequential, and progress events in gold-set order**. A run
+    is almost entirely spent waiting on a model, so raising it is close to a linear speedup until
+    the provider's tokens-per-minute limit binds, but it reorders progress events, and that is a
+    caller's decision rather than this function's: the CLI passes `--concurrency`, the dashboard
+    does not. Scores are unaffected either way.
     """
     gold = gold or load_gold_set()
     run_id = run_id or new_run_id()
     started = time.perf_counter()
 
-    results: list[EvalQuestionResult] = []
-    for question in gold.questions:
-        try:
-            result = score_question(question, answer_fn(question))
-        except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
-            result = EvalQuestionResult(
-                question_id=question.id,
-                passed=False,
-                expected_abstain=question.expected_abstain,
-                error=f"{type(exc).__name__}: {exc}",
-            )
-        results.append(result)
-        if on_progress is not None:
-            on_progress(result)
+    results = await _grade_all(gold.questions, answer_fn, graders, max_concurrency, on_progress)
 
     return EvalRun(
         id=run_id,
         created_at=datetime.now(UTC),
         runner=runner,
+        # Both pin the score to what produced it. docs/progress.md asks for these specifically
+        # because `config.yaml`'s model is a floating alias — OpenAI publishes no dated snapshot
+        # for that family — so a rerun can differ from its baseline with nothing in the repo to
+        # say why. `None` when no model was involved (a stub or retrieval-only run).
+        config_fingerprint=get_config().fingerprint(),
+        model=model,
         chunker_snapshot_id=chunker_snapshots(),
         n_questions=len(results),
         n_passed=sum(1 for r in results if r.passed),
@@ -254,30 +351,196 @@ def list_runs(runs_dir: Path | None = None) -> list[EvalRunSummary]:
 # ---- CLI ----
 
 
-def main() -> int:
+def _build(runner: str, judge: bool) -> tuple[AnswerFn, GoldSet, list[Grader], str | None]:
+    """Resolve `--runner` into an answerer, the questions to ask it, and how to grade it.
+
+    The gold *set* varies by runner, which is the non-obvious part. A retrieval-only run is asked
+    only the in-corpus questions: a bare retriever always returns its top k and can never abstain,
+    so scoring it on the five abstention questions would report a guaranteed zero as if it were a
+    finding.
+    """
+    from health_coverage_navigator.evals.answerers import (
+        agent_answerer,
+        bm25_answerer,
+        stub_answerer,
+    )
+    from health_coverage_navigator.evals.grading import (
+        groundedness_grader,
+        key_fact_coverage_grader,
+    )
+
+    gold = load_gold_set()
+    if runner == "stub":
+        if judge:
+            raise SystemExit("--judge on the stub runner would only measure canned text")
+        return stub_answerer(), gold, [key_fact_coverage_grader()], None
+
+    from health_coverage_navigator.agent.index import get_corpus_index
+
+    index = get_corpus_index()
+    graders: list[Grader] = [groundedness_grader(index), key_fact_coverage_grader()]
+
+    if runner == "bm25":
+        if judge:
+            raise SystemExit("--judge on the bm25 runner has no answer to judge")
+        return bm25_answerer(index), GoldSet(questions=gold.in_corpus()), graders, None
+
+    if judge:
+        from health_coverage_navigator.evals.judge import judge_grader
+
+        graders.append(judge_grader())
+    return agent_answerer(index), gold, graders, get_config().agent.model
+
+
+def _status(result: EvalQuestionResult) -> str:
+    if result.error:
+        return "ERR"
+    return "PASS" if result.passed else "FAIL"
+
+
+def _detail(result: EvalQuestionResult) -> str:
+    """Why this question scored the way it did, in one column.
+
+    The interesting part is *how* a question failed, which the pass/fail flag alone hides: a
+    question that retrieved nothing and a question that retrieved the right document then abstained
+    anyway are the same `FAIL` and completely different bugs.
+    """
+    if result.error:
+        # Truncated to keep the column aligned; the full message is reprinted after the run.
+        return (result.error[:49] + "…") if len(result.error) > 50 else result.error
+    if result.expected_abstain:
+        return "abstained" if result.abstained else "answered anyway"
+    if result.abstained:
+        return "false abstention"
+    if result.rank is not None:
+        return f"rank {result.rank}"
+    return "not retrieved"
+
+
+def _progress_printer(total: int) -> ProgressFn:
+    """One line per graded question, on stderr.
+
+    `run_gold_set` takes `on_progress` exactly so a caller can do this — the HTTP route already
+    uses it to stream to the dashboard. Without it the CLI is silent for the whole run, and
+    `make eval` is 35 model calls over several minutes: a command that prints nothing for that long
+    is indistinguishable from one that has hung, which is the wrong thing to make someone guess
+    about while they are spending money.
+
+    **stderr, and flushed.** `--no-write` prints the run JSON to stdout, so progress on stdout would
+    end up inside a piped payload. Flushing because stderr is block-buffered when it is not a tty,
+    which would hold every line until the run finished and defeat the point.
+
+    The clock is **elapsed since the run started**, not per question. Under `--concurrency` the gap
+    between two completions is not how long either took, and a column that silently means something
+    different depending on a flag is worse than one that means less. `_grade_all` guarantees this is
+    only ever called from one thread, so the counter needs no lock.
+    """
+    index = 0
+    started = time.perf_counter()
+
+    def report(result: EvalQuestionResult) -> None:
+        nonlocal index
+        index += 1
+
+        correctness = result.metrics.get("answer_correctness")
+        suffix = f"  correctness {correctness:.2f}" if correctness is not None else ""
+        print(
+            f"  {index:>3}/{total}  {_status(result):<4}  {result.question_id:<22} "
+            f"{_detail(result):<22} {time.perf_counter() - started:5.1f}s{suffix}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    return report
+
+
+async def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the gold eval set and write the result to data/eval_runs/."
     )
     parser.add_argument(
         "--runner",
-        default="stub",
-        help="label recorded on the run (default: stub, the Phase 0 canned answerer)",
+        default="agent",
+        choices=("agent", "bm25", "stub"),
+        help=(
+            "agent: the Phase 1a agent (costs a model call per question). "
+            "bm25: retrieval only, no model, no key, sub-second. "
+            "stub: the Phase 0 canned answerer, kept as the baseline. Default: agent."
+        ),
+    )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="grade answer correctness with an LLM judge (agent runner only; costs a second "
+        "model call per question)",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        metavar="N",
+        help=(
+            "how many questions to run at once. A run is almost all waiting on the model, so this "
+            "is close to a linear speedup until the provider's tokens-per-minute limit binds — "
+            "see the note in the source before raising it. 1 runs sequentially. Default: 3."
+        ),
     )
     parser.add_argument("--no-write", action="store_true", help="print the run instead of saving")
     args = parser.parse_args()
+    if args.concurrency < 1:
+        raise SystemExit("--concurrency must be at least 1")
 
-    run = run_gold_set(stub_answer_fn, runner=args.runner)
+    answer_fn, gold, graders, model = _build(args.runner, args.judge)
+
+    # Printed before the first call rather than after, so the cost is visible while there is still
+    # time to interrupt it.
+    total = len(gold.questions)
+    calls = 0 if model is None else total * (2 if args.judge else 1)
+    concurrency = args.concurrency if calls else 1  # threads buy nothing without network waits
+    print(
+        f"{args.runner} runner · {total} questions"
+        + (f" · ~{calls} model calls" if calls else " · no model calls")
+        + (f" · {concurrency} at a time" if concurrency > 1 else ""),
+        file=sys.stderr,
+    )
+    if model:
+        print(f"  model  {model}", file=sys.stderr)
+    if args.judge:
+        print(f"  judge  {get_config().evals.judge_model}", file=sys.stderr)
+
+    run = await run_gold_set(
+        answer_fn,
+        gold,
+        runner=args.runner,
+        graders=graders,
+        model=model,
+        on_progress=_progress_printer(total),
+        max_concurrency=concurrency,
+    )
+
     if args.no_write:
         print(run.model_dump_json(indent=2))
     else:
         path = write_run(run)
         print(f"Wrote {path}", file=sys.stderr)
 
-    print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed")
+    # Under `--no-write` stdout *is* the run, so the human summary has to move aside or it lands
+    # after the closing brace and `... | jq` fails on trailing data. Otherwise the summary is the
+    # command's real output and belongs on stdout.
+    out = sys.stderr if args.no_write else sys.stdout
+    print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed", file=out)
+    if run.model:
+        print(f"  model                    {run.model}", file=out)
     for name, value in sorted(run.metrics.items()):
-        print(f"  {name:<24} {value:.3f}")
+        print(f"  {name:<24} {value:.3f}", file=out)
+
+    errored = [r for r in run.results if r.error]
+    if errored:
+        print(f"\n{len(errored)} question(s) errored:", file=sys.stderr)
+        for result in errored[:5]:
+            print(f"  {result.question_id}: {result.error}", file=sys.stderr)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))

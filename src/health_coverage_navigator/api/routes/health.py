@@ -53,8 +53,16 @@ def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthRespon
     lanes = [
         LaneStatus(
             source_type="reference",
-            configured=bool(ctx.docs),
-            detail=f"{documents:,} documents, {chunks:,} chunks across {len(corpora)} corpora",
+            # The *index*, not the document count. Citation drill-down works off `ctx.docs`, but
+            # answering needs the chunks, and chunks.jsonl is git-ignored — so a fresh clone has
+            # documents and no lane. Reporting `configured` off `docs` would show a live lane on a
+            # server that can only 503.
+            configured=ctx.index is not None,
+            detail=(
+                f"{documents:,} documents, {chunks:,} chunks across {len(corpora)} corpora"
+                if ctx.index is not None
+                else "corpus not chunked on this machine — run `make chunk` and restart"
+            ),
         ),
         LaneStatus(
             source_type="structured_api",

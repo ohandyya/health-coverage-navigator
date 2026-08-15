@@ -44,6 +44,11 @@ const ALLOWED = [
 const MARKER = /\[(c\d+)\]/g
 
 export function AnswerBody({ answer, onCite }: { answer: string; onCite: (id: string) => void }) {
+  // `#cite-<id>` here is a **private sentinel, not a DOM anchor** — it exists only to survive the
+  // trip through the markdown parser so the `a` renderer below can recognise a citation marker and
+  // swap it for a button. It is never navigated to and never matches an element: the real card ids
+  // are `citationDomId(messageId, citationId)`, which carry the message id this component does not
+  // know. The bare `c1` is what reaches `onCite`, and the caller scopes it.
   const withLinks = answer.replace(MARKER, (_, id: string) => `[[${id}]](#cite-${id})`)
 
   return (

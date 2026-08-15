@@ -48,13 +48,37 @@ def _fingerprint(model: BaseModel) -> str:
 
 
 class AgentConfig(BaseModel):
-    """The answering agent."""
+    """The answering agent, and the ceilings on its loop."""
 
     model_config = _FROZEN
 
     #: PydanticAI model string, `provider:model`. See config.yaml for why this one is not pinned
     #: to a dated snapshot and what that costs.
     model: str = Field(min_length=1)
+
+    #: How many times a rejected answer may be re-attempted. This is the grounding guardrail's
+    #: budget: `runtime._validate_grounding` raises `ModelRetry` with what went wrong attached.
+    retries: int = Field(ge=0, le=5)
+
+    #: Ceiling on model requests in one run, and on tool calls across it. Loop safety goes in with
+    #: the agent rather than with Phase 4 (docs/plan.md): cheap now, painful to retrofit.
+    request_limit: int = Field(gt=0)
+    tool_calls_limit: int = Field(gt=0)
+
+    #: How many times the HTTP client retries a transport-level failure — a 429 or a 5xx. Nothing
+    #: to do with `retries` above, which is about the *content* of an answer. Lives in config
+    #: rather than in a flag because it decides whether a rate-limited question becomes a delayed
+    #: success or a recorded error, and that changes an eval score.
+    request_retries: int = Field(ge=0, le=10)
+
+
+class EvalsConfig(BaseModel):
+    """Grading. Separate from `agent:` because the judge must be swappable without touching what
+    is being judged — a judge sharing the model it grades would mark its own homework."""
+
+    model_config = _FROZEN
+
+    judge_model: str = Field(min_length=1)
 
 
 class RetrievalConfig(BaseModel):
@@ -106,6 +130,7 @@ class Config(BaseModel):
 
     agent: AgentConfig
     retrieval: RetrievalConfig
+    evals: EvalsConfig
     chunking: ChunkParams
 
     def fingerprint(self) -> str:

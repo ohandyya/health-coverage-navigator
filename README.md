@@ -35,46 +35,79 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 
 ---
 
-## Status — Phase 0 of 5 complete
+## Status — Phase 1a of 5 complete
 
-> **Where this actually is:** the *entire skeleton* is built and runs end to end — data pipeline,
-> eval harness, frozen API contract, FastAPI backend, React frontend — with a **stubbed answerer
-> in place of the agent**. Phase 1a swaps that stub for a real PydanticAI agent. No LLM call
-> happens anywhere in this repo yet, and nothing below overstates that.
+> **Where this actually is:** the agent is live on **one lane of three**. Ask a health-coverage
+> question in the browser and a PydanticAI agent searches the indexed reference corpus with a
+> four-tool full-text toolset, answers with citations back to specific chunks, and says *"not in my
+> reference material"* when the question falls outside it. There is no web search and there are no
+> live API tools yet — those are Phases 2 and 3, and the routing problem this project is about is
+> not solved until they land.
 
-This ordering is deliberate rather than incidental. The harness was built before the agent so the
-agent has something to be measured against on the day it arrives, and the API contract was frozen
-before there was anything real behind it so later phases add *values* to existing fields instead
-of reshaping the response.
+The build order is deliberate. The eval harness was built before the agent so the agent had
+something to be measured against on the day it arrived, and the API contract was frozen before
+there was anything real behind it so later phases add *values* to existing fields instead of
+reshaping the response. Phase 1a cost the contract two optional fields and the chat UI nothing.
 
 ### What works today
 
 | | |
 |---|---|
+| **The agent** | One PydanticAI agent, four tools it composes itself — `search_corpus` (BM25) / `grep_corpus` / `get_chunk` / `list_documents` — with **no database of any kind**: no vector store, no SQL, no embeddings. ~100 lines of standard-library BM25 over an in-memory inverted index |
+| **Grounding** | Enforced in code, not asked for in the prompt: a citation of a chunk no tool returned, or a quotation not verbatim in its chunk, is rejected and retried. Citations are rebuilt from the real chunk, so an invented title cannot reach the browser |
+| **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
+| **Streaming** | The answer streams token by token *and* the tool trace fills in live, over SSE |
 | **Ingestion** | 5 bulk sources fetched, normalized, and committed — idempotent and re-runnable |
 | **Corpus** | 2,056 documents across 3 text corpora → **6,722 chunks** with verified provenance |
 | **Structured mirrors** | Exchange PUFs (3 tables, PY2026) + Medicare Part D SPUF (7 files, 2026Q2) as lossless columnar mirrors — *deliberately not chunked* |
-| **Eval harness** | 35 gold questions (30 in-corpus + 5 abstention), recall@k / MRR / abstention accuracy, runs persisted as JSON, triggerable from the browser |
+| **Eval harness** | 35 gold questions (30 in-corpus + 5 abstention), three runners (`agent` / `bm25` / `stub`) through one scorer, retrieval + groundedness + answer-correctness metrics, runs persisted as JSON and triggerable from the browser |
 | **API** | FastAPI with a frozen contract: `POST /api/chat`, SSE streaming, eval endpoints, citation drill-down |
 | **Frontend** | React 19 + Vite 8 + TS + Tailwind 4 + shadcn — chat page with source badges, expandable citation cards, collapsible agent-trace panel, abstention state, and an eval dashboard |
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 84 Python tests + 11 Vitest, ruff, pyright, tsc, oxlint — all wired into one `make check-all` |
+| **Gates** | 202 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
+
+### Measured, not asserted
+
+All three on the same gold set and the same chunk snapshots. `bm25` retrieves and stops — no model
+in the loop — so the gap between it and `agent` is what the agent's query reformulation is worth.
+
+| runner | recall@5 | MRR | abstention acc. | groundedness | answer correctness |
+|---|---|---|---|---|---|
+| `stub` — canned answers (Phase 0 baseline) | 0.033 | 0.033 | 0.400 | — | — |
+| `bm25` — retrieval only, no model | 0.567 | 0.416 | — | 1.000 | — |
+| **`agent`** | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
+
+**The agent row is a mean, and the spread is wide.** Seven runs at effectively one configuration put
+recall@5 anywhere between **0.600 and 0.867** — model nondeterminism alone, on a 30-question
+in-corpus set where one question is worth 0.033. So treat any difference under about 0.100 as noise,
+including the ones this repo will report for Phase 1b. The `bm25` row has no such caveat: no model
+is in the loop, so it returns the same number every time. Abstention accuracy reads 1.000 in every
+run that completed without errored questions; the runs that dipped were runs that lost questions to
+provider rate limits, which is a broken run rather than a weaker guardrail.
+
+Groundedness and citation resolution are deterministic and should always read 1.000 — the output
+validator rejects anything else before an answer is built. They are measured anyway, because a
+guardrail nobody checks is one that has already stopped working. Answer correctness is an LLM judge
+scoring each answer against the gold set's key facts, run on a *different* model from the one it
+grades, behind an opt-in `make eval-judge`. The 0.739 above was graded by the judge model in use at
+the time; that setting has since changed, so the number is a historical sample, not a figure the
+current `config.yaml` reproduces.
 
 ### What does not work yet
 
-- **There is no agent.** `api/stub.py` returns canned responses. Phase 1a replaces it. `pydantic-ai`
-  is installed and an API key is read from `.env`, but **nothing in this repo calls an LLM** —
-  the dependency landing is not the capability landing.
-- **No retrieval.** No BM25, no embeddings, no vector store. Phase 1a gives the agent a lexical
-  toolset (list / grep / BM25 search / expand) with no database of any kind; 1b adds a LanceDB
-  vector tool beside it.
-- **No web search and no live API tools.** Phases 2 and 3.
-- **Eval metrics are honestly terrible**, because they grade the stub: recall@5 = `0.033`,
-  abstention accuracy = `0.40`. Every run record carries `runner: "stub"` and the dashboard
-  renders it as a badge. These numbers are *real measurements of a placeholder*, not fabrications
-  — which is exactly what makes them a usable baseline.
+- **Only one lane of three.** No web search (Phase 2) and no live API tools — Marketplace, openFDA,
+  NPPES (Phase 3). Ask about a specific plan, premium, provider or formulary and it will correctly
+  tell you it cannot answer. **The tri-modal routing this project is about is not built yet.**
+- **Lexical retrieval only.** No embeddings and no vector store; Phase 1b adds a LanceDB
+  `vector_search` tool *beside* the existing ones and measures lexical vs. vector vs. both.
+- **Retrieval is the bottleneck, and the numbers say so.** A mean recall@5 of 0.700 means the agent
+  never saw the right document for about 3 of 10 in-corpus questions. That is the gap Phase 1b
+  exists to close.
+- **No planning or decomposition.** The agent calls tools in a loop but does not break a compound
+  question into sub-questions and route each one — that is Phase 4, along with per-claim provenance.
+- **Single-turn only.** `conversation_id` is carried in the contract but nothing uses it yet.
 
 ---
 
@@ -86,12 +119,12 @@ of reshaping the response.
 flowchart TD
     Q["User question"] --> AG["Agent<br/>(decompose + route)"]
 
-    AG -.->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
+    AG -->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
     AG -.->|Phase 1b| V["vector_search()<br/>reference lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
     AG -.->|Phase 3| S["typed API tools<br/>structured_api lane"]
 
-    R -.-> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
+    R --> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
     V -.-> C1
     W -.-> C2["Live web"]
     S -.-> C3["Marketplace API · openFDA · NPPES"]
@@ -102,18 +135,19 @@ flowchart TD
     S --> SY
     SY --> RESP["ChatResponse<br/>answer · citations · claims · trace · abstained"]
 
-    style AG stroke-dasharray: 5 5
-    style R stroke-dasharray: 5 5
     style V stroke-dasharray: 5 5
     style W stroke-dasharray: 5 5
     style S stroke-dasharray: 5 5
+    style C2 stroke-dasharray: 5 5
+    style C3 stroke-dasharray: 5 5
 ```
 
-*Dashed = not built yet. Today a stub sits where the agent will go, and `ChatResponse` — the solid
-box — is already frozen and fully rendered by the UI. Each phase label is a set of tools added to
-the same agent; the box marked `Agent` is never rebuilt after Phase 1a. Note that 1a and 1b both
-point at the reference lane — they are two ways of searching one corpus, and 1b's vector tool
-joins the lexical ones rather than replacing them.*
+*Dashed = not built yet. The agent and its reference lane are live; the other three tool sets are
+not, so **routing between lanes — the problem this project is about — has nothing to route between
+yet.** Each phase label is a set of tools added to the same agent; the box marked `Agent` is never
+rebuilt after Phase 1a. Note that 1a and 1b both point at the reference lane — they are two ways of
+searching one corpus, and 1b's vector tool joins the lexical ones rather than replacing them.
+"Decompose" is Phase 4; today the agent routes and loops but does not split a question up.*
 
 ### What runs today
 
@@ -124,7 +158,7 @@ flowchart LR
     end
     subgraph api["uvicorn :8000 (127.0.0.1)"]
         FA["FastAPI"]
-        STUB["stub.py<br/>← Phase 1a swaps this"]
+        AGT["agent/<br/>4 tools · BM25 · grounding validator"]
         EV["evals/runner.py<br/>pluggable answerer"]
     end
     subgraph disk["data/"]
@@ -135,7 +169,7 @@ flowchart LR
     end
 
     UI -->|"POST /api/chat · SSE"| FA
-    FA --> STUB
+    FA --> AGT
     FA --> EV
     EV --> GOLD
     EV --> RUNS
@@ -169,35 +203,43 @@ structured source is **never** chunked or embedded. See [data/README.md](data/RE
 
 ## Screenshots
 
-Both pages are live today. The amber banner across the top of each is the app declining to
-overstate itself — *"Stub mode. Every answer is canned — no agent and no retrieval exist yet.
-Eval runs are labelled `stub` for the same reason."* It disappears on its own at Phase 1a,
-because it is driven by the same `stub` flag that labels the eval runs.
+All real output from the live agent — no fixtures, no mock-ups.
 
-### Chat — the full provenance surface, rendering a canned answer
+### Chat — a real answer, and everything behind it
 
-![The chat page: a stubbed answer to "what is a deductible?" with a reference source badge, inline citation markers, two expandable citation cards, and the agent trace panel open on the right](docs/img/chat-page.png)
+![The chat page: the agent's answer to "what exactly is a deductible?" with a reference source badge, inline [c1] markers, an expanded citation card showing the retrieved chunk, and the agent trace panel open on the right showing plan, search_corpus call, search_corpus result and synthesis](docs/img/chat-page.png)
 
-Everything the contract carries is already rendered: the **source badge** (`reference` — blue;
-green and amber arrive with Phases 2 and 3), inline `[c1]`/`[c2]` markers that link to their
-cards, **expandable citation cards** showing the retrieved snippet with a drill-down into the
-real corpus document, and the **agent trace** with per-step timings and token counts. The two
-citations have deliberately different shapes — one carries an external link and a retrieval
-score, the other neither — so the components are proven against both branches rather than
-against a convenient fixture. The plan-year selector sits beside the input and is sent on every
-request, per the domain's most common correctness bug.
+The **agent trace** on the right is a user-facing feature from the first agent phase, not a debug
+view: it shows the tool the agent chose, the query it wrote — note that it reformulated *"what
+exactly is a deductible?"* into search terms rather than pasting the question — and how long each
+step took. That legibility is the reason the agent gets four narrow tools instead of one
+`retrieve()` call.
 
-### Evals — genuine metrics, honestly labelled
+Everything else the contract carries is rendered too: the **source badge** (`reference` — blue;
+green and amber arrive with Phases 2 and 3), inline `[c1]` markers that scroll to their card, and
+an **expandable citation card** with the retrieved chunk verbatim, a link to the source, and a
+drill-down into the full corpus document. The plan-year selector sits beside the input and is sent
+on every request, per the domain's most common correctness bug.
 
-![The eval dashboard: five runs each tagged "stub", showing abstention accuracy 0.400, MRR 0.033 and recall@5 0.033 at 3/35 passed, above the 35-question gold set with corpus, difficulty and expected-lane columns](docs/img/eval-dashboard.png)
+### Abstention — the answer that is worth the most
 
-`recall@5` of `0.033` and `3/35` passed is what grading a canned answerer *should* look like.
-The numbers are really computed — the runner scores the stub's output against the gold set the
-same way it will score the agent — and every run wears a `stub` badge so no future reader
-mistakes the baseline for a result. Phase 1a swaps one function and these columns start meaning
-something; the table, the storage format, and this page do not change. Below the runs sits the
-gold set itself, with the `expected lane` column that Phase 2's routing-correctness metric will
-be scored against.
+![The chat page showing an abstention: a distinct dashed panel headed "NOT IN MY REFERENCE MATERIAL" explaining that live provider directories are not available, citing HealthCare.gov on how to check a plan's directory](docs/img/abstention.png)
+
+Asked which dermatologists near a ZIP code take a given insurer, it declines — and says why, and
+points at what would know. `abstained` is a first-class boolean in the API, never pattern-matched
+out of the prose, so this panel cannot be one prompt tweak away from silently disappearing.
+
+### Evals — three runners, one scorer, honestly labelled
+
+![The eval dashboard: an agent run showing abstention accuracy 1.000, answer correctness 0.739, citation resolution 1.000, groundedness 1.000 and recall@5 0.700, above a bm25 run and five stub runs, with per-question pass/fail rows below](docs/img/eval-dashboard.png)
+
+The `agent`, `bm25` and `stub` runs sit in one table because they go through one scorer, so their
+numbers are directly comparable — that is what makes "the agent beats raw retrieval 0.700 to 0.567"
+a measurement rather than a claim. Only `agent` gets the green badge; the other two are amber,
+because neither is a real answer. The metric columns are derived from the data rather than
+hardcoded, so groundedness and answer correctness appeared this phase without the table changing,
+and `—` marks a metric a run does not report. Below sits the per-question breakdown, and below that
+the gold set with the `expected lane` column Phase 2's routing metric will be scored against.
 
 ---
 
@@ -209,22 +251,26 @@ targets load nvm automatically if it is installed).
 ```bash
 uv sync                 # Python deps into .venv
 make ui-install         # frontend deps (needs node >= 22.12)
+make chunk              # build chunks.jsonl — git-ignored, ~1s, required by the agent
+cp .env.example .env    # then add your OPENAI_API_KEY
 make dev                # both servers → open http://127.0.0.1:5173
 ```
 
-The corpus is committed, so there is nothing to download. Ask anything — you'll get the stubbed
-answer with two citations of deliberately different shapes and a four-step trace. Two trigger
-words select the other canned variants:
+The corpus is committed, so there is nothing to download — but `chunks.jsonl` is not, so
+`make chunk` is required. Skip it and the app boots, reports the reference lane unconfigured, and
+returns a 503 naming the fix rather than quietly answering worse.
 
-- type **`abstain`** → the abstention state (a visually distinct panel, no citations)
-- type **`lanes`** → a response exercising all three source badges at once
+Try *"what exactly is a deductible?"*, *"does Medicare cover acupuncture for chronic low back
+pain?"*, and something out of corpus like *"which dermatologists near 30076 take Aetna?"* to see it
+abstain.
 
 Everything else:
 
 ```bash
-make chunk              # rebuild chunks.jsonl (git-ignored, ~1s)
-make eval               # run the gold set → data/eval_runs/
-make check-all          # ruff · pyright · pytest · tsc · oxlint · vitest
+make eval-retrieval     # score BM25 retrieval alone — free, instant, no API key
+make eval               # run the gold set through the agent (35 model calls)
+make eval-judge         # + grade answer correctness with an LLM judge (70 model calls)
+make check-all          # ruff · pyright · pytest · tsc · oxlint · vitest — never calls a model
 make types              # regenerate frontend/src/api/schema.d.ts from OpenAPI
 make scan               # secrets / PII / licensing scan — run before publishing
 make help               # everything
@@ -239,11 +285,20 @@ make help               # everything
 
 Each of these is written up in full in `docs/`, including the alternatives that were rejected.
 
-**1. The eval harness was built before the agent — and it grades the stub.**
-`evals/runner.py` takes the answerer as a parameter. At Phase 0 that parameter is the chat stub,
-so metrics are *genuinely computed against canned answers* rather than faked. Phase 1a swaps one
-function; the API, the storage format, and the dashboard are untouched. A harness written after
-the agent tends to be written to make the agent look good.
+**1. The eval harness was built before the agent, and the answerer is a parameter.**
+At Phase 0 that parameter was the chat stub, so metrics were *genuinely computed against canned
+answers* rather than faked. Phase 1a swapped in the agent and the API, the storage format and the
+dashboard were untouched — and it also added a third answerer that retrieves and stops, so
+"the agent is worth 0.567 → 0.700" is one scorer's output rather than two incomparable numbers.
+A harness written after the agent tends to be written to make the agent look good.
+
+**1b. The grounding guardrail is code, not a sentence in the prompt.**
+Every chunk a tool returns is recorded; an output validator rejects a citation of anything else, a
+quotation not verbatim in its chunk, or a marker pointing at nothing — and tells the model why so
+it can retry. Citations are then rebuilt from the real chunk, so the model contributes only *which*
+passage and *which words*, both checked. The prompt deliberately does not restate any of it:
+whatever a guardrail can enforce, the guardrail enforces. Measured groundedness is 1.000, which is
+the only value it should ever have.
 
 **2. `abstained` is a first-class boolean, not a phrase in the answer text.**
 The grounding guardrail requires the agent to say *"not in my reference material"* rather than
@@ -336,13 +391,14 @@ Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves
   self-reported an English URL. Deduping in the chunker would have silently stamped Spanish titles
   onto 21 English pages.
 
-**Three custom skills encode procedures that are easy to get wrong**, in
+**Four custom skills encode procedures that are easy to get wrong**, in
 [`.claude/skills/`](.claude/skills/):
 [`scan-sensitive`](.claude/skills/scan-sensitive/SKILL.md) (the pre-publish guardrail),
 [`sync-frontend`](.claude/skills/sync-frontend/SKILL.md) (propagate a contract change through
 codegen — deliberately *not* about `make types`, which is one line, but about the seams codegen
-cannot see), and [`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
-`progress.md`).
+cannot see), [`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
+`progress.md`), and [`walkthrough`](.claude/skills/walkthrough/SKILL.md) (hand a change set over one
+step at a time, pausing after each so the human reads the files rather than a summary of them).
 
 **A standing rule the assistant must obey: keep the glossary current.** Any change introducing a
 domain term adds its entry in the *same* change — and an entry must say what the term means *in
@@ -360,13 +416,14 @@ health_coverage_navigator/
 ├── config.yaml                   # ⭐ every non-secret tunable — committed, never env-overridable
 ├── .env.example                  # secrets template; the real .env is git-ignored
 ├── src/health_coverage_navigator/
+│   ├── agent/                    # ⭐ the agent: bm25 · index · tools · prompt · runtime
 │   ├── api/
 │   │   ├── models.py             # ⭐ the frozen HTTP contract
 │   │   ├── app.py                # app factory, static mount, SPA fallback
 │   │   ├── routes/               # health · chat · evals · corpus
-│   │   └── stub.py               # canned responses ← Phase 1a replaces this
+│   │   └── stub.py               # Phase 0 canned answers, kept as an eval baseline
 │   ├── chunking/                 # splitter · per-source strategies · pipeline
-│   ├── evals/                    # gold-set models, loader, runner
+│   ├── evals/                    # gold set · runner · answerers · graders · judge
 │   └── config.py, settings.py, corpus.py, paths.py
 ├── frontend/src/
 │   ├── api/{client,stream,schema.d.ts}   # schema.d.ts is GENERATED
@@ -377,7 +434,8 @@ health_coverage_navigator/
 ├── evals/gold/questions.yaml     # 35 hand-authored, corpus-verified questions
 ├── data/{raw,processed}/         # committed — see the licensing rules
 └── docs/                         # plan · frontend_plan · progress · glossary
-                                  #   + development · configuration + per-source guides
+                                  #   + agent · chunking · development · configuration
+                                  #   + per-source data guides
 ```
 
 ---
@@ -408,8 +466,8 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | Phase | Backend | Frontend | Status |
 |---|---|---|---|
 | **0** | Corpus + eval scaffold | Contract frozen, UI on a stub | ✅ **Complete** |
-| **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ⏭️ **Next** |
-| **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ⬜ |
+| **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ✅ **Complete** |
+| **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ⏭️ **Next** |
 | **2** | Web-search tool (Tavily / Exa) + routing eval | `web` badge, routing accuracy | ⬜ |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |

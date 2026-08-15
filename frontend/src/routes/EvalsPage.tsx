@@ -8,9 +8,11 @@
  * every phase: retrieval now, groundedness at Phase 1, routing accuracy at 2/3, citation accuracy
  * at 4. So the columns come from the union of the runs' `metrics` keys.
  *
- * **The runner label is prominent.** Every Phase 0 run is produced by the canned answerer and
- * carries `runner: "stub"`. A dashboard that showed `recall@5 0.03` without saying what produced
- * it would be actively misleading, which is the same argument that makes `abstained` a boolean.
+ * **The runner label is prominent.** A run is produced by the agent, by BM25 retrieval with no
+ * model behind it, or by the Phase 0 canned answerer — and the three sit in the same table. A
+ * dashboard that showed `recall@5 0.57` without saying which produced it would be actively
+ * misleading, the same argument that makes `abstained` a boolean. Only `agent` gets the green
+ * treatment; the other two are amber, because neither is a real answer.
  */
 import { CircleAlert, Play } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -63,9 +65,9 @@ function MetricTable({ runs, onPick }: { runs: EvalRunSummary[]; onPick: (id: st
                 <span
                   className={cn(
                     'rounded-full px-2 py-0.5 text-xs ring-1 ring-inset',
-                    run.runner === 'stub'
-                      ? 'bg-lane-web/10 text-lane-web ring-lane-web/30'
-                      : 'bg-lane-structured/10 text-lane-structured ring-lane-structured/30',
+                    run.runner === 'agent'
+                      ? 'bg-lane-structured/10 text-lane-structured ring-lane-structured/30'
+                      : 'bg-lane-web/10 text-lane-web ring-lane-web/30',
                   )}
                 >
                   {run.runner}
@@ -95,11 +97,17 @@ function RunDetail({ run, questions }: { run: EvalRun; questions: EvalQuestionsR
 
   return (
     <div className="space-y-2">
+      {/* Everything after the run id answers "what was this measured under". `model` and
+          `config_fingerprint` are here because the configured model is a floating alias, so the
+          fingerprint proves which alias was configured and `model` says what it resolved to; the
+          chunk snapshots pin the corpus. Together they are what makes two runs comparable. */}
       <h3 className="text-sm font-medium">
         {run.id}{' '}
         <span className="font-normal text-muted-foreground">
           · {run.duration_ms} ms · chunks{' '}
           {Object.values(run.chunker_snapshot_id ?? {}).join(', ') || 'unknown'}
+          {run.model && <> · {run.model}</>}
+          {run.config_fingerprint && <> · config {run.config_fingerprint.slice(0, 12)}</>}
         </span>
       </h3>
       <div className="max-h-96 overflow-y-auto rounded-lg border border-border">
@@ -186,11 +194,9 @@ export function EvalsPage() {
 
         {runs.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-            No runs yet. Press <strong>Run gold set</strong>, or run{' '}
-            <code className="font-mono text-xs">
-              uv run python -m health_coverage_navigator.evals.runner
-            </code>
-            .
+            No runs yet. Press <strong>Run gold set</strong> to run the agent over all 35
+            questions, or <code className="font-mono text-xs">make eval-retrieval</code> for a free,
+            instant run that scores retrieval alone.
           </p>
         ) : (
           <MetricTable

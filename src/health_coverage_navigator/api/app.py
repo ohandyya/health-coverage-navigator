@@ -11,7 +11,8 @@ network (§8); the Makefile targets pass the host explicitly and nothing here ev
 """
 
 import importlib.metadata
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from starlette.responses import PlainTextResponse, Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
+from health_coverage_navigator.agent.index import ChunksNotBuiltError, CorpusIndex, get_corpus_index
 from health_coverage_navigator.api.deps import AppContext
 from health_coverage_navigator.api.routes import chat, corpus, evals, health
 from health_coverage_navigator.corpus import load_doc_index
@@ -32,9 +34,13 @@ DESCRIPTION = """
 Answers U.S. health-coverage questions by routing each sub-question to the right source type:
 indexed reference material, a structured public API, or the open web.
 
-**Phase 0 — every answer on this server is canned.** `GET /api/health` reports `stub: true` while
-that is the case.
+**Phase 1a — one lane is live.** Answers come from a PydanticAI agent searching the indexed
+reference corpus with a full-text toolset, and it abstains rather than guess when the corpus does
+not cover the question. `GET /api/health` reports which lanes are configured, and `stub: true` on
+a server still serving canned answers.
 """
+
+logger = logging.getLogger(__name__)
 
 
 def _version() -> str:
@@ -93,16 +99,41 @@ def _mount_frontend(app: FastAPI, dist_dir: Path) -> None:
         )
 
 
-def create_app(*, dist_dir: Path | None = None, stub: bool = True) -> FastAPI:
+def _load_index() -> CorpusIndex | None:
+    """The agent's corpus index, or `None` with an explanation on the console.
+
+    Not fatal, deliberately. `chunks.jsonl` is git-ignored, so a fresh clone has none until
+    `make chunk` runs — and `make types` imports this app before anything has been built. A server
+    that refuses to boot would take `/api/health`, the eval dashboard, and the codegen down with
+    it. Refusing to *answer* is `routes/chat.py`'s job, where the message can name the fix.
+    """
+    try:
+        return get_corpus_index()
+    except ChunksNotBuiltError as exc:
+        logger.warning("reference lane unavailable: %s", exc)
+        return None
+
+
+def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """Build the application.
+
+    `stub` defaults to False from Phase 1a: the real agent answers, and `HealthResponse.stub` drops
+    to false, which is what removes the UI's banner. Passing `stub=True` still serves `api/stub.py`
+    — the Phase 0 canned answers, kept because they are what the contract tests assert against and
+    what an offline demo can run on.
 
     `dist_dir` is a parameter rather than a constant read because the SPA-fallback tests need to
     point it at a `tmp_path` — a real test requirement, not gratuitous injection.
     """
     dist_dir = FRONTEND_DIST if dist_dir is None else dist_dir
 
+    # `AsyncGenerator`, not `AsyncIterator`: `asynccontextmanager` drives the function with
+    # `asend()` and `athrow()`, which are generator methods — `AsyncIterator` only promises
+    # `__anext__`, so the old annotation was a quiet under-specification that typeshed now flags.
+    # Spelled with both parameters because this annotation is evaluated at import time and
+    # `requires-python` is `>=3.12`, where the single-argument form is not universally available.
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # The gold set is 35 questions and loads in milliseconds. Eager because a malformed
         # questions.yaml should fail `make api-dev` at boot rather than on the first page load.
         #
@@ -112,15 +143,21 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = True) -> FastAPI:
         # doc-id -> byte-offset sidecar, which saves the memory and costs a second file format,
         # a rebuild step, and a seek per request.
         #
-        # Chunks are deliberately NOT loaded: chunks.jsonl is git-ignored and may not exist on a
-        # fresh clone, so the API must boot without it. /api/health reads the committed
-        # chunks_meta.json instead.
+        # The chunk index is Phase 1a's addition and the expensive one: 6,722 chunks plus a BM25
+        # inverted index, ~200 ms and ~30 MB, measured. Eager for the same reason the others are —
+        # paying it on the first question would make the first question look slow for a reason
+        # that has nothing to do with the agent. It is the one entry allowed to be `None`, because
+        # chunks.jsonl is git-ignored and a fresh clone has none; see `_load_index`.
+        #
+        # /api/health still reads the committed chunks_meta.json for its counts rather than this
+        # index, so the numbers are answerable either way.
         app.state.ctx = AppContext(
             gold=load_gold_set(),
             docs=load_doc_index(),
             started_at=datetime.now(UTC),
             stub=stub,
             version=_version(),
+            index=None if stub else _load_index(),
         )
         yield
         app.state.ctx = None
