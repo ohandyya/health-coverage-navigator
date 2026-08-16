@@ -23,7 +23,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
 #### Logs
 
-1. Phase 1-c plan document
+1. Phase 1-b plan document
     - /Users/andytseng/.claude/plans/i-am-read-to-eager-wind.md
 
 ### Aug 14, 2026
