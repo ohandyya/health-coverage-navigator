@@ -18,6 +18,19 @@ DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 
+#: The LanceDB vector store (Phase 1b). Git-ignored — it is ~41 MB of float32 derived from the
+#: committed corpora plus a paid embedding call, and `make embed` rebuilds it. What *is* committed
+#: is the manifest below, which is what makes the ignored directory reproducible and what lets
+#: `VectorIndex.open` refuse a store built against different chunks. Note the path: an earlier
+#: draft of docs/lancedb.md used `data/lancedb` while .gitignore only carried `.lancedb/`, which
+#: matches neither — the two are kept in step here on purpose.
+VECTOR_STORE_DIR = DATA_DIR / "lancedb"
+
+#: The vector manifest (committed). Cross-corpus rather than per-source — one table spans all
+#: three text corpora so a single query ranks against one embedding space — which is why it sits
+#: beside the per-source directories rather than inside one.
+VECTOR_META_PATH = PROCESSED_DIR / "vectors_meta.json"
+
 EVALS_DIR = REPO_ROOT / "evals"
 GOLD_SET_PATH = EVALS_DIR / "gold" / "questions.yaml"
 

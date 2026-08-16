@@ -35,25 +35,26 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 
 ---
 
-## Status — Phase 1a of 5 complete
+## Status — Phase 1b of 5 complete
 
 > **Where this actually is:** the agent is live on **one lane of three**. Ask a health-coverage
-> question in the browser and a PydanticAI agent searches the indexed reference corpus with a
-> four-tool full-text toolset, answers with citations back to specific chunks, and says *"not in my
-> reference material"* when the question falls outside it. There is no web search and there are no
+> question in the browser and a PydanticAI agent searches the indexed reference corpus — by keyword
+> *and* by meaning, choosing between the two itself — answers with citations back to specific
+> chunks, and says *"not in my reference material"* when the question falls outside it. There is no web search and there are no
 > live API tools yet — those are Phases 2 and 3, and the routing problem this project is about is
 > not solved until they land.
 
 The build order is deliberate. The eval harness was built before the agent so the agent had
 something to be measured against on the day it arrived, and the API contract was frozen before
 there was anything real behind it so later phases add *values* to existing fields instead of
-reshaping the response. Phase 1a cost the contract two optional fields and the chat UI nothing.
+reshaping the response. Phase 1a cost the contract two optional fields and the chat UI nothing; Phase 1b cost it two
+more and the chat UI nothing again.
 
 ### What works today
 
 | | |
 |---|---|
-| **The agent** | One PydanticAI agent, four tools it composes itself — `search_corpus` (BM25) / `grep_corpus` / `get_chunk` / `list_documents` — with **no database of any kind**: no vector store, no SQL, no embeddings. ~100 lines of standard-library BM25 over an in-memory inverted index |
+| **The agent** | One PydanticAI agent, five tools it composes itself — `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Which retrieval tools it sees is a per-run flag, so lexical-only, vector-only and both are one code path measured three ways |
 | **Grounding** | Enforced in code, not asked for in the prompt: a citation of a chunk no tool returned, or a quotation not verbatim in its chunk, is rejected and retried. Citations are rebuilt from the real chunk, so an invented title cannot reach the browser |
 | **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
 | **Streaming** | The answer streams token by token *and* the tool trace fills in live, over SSE |
@@ -70,20 +71,35 @@ reshaping the response. Phase 1a cost the contract two optional fields and the c
 
 ### Measured, not asserted
 
-All three on the same gold set and the same chunk snapshots. `bm25` retrieves and stops — no model
-in the loop — so the gap between it and `agent` is what the agent's query reformulation is worth.
+All on the same gold set and the same chunk snapshots. The two retrieval-only runners retrieve and
+stop — no model in the loop — so the gap between them and the agent rows is what the agent's query
+reformulation is worth, and the gap between *them* is what the embeddings are worth.
 
 | runner | recall@5 | MRR | abstention acc. | groundedness | answer correctness |
 |---|---|---|---|---|---|
 | `stub` — canned answers (Phase 0 baseline) | 0.033 | 0.033 | 0.400 | — | — |
-| `bm25` — retrieval only, no model | 0.567 | 0.416 | — | 1.000 | — |
-| **`agent`** | **0.700** | **0.667** | **1.000** | **1.000** | **0.739** |
+| `bm25` — lexical retrieval only, no model | 0.567 | 0.416 | — | 1.000 | — |
+| `vector` — semantic retrieval only, no model | 0.733 | 0.561 | — | 1.000 | — |
+| `agent` — lexical tools only | 0.667 | 0.650 | 1.000 | 1.000 | — |
+| `agent` — vector tool only | 0.733 | 0.717 | 1.000 | 1.000 | — |
+| **`agent` — both (shipped)** | **0.800** | **0.733** | **1.000** | **1.000** | 0.739 † |
 
-**The agent row is a mean, and the spread is wide.** Seven runs at effectively one configuration put
+† Answer correctness was last measured under Phase 1a's judge model and is a historical sample.
+
+**Phase 1b's decision was taken on the two retrieval-only rows, not on the agent rows**, and that
+is the methodological point rather than a shortcut. Those two have no model in them, so they
+reproduce exactly — the `vector` row came back identical to three decimals across two runs — while
+the agent rows carry the spread described next. Vector beats lexical 0.733 to 0.567, and the two
+**fail differently**: vector fixes 7 questions and regresses 2, with four of the fixes landing at
+rank 1. That complementarity is why "both" ships, and it clears the bar the plan set — *"both has
+to earn its place: it only wins if it beats each alone."*
+
+**The agent rows are single runs, and the spread is wide.** Seven runs at effectively one configuration put
 recall@5 anywhere between **0.600 and 0.867** — model nondeterminism alone, on a 30-question
-in-corpus set where one question is worth 0.033. So treat any difference under about 0.100 as noise,
-including the ones this repo will report for Phase 1b. The `bm25` row has no such caveat: no model
-is in the loop, so it returns the same number every time. Abstention accuracy reads 1.000 in every
+in-corpus set where one question is worth 0.033. So treat any difference under about 0.100 as noise
+— **including 0.800 vs 0.733 above.** The two retrieval-only rows have no such caveat: no model is
+in the loop, so they return the same number every time, which is exactly why the lexical-vs-vector
+call was made there. Abstention accuracy reads 1.000 in every
 run that completed without errored questions; the runs that dipped were runs that lost questions to
 provider rate limits, which is a broken run rather than a weaker guardrail.
 
@@ -100,11 +116,12 @@ current `config.yaml` reproduces.
 - **Only one lane of three.** No web search (Phase 2) and no live API tools — Marketplace, openFDA,
   NPPES (Phase 3). Ask about a specific plan, premium, provider or formulary and it will correctly
   tell you it cannot answer. **The tri-modal routing this project is about is not built yet.**
-- **Lexical retrieval only.** No embeddings and no vector store; Phase 1b adds a LanceDB
-  `vector_search` tool *beside* the existing ones and measures lexical vs. vector vs. both.
-- **Retrieval is the bottleneck, and the numbers say so.** A mean recall@5 of 0.700 means the agent
-  never saw the right document for about 3 of 10 in-corpus questions. That is the gap Phase 1b
-  exists to close.
+- **Retrieval is still the bottleneck, though less of one.** recall@5 0.800 means the agent never
+  saw the right document for about 2 of 10 in-corpus questions. Six of the thirty defeat *both*
+  retrieval methods, so the remaining gap is not one more index — it is chunking, the gold set's
+  phrasing, or query reformulation.
+- **No hybrid ranking.** LanceDB carries BM25 in the same table and it is deliberately unused:
+  "both" means both *tools*, with the agent reconciling them, which is the thing being measured.
 - **No planning or decomposition.** The agent calls tools in a loop but does not break a compound
   question into sub-questions and route each one — that is Phase 4, along with per-claim provenance.
 - **Single-turn only.** `conversation_id` is carried in the contract but nothing uses it yet.
@@ -120,7 +137,7 @@ flowchart TD
     Q["User question"] --> AG["Agent<br/>(decompose + route)"]
 
     AG -->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
-    AG -.->|Phase 1b| V["vector_search()<br/>reference lane"]
+    AG -->|Phase 1b| V["vector_search()<br/>reference lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
     AG -.->|Phase 3| S["typed API tools<br/>structured_api lane"]
 
@@ -229,14 +246,18 @@ Asked which dermatologists near a ZIP code take a given insurer, it declines —
 points at what would know. `abstained` is a first-class boolean in the API, never pattern-matched
 out of the prose, so this panel cannot be one prompt tweak away from silently disappearing.
 
-### Evals — three runners, one scorer, honestly labelled
+### Evals — four runners, one scorer, honestly labelled
 
 ![The eval dashboard: an agent run showing abstention accuracy 1.000, answer correctness 0.739, citation resolution 1.000, groundedness 1.000 and recall@5 0.700, above a bm25 run and five stub runs, with per-question pass/fail rows below](docs/img/eval-dashboard.png)
 
-The `agent`, `bm25` and `stub` runs sit in one table because they go through one scorer, so their
-numbers are directly comparable — that is what makes "the agent beats raw retrieval 0.700 to 0.567"
-a measurement rather than a claim. Only `agent` gets the green badge; the other two are amber,
-because neither is a real answer. The metric columns are derived from the data rather than
+*Screenshot captured at Phase 1a — the numbers in it predate the vector runner and the toolset
+badge, and the table above this section is the current one.*
+
+The `agent`, `bm25`, `vector` and `stub` runs sit in one table because they go through one scorer,
+so their numbers are directly comparable — that is what makes "the agent beats raw retrieval 0.800
+to 0.567" a measurement rather than a claim. Only `agent` gets the green badge; the others are
+amber, because none of them is a real answer. Agent runs also carry a **toolset** badge, since
+Phase 1b's whole comparison is between runs that differ only in that. The metric columns are derived from the data rather than
 hardcoded, so groundedness and answer correctness appeared this phase without the table changing,
 and `—` marks a metric a run does not report. Below sits the per-question breakdown, and below that
 the gold set with the `expected lane` column Phase 2's routing metric will be scored against.
@@ -289,7 +310,7 @@ Each of these is written up in full in `docs/`, including the alternatives that 
 At Phase 0 that parameter was the chat stub, so metrics were *genuinely computed against canned
 answers* rather than faked. Phase 1a swapped in the agent and the API, the storage format and the
 dashboard were untouched — and it also added a third answerer that retrieves and stops, so
-"the agent is worth 0.567 → 0.700" is one scorer's output rather than two incomparable numbers.
+"the agent is worth 0.567 → 0.800" is one scorer's output rather than two incomparable numbers.
 A harness written after the agent tends to be written to make the agent look good.
 
 **1b. The grounding guardrail is code, not a sentence in the prompt.**
@@ -467,7 +488,7 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 |---|---|---|---|
 | **0** | Corpus + eval scaffold | Contract frozen, UI on a stub | ✅ **Complete** |
 | **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ✅ **Complete** |
-| **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ⏭️ **Next** |
+| **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ✅ **Done** |
 | **2** | Web-search tool (Tavily / Exa) + routing eval | `web` badge, routing accuracy | ⬜ |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |

@@ -7,14 +7,21 @@ dashboard untouched. This module is what fills it.
 | answerer | label | costs | measures |
 |---|---|---|---|
 | `stub_answerer` | `stub` | nothing | the harness itself |
-| `bm25_answerer` | `bm25` | nothing | **retrieval alone**, with no model in the loop |
+| `bm25_answerer` | `bm25` | nothing | **lexical retrieval alone**, no model in the loop |
+| `vector_answerer` | `vector` | ~30 embedding calls | **semantic retrieval alone**, likewise |
 | `agent_answerer` | `agent` | a model call per question | the whole phase |
 
-The middle row is the one worth explaining. It answers nothing — it retrieves and stops — but it
-runs through the *same* scorer, the same run file, and the same dashboard, so `recall@5` from a
-retrieval-only run is directly comparable to `recall@5` from an agent run. That comparison is the
-phase's most useful single number: it separates "the retriever cannot find it" from "the agent did
-not look properly", which are different bugs with different fixes, and it costs nothing to run.
+The two middle rows are the ones worth explaining. They answer nothing — they retrieve and stop —
+but they run through the *same* scorer, the same run file, and the same dashboard, so their
+`recall@5` is directly comparable both to each other and to an agent run. Two different comparisons
+come out of that, and they are the reason these exist:
+
+* `bm25` vs `agent` separates "the retriever cannot find it" from "the agent did not look
+  properly" — different bugs with different fixes.
+* `bm25` vs `vector` is **the Phase 1b decision**, and it is made here rather than between two agent
+  runs because these two are deterministic. Seven agent runs at fixed config span recall@5
+  0.600-0.867 (docs/progress.md), so an agent A/B cannot resolve the effect being looked for; a
+  pair of runs with no model in them can.
 
 Each entry is a **builder** returning the answerer, not the answerer itself, so per-run setup (the
 ~200 ms index build) is paid once rather than once per question — and so a test can hand in a small
@@ -28,9 +35,11 @@ inside its builder.
 from collections.abc import Awaitable, Callable
 
 from health_coverage_navigator.agent.index import CorpusIndex
+from health_coverage_navigator.agent.models import ChunkHit
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, Citation, TraceStep
-from health_coverage_navigator.config import get_config
+from health_coverage_navigator.config import Toolset, get_config
 from health_coverage_navigator.evals.models import GoldQuestion
+from health_coverage_navigator.vectors.store import VectorIndex
 
 #: What every answerer looks like from the runner's side. Defined here rather than in `runner.py`
 #: so `runner` can import it alongside the builders without the two modules importing each other.
@@ -47,9 +56,75 @@ AnswerFn = Callable[[GoldQuestion], Awaitable[ChatResponse]]
 #: same reasoning as `HealthResponse.stub`: output that is not an answer must never be mistakable
 #: for one, including by whoever opens the run file six months from now.
 NO_ANSWER = (
-    "_Retrieval-only run: these are the chunks lexical search returned for the question. "
+    "_Retrieval-only run: these are the chunks {retriever} returned for the question. "
     "No model was called and no answer was synthesized._"
 )
+
+
+def _retrieval_response(
+    question: GoldQuestion,
+    hits: list[ChunkHit],
+    index: CorpusIndex,
+    *,
+    runner: str,
+    tool: str,
+    tool_input: dict[str, object],
+    retriever: str,
+) -> ChatResponse:
+    """Wrap a ranked hit list in the response shape, for an answerer with no model behind it.
+
+    Shared by `bm25_answerer` and `vector_answerer` rather than written twice. The two differ only
+    in *which* primitive produced the hits and what the synthesized trace step is called — and
+    keeping the rest identical is the point, because the comparison between their `recall@5` values
+    is only meaningful if nothing else about how they are scored differs.
+
+    Citations are rebuilt from the real `Chunk`, exactly as `runtime._citations` does, so a
+    retrieval run and an agent run put the same fields in front of the scorer.
+    """
+    citations: list[Citation] = []
+    for position, hit in enumerate(hits, start=1):
+        chunk = index.chunk(hit.chunk_id)
+        if chunk is None:  # pragma: no cover - hits come from this index by construction
+            continue
+        citations.append(
+            Citation(
+                id=f"c{position}",
+                source_type="reference",
+                title=hit.label,
+                url=chunk.url or None,
+                doc_id=chunk.doc_id,
+                chunk_id=chunk.id,
+                snippet=chunk.text,
+                score=hit.score,
+            )
+        )
+
+    return ChatResponse(
+        conversation_id=f"conv_{runner}",
+        message_id=f"msg_{runner}_{question.id}",
+        # Never true. A bare retriever has no notion of "the corpus does not cover this" — it
+        # always returns its top k, however weak. Scoring the abstention slice against this
+        # answerer would measure nothing, which is why the CLI runs it over `in_corpus()` only.
+        abstained=False,
+        answer=NO_ANSWER.format(retriever=retriever),
+        claims=[],
+        citations=citations,
+        trace=[
+            TraceStep(
+                index=0,
+                kind="tool_call",
+                tool=tool,
+                input=tool_input,
+                summary=f"{tool}({', '.join(f'{k}={v!r}' for k, v in tool_input.items())})",
+            ),
+            TraceStep(
+                index=1,
+                kind="tool_result",
+                tool=tool,
+                summary=f"{len(citations)} chunks returned",
+            ),
+        ],
+    )
 
 
 def stub_answerer() -> AnswerFn:
@@ -84,57 +159,63 @@ def bm25_answerer(index: CorpusIndex) -> AnswerFn:
             k1=retrieval.bm25_k1,
             b=retrieval.bm25_b,
         )
-
-        citations: list[Citation] = []
-        for position, hit in enumerate(hits, start=1):
-            chunk = index.chunk(hit.chunk_id)
-            if chunk is None:  # pragma: no cover - hits come from this index by construction
-                continue
-            citations.append(
-                Citation(
-                    id=f"c{position}",
-                    source_type="reference",
-                    title=hit.label,
-                    url=chunk.url or None,
-                    doc_id=chunk.doc_id,
-                    chunk_id=chunk.id,
-                    snippet=chunk.text,
-                    score=hit.score,
-                )
-            )
-
-        return ChatResponse(
-            conversation_id="conv_bm25",
-            message_id=f"msg_bm25_{question.id}",
-            # Never true. A bare retriever has no notion of "the corpus does not cover this" — it
-            # always returns its top k, however weak. Scoring the abstention slice against this
-            # answerer would measure nothing, which is why the CLI runs it over `in_corpus()` only.
-            abstained=False,
-            answer=NO_ANSWER,
-            claims=[],
-            citations=citations,
-            trace=[
-                TraceStep(
-                    index=0,
-                    kind="tool_call",
-                    tool="search_corpus",
-                    input={"query": question.question, "k": retrieval.top_k},
-                    summary=f"search_corpus(query={question.question!r}, k={retrieval.top_k})",
-                ),
-                TraceStep(
-                    index=1,
-                    kind="tool_result",
-                    tool="search_corpus",
-                    summary=f"{len(citations)} chunks returned",
-                ),
-            ],
+        return _retrieval_response(
+            question,
+            hits,
+            index,
+            runner="bm25",
+            tool="search_corpus",
+            tool_input={"query": question.question, "k": retrieval.top_k},
+            retriever="lexical search",
         )
 
     return answer
 
 
-def agent_answerer(index: CorpusIndex) -> AnswerFn:
-    """The real answerer: the Phase 1a agent, one run per question.
+def vector_answerer(index: CorpusIndex, vectors: VectorIndex) -> AnswerFn:
+    """Semantic retrieval with no model: the top-k nearest chunks, wrapped in the response shape.
+
+    **The number Phase 1b is actually decided on.** Not free — it embeds each question — but at
+    ~30 short queries that is a fraction of a cent, and unlike an agent run it is *deterministic*:
+    the same question produces the same vector and the same neighbours every time. That matters
+    more than the cost. docs/progress.md records seven agent runs at fixed config spanning recall@5
+    0.600-0.867, so an agent A/B cannot resolve a difference smaller than about 0.2 — which is
+    larger than the effect being looked for. This runner has no such spread, and its `recall@5`
+    sits directly beside `bm25`'s 0.567 under the same scorer.
+
+    Genuinely awaits, unlike the two free answerers: the embedding call is a real network round
+    trip, so the runner's `--concurrency` buys real overlap here.
+    """
+
+    async def answer(question: GoldQuestion) -> ChatResponse:
+        top_k = get_config().vectors.top_k
+        ranked = await vectors.search(question.question, top_k)
+        # Resolved through the same `CorpusIndex` the agent's tool uses, for the same reason: a
+        # chunk id the corpus cannot resolve is not citable, and it must not become a scored hit.
+        hits = [
+            ChunkHit.of(chunk, score)
+            for chunk_id, score in ranked
+            if (chunk := index.chunk(chunk_id)) is not None
+        ]
+        return _retrieval_response(
+            question,
+            hits,
+            index,
+            runner="vector",
+            tool="vector_search",
+            tool_input={"query": question.question, "k": top_k},
+            retriever="semantic search",
+        )
+
+    return answer
+
+
+def agent_answerer(
+    index: CorpusIndex,
+    vectors: VectorIndex | None = None,
+    toolset: Toolset | None = None,
+) -> AnswerFn:
+    """The real answerer: the agent, one run per question.
 
     The only answerer that genuinely awaits, and the reason the whole seam is awaitable. It hands
     the agent's coroutine straight to the runner's event loop, so `run_gold_set` can hold several
@@ -146,12 +227,20 @@ def agent_answerer(index: CorpusIndex) -> AnswerFn:
     stays opt-in: the dashboard leaves `max_concurrency` at 1, the CLI's `--concurrency` turns it
     up. Scores are unaffected either way — questions are graded independently and `gather` returns
     them in gold-set order.
+
+    `toolset` is Phase 1b's eval axis: `None` means "whatever `config.yaml` says", which is what the
+    dashboard and `make eval` use, while `--toolset` names one explicitly. It is the *only* thing
+    that differs between the lexical-only, vector-only and both-tools runs — one runner with a flag
+    rather than three code paths (docs/plan.md §1b).
     """
     from health_coverage_navigator.agent.runtime import answer_question
 
     async def answer(question: GoldQuestion) -> ChatResponse:
         return await answer_question(
-            ChatRequest(message=question.question, plan_year=question.plan_year), index
+            ChatRequest(message=question.question, plan_year=question.plan_year),
+            index,
+            toolset=toolset,
+            vectors=vectors,
         )
 
     return answer

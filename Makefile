@@ -1,7 +1,8 @@
 .PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
-        chunk chunk-check scan scan-staged scan-unstaged scan-selftest \
+        chunk chunk-check embed embed-check scan scan-staged scan-unstaged scan-selftest \
         ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
-        eval eval-retrieval eval-judge eval-stub smoke smoke-abstain
+        eval eval-retrieval eval-retrieval-vector eval-lexical eval-vector eval-judge \
+        eval-stub smoke smoke-abstain
 
 .DEFAULT_GOAL := help
 
@@ -133,6 +134,24 @@ eval: ## Run the gold set through the agent (35 model calls) -> data/eval_runs/
 eval-retrieval: ## Score BM25 retrieval alone against the gold set — free and instant
 	uv run python -m health_coverage_navigator.evals.runner --runner bm25
 
+# The Phase 1b decision, and the reason it is a separate runner rather than two agent runs.
+# Deterministic: same question, same vector, same neighbours. Seven agent runs at fixed config
+# span recall@5 0.600-0.867 (docs/progress.md), so an agent A/B cannot resolve an effect the size
+# of the one being looked for; this pair can, because no model is in either of them. Costs ~30
+# short embedding calls — a fraction of a cent, but it does need a key, unlike eval-retrieval.
+eval-retrieval-vector: ## Score semantic retrieval alone — the number 1b is decided on
+	uv run python -m health_coverage_navigator.evals.runner --runner vector
+
+# The toolset axis: one runner with a flag, not three code paths (docs/plan.md §1b). `make eval`
+# is the third configuration — it runs whatever agent.toolset says, which is `both`. Read these as
+# a sanity check on the agent's tool *choice*, not as the lexical-vs-vector comparison: that is
+# what the two retrieval-only targets above are for.
+eval-lexical: ## Agent restricted to the Phase 1a lexical tools (35 model calls)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --toolset lexical
+
+eval-vector: ## Agent restricted to vector_search (35 model calls)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --toolset vector
+
 # Answer correctness, graded per key fact by a second model. Opt-in and deliberately unreachable
 # from the UI: a button that spends money on every click is the wrong affordance.
 eval-judge: ## Run the gold set through the agent AND grade answers with the LLM judge
@@ -150,6 +169,18 @@ chunk: ## Chunk the three text corpora -> data/processed/<source>/chunks.jsonl
 
 chunk-check: ## Rebuild chunks in memory and verify they match the committed manifests
 	uv run python -m health_coverage_navigator.chunking --check
+
+# Outside check-all for all the usual reasons — writes files, needs a key — plus one of its own:
+# it is the only build step in this repo that spends money. It is idempotent, so a re-run with an
+# up-to-date store costs nothing and says so; --refresh forces the rebuild.
+embed: ## Embed the chunked corpus into data/lancedb (~$0.04, ~2 min)
+	uv run python -m health_coverage_navigator.vectors
+
+# The vectors' answer to chunk-check. Cheap on purpose: it compares the snapshot id and the row
+# count rather than re-embedding to compare vectors, and the snapshot id already covers every
+# input that could change one.
+embed-check: ## Verify the vector store matches the committed manifest — embeds nothing
+	uv run python -m health_coverage_navigator.vectors --check
 
 # Deliberately not part of check-all: check-all is the fast inner-loop command, and a scan
 # of the whole 14 MB corpus is a pre-publish gate you invoke on purpose.

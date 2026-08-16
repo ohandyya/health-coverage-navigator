@@ -18,6 +18,7 @@ codegen is unaffected.
 
 import asyncio
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -56,24 +57,43 @@ router = APIRouter()
 EvalEvent = EvalRunStarted | EvalRunProgress | EvalRunFinished | EvalRunFailed
 
 
-def _run_config(ctx: AppContext) -> tuple[AnswerFn, list[Grader], str | None]:
+@dataclass(frozen=True, slots=True)
+class _RunConfig:
+    """What a browser-triggered run measures, and what the record pins it to."""
+
+    answer_fn: AnswerFn
+    graders: list[Grader]
+    model: str | None = None
+    toolset: str | None = None
+    vectors_snapshot_id: str | None = None
+
+
+def _run_config(ctx: AppContext) -> _RunConfig:
     """Which answerer a browser-triggered run measures, and how it is graded.
 
-    Mirrors `evals/runner.py`'s CLI, minus the `bm25` option: a retrieval-only run is a tuning
-    tool for whoever is changing `bm25_b`, not something the dashboard offers, and adding it would
-    put a run that cannot abstain next to runs that can with nothing on screen to explain the gap.
-    The `runner` label the record carries still distinguishes them, so a CLI `bm25` run and a
-    browser `agent` run sit in the same table honestly.
+    Mirrors `evals/runner.py`'s CLI, minus the retrieval-only runners: those are tuning tools for
+    whoever is changing `bm25_b` or comparing embeddings, not something the dashboard offers, and
+    adding them would put runs that cannot abstain next to runs that can with nothing on screen to
+    explain the gap. The `runner` label the record carries still distinguishes them, so a CLI
+    `bm25` run and a browser `agent` run sit in the same table honestly.
+
+    **`--toolset` is likewise not exposed.** The dashboard runs whatever `config.yaml` configures
+    and records which that was, so a browser run is comparable to a CLI one; choosing a toolset per
+    click would be a request body for a decision made three times from the command line, and the UI
+    tracks the phases rather than leading them.
 
     The **LLM judge is deliberately not reachable over HTTP.** A button that quietly spends money
     on every click is the wrong affordance; `make eval-judge` is an explicit act.
     """
     if ctx.stub or ctx.index is None:
-        return stub_answerer(), [key_fact_coverage_grader()], None
-    return (
-        agent_answerer(ctx.index),
+        return _RunConfig(stub_answerer(), [key_fact_coverage_grader()])
+    toolset = get_config().agent.toolset
+    return _RunConfig(
+        agent_answerer(ctx.index, ctx.vectors, toolset),
         [groundedness_grader(ctx.index), key_fact_coverage_grader()],
-        get_config().agent.model,
+        model=get_config().agent.model,
+        toolset=toolset,
+        vectors_snapshot_id=None if ctx.vectors is None else ctx.vectors.snapshot_id,
     )
 
 
@@ -170,18 +190,20 @@ async def post_run(ctx: Annotated[AppContext, Depends(get_context)]) -> EvalRunS
             )
         )
 
-    answer_fn, graders, model = _run_config(ctx)
+    config = _run_config(ctx)
 
     async def execute() -> None:
         try:
             run = await run_gold_set(
-                answer_fn,
+                config.answer_fn,
                 ctx.gold,
                 runner="stub" if ctx.stub or ctx.index is None else "agent",
                 run_id=run_id,
                 on_progress=on_progress,
-                graders=graders,
-                model=model,
+                graders=config.graders,
+                model=config.model,
+                toolset=config.toolset,
+                vectors_snapshot_id=config.vectors_snapshot_id,
                 # Deliberately left at the default of 1. Progress events drive a live dashboard,
                 # and out-of-order arrival renders as a run that jumps around.
                 max_concurrency=1,

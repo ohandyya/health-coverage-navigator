@@ -39,8 +39,15 @@ def valid() -> dict:
             "request_limit": 8,
             "tool_calls_limit": 12,
             "request_retries": 5,
+            "toolset": "both",
         },
         "retrieval": {"top_k": 5, "bm25_k1": 1.2, "bm25_b": 0.75},
+        "vectors": {
+            "embedding_model": "text-embedding-3-small",
+            "dimensions": 1536,
+            "top_k": 5,
+            "batch_size": 128,
+        },
         "evals": {"judge_model": "openai:gpt-5.4-mini-2026-03-17"},
         "chunking": {
             "max_chars": 1200,

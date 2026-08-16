@@ -17,41 +17,78 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-15.*
+*Updated 2026-08-16.*
 
-- **Phase:** **1a is complete and shippable.** One PydanticAI agent answers coverage questions from
-  the reference corpus with a four-tool full-text toolset over stdlib BM25 — no database of any
-  kind — abstains when the question is out of corpus, and streams its answer and its tool trace to
-  the browser. The Phase 0 stub is still reachable behind `create_app(stub=True)` as a baseline.
-  Measured on the 35-question gold set, and **read it as a distribution, not a number**: seven agent
-  runs put recall@5 between 0.600 and 0.867, with a mean of exactly 0.700 over the four runs at the
-  current config; MRR tracks it. Groundedness and citation resolution are 1.000 in every run, by
-  construction. Abstention accuracy is 1.000 in every run that finished without errored questions.
-  Answer correctness has two samples, 0.739 and 0.770, both from the *previous* judge model.
-  Retrieval alone is a flat, deterministic 0.567/0.416, so the ~0.13 gap to the agent's mean is what
-  query reformulation buys. Design: [agent.md](agent.md).
-- **Next up:** **Phase 1b — `vector_search` alongside the 1a tools** —
-  [plan.md](plan.md#phase-1-b--add-vector-search-alongside-the-full-text-tools) and
-  [lancedb.md](lancedb.md). Register the tool on the **same** agent rather than replacing anything;
-  the comparison is three-way (lexical-only / vector-only / both) with toolset composition as an
-  eval axis, so it should be one runner with a flag, not three code paths. `make eval-retrieval`
-  already gives the lexical baseline to beat, and the frontend slice is a run-comparison view — the
-  chat UI is untouched by design. **Decide the measurement protocol before writing the tool:** the
-  spread at fixed config is 0.200 wide, so a single before/after pair cannot resolve anything
-  smaller than a large effect. Either run each toolset configuration three times and compare means,
-  or say up front that only a large effect is readable. The `bm25` runner is the one number
-  comparable run-to-run, because no model touches it.
+- **Phase:** **1b is complete, measured and shippable.** One PydanticAI agent answers coverage
+  questions from the reference corpus with a **five-tool** toolset — stdlib BM25 *and* LanceDB
+  embeddings, with which tools it sees a per-run flag — abstains when the question is out of corpus,
+  and streams its answer and its tool trace to the browser. The Phase 0 stub is still reachable
+  behind `create_app(stub=True)` as a baseline. Design: [agent.md](agent.md).
+- **The headline result: vector beats lexical, and "both" beats either alone.** Deterministic
+  retrieval-only, 30 in-corpus questions: BM25 **0.567**/0.416 against vector **0.733**/0.561.
+  Through the agent, 35 questions: lexical 0.667/0.650, vector 0.733/0.717, **both 0.800/0.733**.
+  plan.md's bar — *"both only wins if it beats each alone"* — is cleared on both metrics, so
+  `agent.toolset: both` ships. **The decision was taken on the retrieval-only pair, deliberately:**
+  the agent's known spread at fixed config is 0.200 wide, which is larger than the effect, while
+  the `vector` runner reproduced to three decimals across two invocations. Read 0.800-vs-0.733 as
+  suggestive and 0.733-vs-0.567 as the finding.
+- **The two methods fail differently, which is the more useful half.** Vector fixes 7 and regresses
+  2; four of the fixes land at rank 1. `hcg-01` — *"What exactly is a deductible?"*, the question
+  agent.md §6 predicted BM25 would lose to the rare word *exactly* — goes from not-retrieved to
+  rank 1. But `ncd-05` and `pub-10` go the other way, and **six of thirty defeat both methods**.
+  That complementarity is the empirical case for `both`; the six mutual misses say the remaining
+  gap is not one more index.
+- **Still on a branch.** All of 1b lives on `phase-1b-vector-search`, not `main`. Two things are
+  worth doing before it merges: open the eval dashboard's new run-comparison view in a browser (it
+  has never been looked at — see the log), and un-mix `docs/human_worklog.md` from commit `b4770e0`.
+- **New doc: [technical_highlights.md](technical_highlights.md)** — the mechanisms worth
+  *presenting*, which is deliberately not a job any of the four canonical docs has. Three entries so
+  far (grounding, the test-suite provider guard, missing-vs-stale). It is **not** listed in
+  CLAUDE.md's doc table; whether it should be is an open call for the author.
+- **Next up:** **Phase 2 — the web-search tool** —
+  [plan.md](plan.md#phase-2--add-the-web-search-tool). The first real *lane* routing decision, and
+  a harder question than 1b's: the wrong answer is a confident abstention, or a web answer to
+  something the corpus already settles. Tavily vs. Exa is to be chosen by measuring both on the
+  gold set's out-of-corpus slice. Note what 1b leaves in place for it: `select_tools` already makes
+  "which tools may the agent see" a per-run flag, and `system_prompt(toolset)` already composes —
+  so a web toolset is a new entry in two dicts rather than a new mechanism.
+- **Phase 1b design decisions, each with a reason that outlives the code:** **`text-embedding-3-small` at 1536d** (~$0.04 a build; `-3-large` was rejected not on cost
+  but because 30 in-corpus questions cannot resolve the difference between two good embedding
+  models). **No hybrid search** — LanceDB carries BM25 in the same table and it is deliberately
+  unused, because "both" means both *tools registered* with the agent reconciling them, which is
+  what the phase is about; a fused ranker would hide exactly that. **The table stores no text** —
+  `chunk_id, doc_id, source, vector` only, so the corpus stays the single source of truth and a
+  citation cannot be validated against a second, drifting copy. **No ANN index** — at 6,722 rows a
+  flat scan is sub-millisecond, and an approximate index would make recall approximate, destroying
+  the one property the `vector` eval runner exists for. **Navigation tools (`get_chunk`,
+  `list_documents`) are in every toolset** — dropping them from the vector-only run would fold
+  "lost the ability to widen a hit" into the lexical-vs-vector number.
+- **Measurement protocol, decided before the tool was written** (the previous entry asked for
+  exactly this): the headline comes from a **deterministic retrieval-only `vector` runner**, not
+  from an agent A/B. It worked — see the result above. No `--repeat` mode was built, so the
+  "a single agent run is not evidence" open question below is *unchanged*, not closed.
 - **Open questions:**
-  - **A single eval run is not evidence, and the repo still quotes single runs.** Seven agent runs
-    at effectively one config span recall@5 0.600–0.867. The README's table and this block name a
-    mean and a range now, but nothing enforces that — the next person to quote "0.700" from one run
-    will be overstating it. Either the runner grows a repeat-and-aggregate mode or the docs keep
-    saying "one sample" by hand.
-  - **`request_retries: 5` reduced the TPM 429s; it did not end them.** Two of the four runs at the
-    current config still lost questions (2 and 4) to `Rate limit reached ... tokens per min`. The
-    ~210k-token gold set against a 200k/minute allowance means the set genuinely cannot complete
-    inside a minute — the retry budget buys headroom, not immunity. Lowering `--concurrency` below
-    3, or pacing between questions, is the untried lever.
+  - **A single eval run is not evidence, and the repo still quotes single runs.** Unchanged by
+    Phase 1b, and now load-bearing in a new place: the three agent toolset rows (0.667 / 0.733 /
+    0.800) are one run each, against a known spread of 0.200. Phase 1b routed *around* this by
+    deciding on the deterministic retrieval runners rather than fixing it. Either the runner grows
+    a repeat-and-aggregate mode or the docs keep saying "one sample" by hand — they do today.
+  - **`request_retries: 5` reduced the TPM 429s; it did not end them, and Phase 1b made it worse.**
+    Running `eval-lexical`, `eval-vector` and `eval` back-to-back put **16 of 35** questions into
+    `Rate limit reached` on the third, scoring 0.400 recall and 0.400 abstention accuracy — a
+    TPM-starved run looks like a quality regression in every column at once (`run_2026-08-16_6`,
+    kept in the run directory as the specimen). A pause plus `--concurrency 2` scored 0.800
+    immediately after, so **the untried lever from the last entry is now the tried one and it
+    works**. What is still missing is anything that makes it automatic: the runner has no pacing,
+    and nothing stops the next person running three evals in a row. `make embed` is not implicated
+    — embeddings are a separate, far larger allowance.
+  - **`UnexpectedModelBehavior: Exceeded maximum output retries (2)` recurred and is now
+    characterised, if not explained.** Two questions in the vector-only agent run died this way —
+    the grounding validator's budget, not a 429, despite sharing the ERR column. Both were re-run
+    by hand immediately afterwards and **both succeeded**, so it is model nondeterminism producing
+    a non-verbatim snippet twice in a row, not anything toolset-specific. Deliberately not fixed:
+    raising `agent.retries` would soften the one guardrail whose failures must stay loud. The 1a
+    entry below records the same shape at 17 of 35, which remains unexplained.
   - **The judge model changed after the only two answer-correctness numbers were measured.**
     `evals.judge_model` is now `openai:gpt-5.6-terra`; 0.739 and 0.770 were both graded by
     `gpt-5.6-sol`. Neither is reproducible from the repo as it stands. A `make eval-judge` run on
@@ -73,6 +110,18 @@ mid-stream.
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
     ever touched for another reason.
+  - **Eval run records carry no tool trace, so no question about tool *choice* can be answered from
+    a run file.** `EvalQuestionResult` has `retrieved_doc_ids` but not the tool sequence. Two
+    separate questions have now hit this — "how often does the agent reach for `vector_search`?"
+    (while explaining why `both` beats `vector` alone) and "how often does it reach for
+    `get_chunk`?" — and both were answered from a handful of hand-captured traces instead of the
+    175 agent questions this branch actually ran. A `tools_used: list[str]` on the result would be
+    additive and cheap, and **Phase 2's routing slice needs exactly this shape for lanes**, so it is
+    close to a prerequisite rather than a nicety.
+  - **Commit `b4770e0` carries four lines of `docs/human_worklog.md`** alongside its `smoke.py`
+    change, swept in by a `git add -A`. Harmless to the code, but that file is the author's and the
+    commit message does not mention it. Worth un-mixing before the branch merges; `git add <path>`
+    rather than `-A` is the habit that prevents it.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
@@ -138,9 +187,193 @@ Beyond the F1 list, because the real agent made them necessary:
 - [x] Abstentions render through `AnswerBody`, since the agent can abstain *and* cite
 - [x] Citation DOM ids scoped by message id — `c1` is unique per answer, not per conversation
 
+### Phase 1b checklist
+
+*Complete as of 2026-08-16, code and measurement.*
+
+Backend (plan.md, Phase 1b):
+
+- [x] Embedding model configured — same model for documents and queries, fixed dimensionality,
+  enforced by `VectorIndex.open` refusing a store whose manifest disagrees
+- [x] LanceDB wired up, populated from `data/processed` by `make embed`
+- [x] `vector_search` registered **alongside** the 1a tools, not in place of them
+- [x] Toolset composition as an eval axis — `select_tools(toolset)` + `--toolset`, one runner
+- [x] `system_prompt(toolset)` so no configuration is told about a tool it does not have
+- [x] `vectors_meta.json` + `make embed-check` — the store is git-ignored but reproducible
+- [x] `make embed` run — 6,722 vectors, `vectors@b693b82f4350`, 53 requests, 47 s, $0.03
+- [x] Eval comparison across the three configurations — **vector 0.733 > BM25 0.567; both 0.800
+  > vector 0.733 > lexical 0.667**, so `both` earned its place and ships
+
+Frontend (frontend_plan.md):
+
+- [x] Run-comparison view — pick two runs, provenance diff, metric deltas, fixed/regressed/unchanged
+- [x] `toolset` badge beside the runner badge; `vectors_snapshot_id` in the run detail
+- [x] Verified against the running app: `/api/health` reports the store, and a live question put
+  `search_corpus` *and* `vector_search` in one trace with five resolving citations
+- [x] Chat UI untouched, by design
+
+Not in the plan, added because the code demanded it:
+
+- [x] A **second money guard** in `conftest.py`. `ALLOW_MODEL_REQUESTS = False` is PydanticAI's
+  switch and has no bearing on a direct `AsyncOpenAI().embeddings.create()` — so the suite could
+  have reached a provider with the developer's own key and still gone green. `openai_embedder` is
+  now replaced suite-wide, and consumers call it *through the module* so the patch actually lands.
+- [x] `chunker_snapshots()` moved from `evals/runner.py` to `corpus.py`, which gave it a second
+  caller with a stronger need: the store records those ids and refuses to open against a corpus
+  that no longer matches.
+- [x] `.gitignore` gained `data/lancedb/`. The existing `.lancedb/` line is dot-prefixed and
+  **does not match** the path `lancedb.md` documents — an ingest following that doc verbatim would
+  have left ~41 MB untracked, un-ignored, and in scope for `make scan`.
+
 ---
 
 ## Log
+
+### 2026-08-16 (later) — a walkthrough of Phase 1b, and the doc it produced
+
+**Did:** walked the Phase 1b branch step by step with the author, who was reading the code to own it
+rather than approve it. No code changed. Three of the mechanisms surfaced during that reading were
+written up in a **new document, `docs/technical_highlights.md`** — grounding, the test-suite
+provider guard, and the missing-vs-stale asymmetry.
+
+**Decided: `technical_highlights.md` is a presentation artifact, not a fifth reference doc.** Its
+job is "which parts of this build are worth *presenting*", which is a different question from any of
+the four docs CLAUDE.md names — those answer what to build, how the UI works, what is built, and
+what the words mean. Each entry follows one shape: **problem → approach → the alternative that lost
+→ evidence → why it presents well**. The last line of each is the one that justifies the file
+existing; without it this would just be `agent.md` with worse organisation.
+
+**Decided: the three topics were chosen by the reader, not by the writer**, and that is worth
+preserving as the selection rule. Each was picked when the author stopped mid-walkthrough and said
+*this is a highlight* — `remember()` plus the output validator, then `fake_embed` plus
+`_no_live_embeddings`, then the two vector-store error types. What a reader independently finds
+notable is better evidence of what presents well than an author's own sense of what was hard.
+
+**Observed, and it revises a plausible mental model:** in every trace captured this session
+(`make smoke`, `make smoke --toolset vector`, and a live Part D question through the app),
+**`get_chunk` was never called.** The search tools already return `ChunkHit.text` verbatim, so there
+is no fetch-the-body step — the ranked result *is* the body, and `get_chunk` is a recovery move for a
+hit truncated mid-definition. The common second step is **reformulating and searching again**, which
+is what `agent.md` credits for the agent beating raw retrieval. The live `both` run did the thing
+the toolset exists for: one `search_corpus`, then one `vector_search`, then answered from five
+citations.
+
+**Stopped at:** clean, nothing uncommitted. Three limits, all pre-existing and none introduced here:
+
+- The observation above rests on **three traces**, and cannot be turned into a number, because
+  eval run records store no tool sequence. That was already an open question; it now has a concrete
+  use case rather than a hypothetical one.
+- The eval dashboard's run-comparison view is **still unverified in a browser** — unchanged from the
+  entry below, and worth doing before the branch merges.
+- Commit `b4770e0` (a `smoke.py` change) **also carries four lines of `docs/human_worklog.md`**,
+  swept in by a `git add -A`. Nothing was lost or altered, but the author's file is inside a commit
+  whose message is about something else.
+
+**Commits:** `40a3a62`, `7d5ec27`, `bc1b23e`
+
+### 2026-08-16 — Phase 1b: vector search joins the toolset, and wins on the number that can be trusted
+
+**Did:** built `vectors/` (the embedder seam, a LanceDB store, a committed manifest), registered
+`vector_search` beside the Phase 1a tools, made the toolset a per-run flag, added a deterministic
+`vector` eval runner and a `--toolset` axis, and shipped the eval dashboard's run-comparison view.
+Then measured it. Reference doc: [lancedb.md](lancedb.md); the numbers live in
+[agent.md](agent.md) §6.
+
+**Decided, and it is the methodological point of the phase: the lexical-vs-vector call is made on
+retrieval-only runners, not on an agent A/B.** The previous entry left this as the thing to settle
+before writing the tool, because seven agent runs at fixed config span recall@5 0.600–0.867 and the
+effect being looked for is that size. The answer was not "run the agent more times" (which costs 35
+model calls a sample) but "take the model out of the measurement": `make eval-retrieval-vector`
+embeds 30 questions, ranks, and stops. It reproduced **identically to three decimals** across two
+invocations. That is what makes 0.567 → 0.733 a finding rather than a data point, and it cost about
+a hundredth of a cent.
+
+**Measured: vector 0.733/0.561 against BM25 0.567/0.416**, and through the agent, lexical 0.667,
+vector 0.733, **both 0.800**. plan.md's bar for the phase was explicit — *"both has to earn its
+place: it only wins if it beats each alone"* — and it clears it on both metrics, so
+`agent.toolset: both` is what ships.
+
+**The more useful half is that the two methods fail differently.** Vector fixes 7 questions and
+regresses 2, with four fixes landing at rank 1. The clean case is `hcg-01`, *"What exactly is a
+deductible?"* — the question [agent.md](agent.md) had already named as BM25's characteristic
+failure, drowned by the rare word *exactly*. Vector retrieves it first, without reformulation. But
+`ncd-05` and `pub-10` go the other way, and **six of thirty defeat both methods**. So the ceiling
+here is not one more index: the remaining gap is chunking, gold-set phrasing, or reformulation.
+
+**Decided: no hybrid search, though LanceDB offers it in the same table.** "Both" means both
+*tools registered*, with the agent reconciling them — a fused ranker would do the reconciling
+itself and hide the exact behaviour the phase exists to observe. It would also put a second BM25
+implementation beside `agent/bm25.py`, free to drift from the baseline the comparison rests on.
+lancedb.md's bullet advertising the feature now carries that as a recorded rejection rather than an
+unexplained omission.
+
+**Decided: the table stores no text.** lancedb.md's own §2 sketch spreads the chunk into the row;
+the shipped schema is `chunk_id, doc_id, source, vector`. The corpus is already the one source of
+truth for text, and a second copy is a second thing to drift — after which a snippet could be
+validated against text the corpus no longer contains. It also keeps the store at 40 MB. Related and
+more important: **`vector_search` resolves ids back through the same `CorpusIndex` the lexical tools
+use**, which is what makes a semantic hit citable at all. `remember()` looks chunks up by id and
+silently skips what it cannot find, so returning LanceDB rows directly would have made every vector
+citation fail grounding — two layers from the cause, looking like a model problem.
+
+**Decided: no ANN index, exhaustive search.** At 6,722 rows a flat scan is sub-millisecond, so an
+IVF/HNSW index buys nothing measurable and costs the one property the `vector` runner exists for:
+an approximate index makes recall approximate, and a number that wobbles with the index cannot
+settle the question being asked.
+
+**Decided: the prompt composes with the toolset.** `SYSTEM_PROMPT` was one constant asserting that
+search matches "on words, not meaning" and naming `grep_corpus` — both false in a vector-only run.
+Leaving it would have made the comparison partly a measurement of how well each configuration
+copes with misleading instructions. `system_prompt(toolset)` now varies only the search guidance,
+and a test asserts no prompt names a tool its toolset does not register.
+
+**Dead end, caught by the guardrail it was about to bypass: `ALLOW_MODEL_REQUESTS = False` does not
+cover embeddings.** It is PydanticAI's switch, and `openai_embedder` calls the OpenAI SDK directly
+— so the suite could have reached a provider on the developer's key and still gone green, which is
+the worst version of this failure. `conftest` now replaces `openai_embedder` suite-wide, and its
+two consumers call it *through the module* rather than binding the name at import, because a
+`from ... import` would have made the patch silently not apply. The invariant is now "no test
+reaches a **provider**", not "no test reaches a model".
+
+**Dead end: three agent evals back-to-back is a rate limit, not a result.** `eval-lexical`,
+`eval-vector`, `eval` in sequence put 16 of 35 questions into `Rate limit reached` on the third,
+which scored recall@5 0.400 and abstention accuracy 0.400 — **a TPM-starved run reads as a quality
+regression in every column at once.** The run is kept (`run_2026-08-16_6`) as the specimen. A short
+pause and `--concurrency 2` scored 0.800 immediately afterwards. The previous entry listed lowering
+concurrency as "the untried lever"; it is now tried and it works.
+
+**Dead end, characterised but not explained: `Exceeded maximum output retries (2)` recurred.** Two
+questions in the vector-only run died on the *grounding validator's* budget rather than a 429.
+Re-run by hand immediately afterwards, both succeeded — so it is model nondeterminism producing a
+non-verbatim snippet twice in a row, not anything about the vector path. Deliberately not fixed:
+raising `agent.retries` would soften the one guardrail whose failures should stay loud.
+
+**Also caught: `.gitignore` had `.lancedb/`, which does not match `data/lancedb/`** — the path
+lancedb.md documents. An ingest following that doc verbatim would have left 40 MB untracked,
+un-ignored, and inside `make scan`'s scope. Both are now correct and the doc says which. And
+`make smoke` gained `--toolset`, because under `both` the agent reaches for `search_corpus` first
+on a defined term and does so successfully — so every default smoke run exercised only the lexical
+path, and `vector_search` could have broken with all nine checks green.
+
+**Contract:** two additive optional fields, `toolset` and `vectors_snapshot_id` on
+`EvalRunSummary`. No route changed, so the hand-written URLs in `client.ts` were not at risk. The
+chat UI is untouched, as designed — `TraceStep.tool` already answers plan.md's "the trace shows
+which kind of search produced each citation", so no `Citation` field was added.
+
+**Worth knowing before reading an old number:** `Config.fingerprint()` moved, because `config.yaml`
+gained `agent.toolset` and a `vectors:` block. **No future run's `config_fingerprint` matches any
+historical one.** Unavoidable and intended, but it means pre-1b runs cannot be matched to current
+ones that way.
+
+**Stopped at:** clean and verified where it counts. `make check-all` (248 pytest, pyright 0 errors,
+tsc, oxlint, 15 vitest, `types-check`), `make scan` clean with every advisory count at baseline,
+`make embed-check` reproducing the committed manifest, and `make smoke` / `make smoke-abstain` /
+`make smoke --toolset vector` all passing against the live provider. Verified against the running
+app: `/api/health` reports the store and its snapshot, and a live question produced a trace
+containing both `search_corpus` and `vector_search` with five resolving citations. **The eval
+dashboard's new comparison view has not been eyeballed in a browser** — it builds, and the
+endpoints it reads return the fields it needs, but the pixels are unverified. progress.md's own
+record is that two of Phase 1a's real UI defects were found in a browser and zero by tests.
 
 ### 2026-08-15 — a bug the gold set could never catch, and six runs that make 0.700 look like luck
 

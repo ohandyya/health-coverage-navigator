@@ -53,6 +53,18 @@ agent:
   # than being slow.
   request_retries: 5
 
+  # Which retrieval tools the agent may see: `lexical` (Phase 1a's search_corpus + grep_corpus),
+  # `vector` (Phase 1b's vector_search), or `both`. The navigation tools — get_chunk,
+  # list_documents — are in every configuration, because they are how a hit is widened rather than
+  # how one is found; removing them from a vector-only run would measure "lost the ability to widen
+  # a hit" alongside "vector vs lexical", which are different things.
+  #
+  # `both` is the configuration the product would actually ship, so it is the default and the one
+  # that gets the most use. The eval runner's `--toolset` overrides this for a single run and
+  # records which was used, so a comparison is one runner with a flag rather than three code paths
+  # (docs/plan.md §1b).
+  toolset: both
+
 retrieval:
   # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
   # cannot drift apart.
@@ -72,6 +84,37 @@ retrieval:
   # recall@5 by at most one question at any k1, so the worry did not materialise and the standard
   # value stands. That closes the question chunking.md opened; the short NCD sections are fine.
   bm25_b: 0.75
+
+# Phase 1b semantic retrieval. WARNING: `embedding_model` and `dimensions` are pinned by the
+# committed `data/processed/vectors_meta.json`. Changing either is not a config tweak — it
+# invalidates all 6,722 stored vectors and needs `make embed` in the same change, or
+# `make embed-check` fails and the app refuses to open the store. Rationale: docs/lancedb.md.
+vectors:
+  # OpenAI's small embedding model. The SAME MODEL EMBEDS DOCUMENTS AND QUERIES — one key rather
+  # than two, because two keys is a way to end up comparing incompatible embedding spaces.
+  #
+  # `-3-small` over `-3-large`: a full ingest is ~1.7M tokens, so small costs ~$0.04 against
+  # large's ~$0.26 — both trivial — but large is 3,072-dimensional, doubling both the store
+  # (41 MB -> 82 MB) and per-query latency. The deciding argument is the measurement, not the
+  # money: there are 30 in-corpus gold questions, and a set that size cannot resolve the
+  # difference between two good embedding models. `make eval-retrieval-vector` is the cheap,
+  # deterministic instrument if that is ever worth testing rather than assuming.
+  embedding_model: text-embedding-3-small
+
+  # Native dimensionality of the model above, NOT a truncation via the API's `dimensions`
+  # parameter. Stated rather than inferred so the Arrow schema, the manifest, and the store can
+  # never quietly disagree about a table that costs a paid call to rebuild.
+  dimensions: 1536
+
+  # How many passages `vector_search` returns by default. Matches `retrieval.top_k` (and so the
+  # headline recall@5) but is deliberately its own key: Phase 1b exists to compare the two
+  # retrieval paths, and a shared value would make "return more" untestable on one side alone.
+  top_k: 5
+
+  # Inputs per embeddings request during `make embed`; a query embeds one string and never reads
+  # this. 128 puts the 6,722-chunk ingest in ~53 requests. Larger batches are fewer round trips
+  # but put more work behind a single failure, and the whole build is under two minutes either way.
+  batch_size: 128
 
 evals:
   # The LLM judge behind `make eval-judge`, which grades each answer against the gold set's

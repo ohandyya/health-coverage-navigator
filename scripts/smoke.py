@@ -52,6 +52,7 @@ from dataclasses import dataclass
 
 from health_coverage_navigator.agent.index import ChunksNotBuiltError, CorpusIndex, get_corpus_index
 from health_coverage_navigator.agent.runtime import stream_answer
+from health_coverage_navigator.agent.tools import needs_vectors
 from health_coverage_navigator.api.models import (
     ChatRequest,
     DoneEvent,
@@ -60,6 +61,9 @@ from health_coverage_navigator.api.models import (
     StreamEvent,
     TokenEvent,
 )
+from health_coverage_navigator.config import get_config
+from health_coverage_navigator.vectors import embedder as embedder_module
+from health_coverage_navigator.vectors.store import VectorIndex
 
 #: In the corpus, and the question docs/agent.md §5 uses as its worked example of the agent
 #: reformulating a query BM25 handles badly on its own. A run that answers this one has exercised
@@ -277,6 +281,17 @@ def main() -> int:
         ),
     )
     parser.add_argument("--model", help="override config.yaml's agent.model for this run")
+    parser.add_argument(
+        "--toolset",
+        choices=("lexical", "vector", "both"),
+        help=(
+            "override config.yaml's agent.toolset. Worth knowing why this exists: under `both` the "
+            "agent is told to reach for search_corpus first on a defined term, and it does — so a "
+            "default smoke run never exercises vector_search, and the semantic path could break "
+            "without any check here noticing. `--toolset vector` is how that path gets smoked. "
+            "Default: from config.yaml."
+        ),
+    )
     args = parser.parse_args()
 
     question = args.question or (ABSTENTION_QUESTION if args.abstain else DEFAULT_QUESTION)
@@ -287,12 +302,26 @@ def main() -> int:
         print(f"{exc}", file=sys.stderr)
         return 1
 
+    toolset = args.toolset or get_config().agent.toolset
     print(f"Q: {question}")
-    print(f"   ({len(index)} chunks indexed; this makes a real model call)")
+    print(f"   ({len(index)} chunks indexed, toolset={toolset}; this makes a real model call)")
 
     async def drain() -> list[StreamEvent]:
+        # The store is opened here rather than at import so a `--toolset lexical` smoke run still
+        # works on a machine where `make embed` has never been run.
+        vectors = None
+        if needs_vectors(toolset):
+            config = get_config().vectors
+            vectors = await VectorIndex.open(
+                embedder_module.openai_embedder(config.embedding_model, config.dimensions)
+            )
         request = ChatRequest(message=question)
-        return [event async for event in stream_answer(request, index, model=args.model)]
+        return [
+            event
+            async for event in stream_answer(
+                request, index, model=args.model, toolset=toolset, vectors=vectors
+            )
+        ]
 
     started = time.perf_counter()
     try:

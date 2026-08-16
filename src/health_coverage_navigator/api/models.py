@@ -341,9 +341,16 @@ class EvalRunSummary(BaseModel):
     created_at: datetime
 
     runner: str
-    """Which answerer produced this run — `"stub"` at Phase 0, then `"bm25"` (retrieval only) or
-    `"agent"`. Surfaced as a badge in the dashboard, because a metric measured against canned
-    answers, or against a retriever with no model behind it, must never read as a real score."""
+    """Which answerer produced this run — `"stub"` at Phase 0, then `"bm25"` or `"vector"`
+    (retrieval only, no model) or `"agent"`. Surfaced as a badge in the dashboard, because a metric
+    measured against canned answers, or against a retriever with no model behind it, must never
+    read as a real score."""
+
+    toolset: str | None = None
+    """Which retrieval tools the agent could see — `"lexical"`, `"vector"` or `"both"`. `None` for
+    every runner with no agent in it, where the question does not arise. Recorded because Phase 1b's
+    whole comparison is between runs that differ *only* in this, so a run that does not name it
+    cannot take part in that comparison."""
 
     config_fingerprint: str | None = None
     """`Config.fingerprint()` — a sha256 over every value in `config.yaml`. The answer to "what
@@ -358,6 +365,14 @@ class EvalRunSummary(BaseModel):
     chunker_snapshot_id: dict[str, str] = Field(default_factory=dict)
     """Per-source `chunks_meta.json` snapshot ids, pinning a score to the chunk parameters it was
     measured under."""
+
+    vectors_snapshot_id: str | None = None
+    """`vectors_meta.json`'s snapshot id, pinning a score to the embeddings behind it — the chunk
+    snapshots, the embedding model, its dimensionality, and the distance metric. `None` when no
+    vector retrieval was involved.
+
+    A separate field rather than an entry in `chunker_snapshot_id`, which is keyed by corpus name
+    and would have to grow a key that is not a corpus."""
 
     n_questions: int
     n_passed: int

@@ -1,47 +1,57 @@
 # The agent
 
-The Phase 1a agent: one PydanticAI `Agent` over the reference corpus, with a small full-text
-toolset and **no database of any kind**. Written alongside the code rather than before it, unlike
-[chunking.md](chunking.md) and [lancedb.md](lancedb.md) — the decisions here needed a running loop
-to make.
+One PydanticAI `Agent` over the reference corpus. Phase 1a built it with a full-text toolset and
+**no database of any kind**; Phase 1b registered `vector_search` alongside those tools and made
+*which* tools it sees a per-run choice. Same agent, same corpus, same output contract. Written
+alongside the code rather than before it, unlike [chunking.md](chunking.md) and
+[lancedb.md](lancedb.md) — the decisions here needed a running loop to make.
 
-Code: `src/health_coverage_navigator/agent/`. Ask it something with `make dev`; measure it with
-`make eval`.
+Code: `src/health_coverage_navigator/agent/`, with semantic retrieval in `vectors/`. Ask it
+something with `make dev`; measure it with `make eval`.
 
 ---
 
 ## 1. Shape
 
 ```
-question ──▶ Agent ──▶ tools ──▶ CorpusIndex ──▶ BM25 over chunks.jsonl
-               │                      │
-               │                      └─ every returned chunk lands in deps.seen_chunks
+                        ┌─▶ CorpusIndex ──▶ BM25 over chunks.jsonl
+question ──▶ Agent ──▶ tools                          │
+               │        └─▶ VectorIndex ─▶ LanceDB ───┤
+               │                                      │
+               │        every hit resolves to a Chunk ┘
+               │        and lands in deps.seen_chunks
                ▼
           AgentAnswer ──▶ output validator ──▶ ChatResponse
        (abstained,          (rejects an          (citations rebuilt
         answer, citations)   ungrounded answer)   from the real chunks)
 ```
 
+Both retrieval paths converge on the same `Chunk`, which is what lets one grounding rule cover
+them and one citation shape serve both.
+
 | module | holds |
 |---|---|
 | `bm25.py` | the ranking formula and an inverted index. Standard library only |
-| `index.py` | `CorpusIndex` — the chunks and the four search primitives. No `pydantic_ai` import |
+| `index.py` | `CorpusIndex` — the chunks and the four lexical primitives. No `pydantic_ai` import |
 | `models.py` | what the *model* sees: `ChunkHit` in, `AgentAnswer` out |
-| `prompt.py` | the system prompt |
-| `tools.py` | the four tools, plus `AnswerDeps` — the run-scoped trace and citable set |
+| `prompt.py` | `system_prompt(toolset)` — the grounding rule, plus per-toolset search guidance |
+| `tools.py` | the five tools, `select_tools`, and `AnswerDeps` — the run-scoped trace and citable set |
 | `runtime.py` | `build_agent()`, the grounding validator, `stream_answer()`, `answer_question()` |
+| `../vectors/` | `VectorIndex` and the embedder. No `pydantic_ai` import either |
 
-`index.py` sits below `tools.py` deliberately: retrieval is then testable and tunable with no
-model, no key and no network, which is what makes `make eval-retrieval` possible.
+`index.py` and `vectors/` sit below `tools.py` deliberately: retrieval is then testable and
+tunable with no model and no agent, which is what makes `make eval-retrieval` and
+`make eval-retrieval-vector` possible.
 
-## 2. Four tools, not one `retrieve()`
+## 2. Five tools, not one `retrieve()`
 
-| tool | for |
-|---|---|
-| `search_corpus(query, k, source?)` | ranked lexical retrieval. The general-purpose one |
-| `grep_corpus(pattern, source?, ...)` | an exact string: an NCD number, a statutory phrase |
-| `get_chunk(chunk_id, before, after)` | widen a hit that landed mid-definition |
-| `list_documents(source?, limit)` | what is in the corpus at all |
+| tool | for | in toolset |
+|---|---|---|
+| `search_corpus(query, k, source?)` | ranked retrieval by **words** | lexical, both |
+| `grep_corpus(pattern, source?, ...)` | an exact string: an NCD number, a statutory phrase | lexical, both |
+| `vector_search(query, k, source?)` | ranked retrieval by **meaning** | vector, both |
+| `get_chunk(chunk_id, before, after)` | widen a hit that landed mid-definition | every |
+| `list_documents(source?, limit)` | what is in the corpus at all | every |
 
 A single `retrieve(query)` would hide the search strategy inside a ranking function, which is the
 part of the exercise worth doing. With narrow tools a bad query and the recovery from it are both
@@ -52,7 +62,7 @@ wrong.
 **Each tool docstring is a prompt.** The model reads it as the tool description, which is why they
 are longer than an ordinary internal docstring, name their siblings, and say what a bad result
 means. `search_corpus`'s says outright that matching is on words and not meaning, and to query with
-the terms the *source* would use — see §5 for the measurement behind that.
+the terms the *source* would use — see §6 for the measurement behind that.
 
 Two ceilings, both in `index.py`: `MAX_HITS = 10` (each hit can be 1,200 characters, so an
 unbounded `k` is a context-window problem before it is a latency one) and
@@ -60,7 +70,34 @@ unbounded `k` is a context-window problem before it is a latency one) and
 Python's engine — a length cap does not make catastrophic backtracking impossible, it removes the
 room to construct one by accident).
 
-## 3. The grounding guardrail is code
+## 3. The toolset is a per-run choice
+
+`config.Toolset` is `lexical | vector | both`; `tools.select_tools()` turns it into the registered
+list and `prompt.system_prompt()` into the matching instructions. `agent.toolset` in `config.yaml`
+sets what the app ships (`both`); `--toolset` overrides it for one eval run, and the run record
+carries which was used. That is what makes Phase 1b's comparison **one runner with a flag rather
+than three code paths** (docs/plan.md §1b).
+
+Three things about it are load-bearing rather than incidental:
+
+**The navigation tools are in every configuration.** `get_chunk` and `list_documents` widen and
+orient; they do not rank. Dropping them from the vector-only run would fold "lost the ability to
+widen a hit" into the lexical-vs-vector number, and nothing downstream could separate the two
+effects again. `grep_corpus` *is* retrieval by content, so it travels with the lexical set.
+
+**The prompt composes with the toolset.** It used to be one constant asserting that search matches
+"on words, not meaning" and naming `grep_corpus` — both false in a vector-only run. Describing a
+tool the agent does not have is not a cosmetic flaw in an eval: it would make the comparison partly
+a measurement of how well each configuration copes with misleading instructions.
+`tests/test_agent.py` asserts that no prompt names a tool its toolset does not register.
+
+**`_build_agent` caches on `(model, toolset)`.** Two agents that differ in what they can do must
+not share one cached object, and both defaults are resolved *before* the lookup — docs/progress.md
+records the Phase 1a bug where `build_agent()` and `build_agent(None)` were two cache keys and an
+`override` silently went to the real provider. A second defaulted argument is a second chance at
+exactly that.
+
+## 4. The grounding guardrail is code
 
 The prompt asks for grounded answers. `runtime._validate_grounding` is what makes them grounded. It
 runs on every candidate answer and raises `ModelRetry` — handing the model the reason — when:
@@ -75,6 +112,14 @@ runs on every candidate answer and raises `ModelRetry` — handing the model the
 The first is mechanical rather than requested: `tools.AnswerDeps.seen_chunks` records every chunk
 any tool returns, and nothing outside that set is citable. There is no wording the model can choose
 that gets around it.
+
+**A vector hit is citable on exactly the same terms, and that is a property of how it is built.**
+`vector_search` resolves LanceDB's `chunk_id`s back through the same `CorpusIndex` the lexical
+tools use, so a semantic hit reaches `seen_chunks` by the same path. Returning rows straight out of
+the store would have broken it in the nastiest available way: `remember()` looks chunks up by id
+and silently skips what it cannot find, so every citation would then be rejected as ungrounded —
+two layers from the cause, looking like a model problem. `VectorIndex.open` refusing a store built
+against different chunks is the production-scale version of the same guarantee.
 
 The last two duplicate checks `ChatResponse._check_provenance` already makes. Doing them one layer
 earlier turns a served 500 into a retry the model can act on. `agent.retries` (2, in `config.yaml`)
@@ -93,7 +138,7 @@ answer, and a model reproducing its own prose character-for-character is a coin 
 contract validator when it loses. `_claims()` splits on the markers instead, which is exact by
 construction.
 
-## 4. Loop safety, from day one
+## 5. Loop safety, from day one
 
 `config.yaml`'s `agent:` block carries `request_limit: 8` and `tool_calls_limit: 12`, applied as
 `UsageLimits` on every run. Without them, a model that keeps reformulating a query it will never
@@ -103,7 +148,47 @@ answer or an honest abstention.
 Phase 4 adds cycle detection and a hop ceiling **on top of** these rather than introducing the
 idea — cheap now, painful to retrofit.
 
-## 5. What the numbers actually say
+## 6. What the numbers actually say
+
+### Phase 1b: does vector search beat lexical?
+
+**Yes, and "both" beats either alone.** Measured 2026-08-16 against the same gold set and chunk
+snapshots.
+
+The decision was made on the two **retrieval-only** runners, not on an agent A/B, and that choice
+is the methodological point of the phase. Seven Phase 1a agent runs at fixed config span recall@5
+0.600-0.867 — so an agent pair cannot resolve an effect the size of the one being looked for. These
+two have no model in them at all, and the vector run reproduced to three decimals across two
+invocations:
+
+| retrieval only (30 in-corpus questions) | recall@5 | MRR |
+|---|---|---|
+| `make eval-retrieval` — BM25 | 0.567 | 0.416 |
+| `make eval-retrieval-vector` — embeddings | **0.733** | **0.561** |
+
+**They fail differently, which is the finding that matters.** Vector fixes 7 questions and
+regresses 2 — net +5, but the composition is more informative than the total. Four of the seven
+land at **rank 1**. The clearest case is `hcg-01`, *"What exactly is a deductible?"* — the exact
+question §6's Phase 1a half predicted BM25 would lose to the rare word *exactly*. Vector retrieves it first.
+Meanwhile `ncd-05` and `pub-10` go the other way, and six questions defeat both.
+
+That complementarity is the empirical case for shipping `both`, and it is why the trade is not a
+swap. Through the agent, on the full 35-question set:
+
+| agent (35 questions) | recall@5 | MRR | abstention | errors |
+|---|---|---|---|---|
+| `make eval-lexical` | 0.667 | 0.650 | 1.000 | 0 |
+| `make eval-vector` | 0.733 | 0.717 | 1.000 | 2 |
+| `make eval` — **both** (shipped) | **0.800** | **0.733** | 1.000 | 0 |
+
+plan.md set the bar: *"'Both' has to earn its place — it only wins if it beats each alone."* It
+does, on both metrics. **Read the agent rows as weaker evidence than the retrieval rows**: they are
+single runs, the known spread is 0.200 wide, and 0.800-vs-0.733 is inside it. The retrieval
+comparison is what carries the decision; the agent rows say the agent is not squandering the extra
+tool, which is the separate thing they can honestly show. The vector-only row is also a *floor* —
+it lost 2 questions to errors (§8), and an errored question scores as a failure.
+
+### Phase 1a: the lexical baseline
 
 Measured against the 30 in-corpus gold questions with `make eval-retrieval` (free, instant, no
 model):
@@ -132,10 +217,10 @@ scores 0.567, and the misses are vocabulary gaps: *"what exactly is a deductible
 the rare word *exactly*, not by *deductible*. That is not a bug to fix in the ranking function — it
 is the reason the agent gets a toolset and reformulates. Observed on a live run, the agent turns
 that question into `search_corpus(query='deductible definition what you pay before plan pays')` and
-lands the glossary entry first. It is also the honest baseline Phase 1b's vector search has to
-beat.
+lands the glossary entry first. It is also the honest baseline Phase 1b's vector search had to
+beat — and did, retrieving that same question at rank 1 without reformulation.
 
-## 6. Streaming a structured output
+## 7. Streaming a structured output
 
 `answer_question()` is `stream_answer()` drained to its `done` event. One code path, two shapes.
 Phase 0 had a test asserting the two endpoints returned identical objects; a nondeterministic model
@@ -157,7 +242,23 @@ Trace steps come from `deps.trace`, not from the framework's tool events, becaus
 the arguments, the real duration, and a summary of what came back — none of which the event stream
 carries.
 
-## 7. Two things that will bite
+## 8. Three things that will bite
+
+**Two runs in a row will hit the tokens-per-minute ceiling.** One agent run is ~6,000 tokens, so
+the 35-question set is ~210k against a 200k/minute allowance — the set cannot honestly complete
+inside a minute at *any* concurrency. Running `eval-lexical`, `eval-vector` and `eval`
+back-to-back put 16 of 35 questions into `Rate limit reached` on the third, which scored 0.400
+recall and 0.400 abstention accuracy: **a TPM-starved run looks like a quality regression in every
+column at once.** Read a run's error list before its score. A short pause and `--concurrency 2`
+produced a clean 0.800 immediately afterwards.
+
+**`UnexpectedModelBehavior: Exceeded maximum output retries (2)` recurs, intermittently.** Two
+questions in the vector-only run died this way — the *grounding validator's* budget exhausted,
+which is a different failure from a 429 despite sharing the ERR column. Both were re-run by hand
+immediately afterwards and both succeeded, so it is model nondeterminism producing a non-verbatim
+snippet twice in a row rather than anything toolset-specific. Recorded, not fixed: raising
+`agent.retries` would paper over the one guardrail whose failures should stay loud. If it becomes
+frequent, the validator's `ModelRetry` messages are where to look.
 
 **`Agent("openai:...")` does not see `Secrets`.** PydanticAI reads `OPENAI_API_KEY` from the
 process environment and `uv run` does not load `.env`, so the obvious wiring raises `UserError`
@@ -174,7 +275,7 @@ draft built `OpenAIChatModel` explicitly on an unchecked assumption, and that co
 /v1/chat/completions. To use function tools, use /v1/responses"*. An agent with no tools is not
 this project, so the explicit construction has to match what inference would have picked.
 
-## 8. Testing it without a provider
+## 9. Testing it without a provider
 
 `tests/conftest.py` sets `pydantic_ai.models.ALLOW_MODEL_REQUESTS = False` for the whole suite, so
 `make check-all` cannot spend money, cannot need a key, and cannot fail because a provider is
@@ -199,18 +300,23 @@ smoke check might mean the provider changed, and one command that means either t
 at red. `make smoke-abstain` runs the same checks over an out-of-corpus question, where an invented
 citation would be the worst failure this tool has.
 
-## 9. Grading
+## 10. Grading
 
 Three tiers, split by cost, which is why the graders are a list the caller composes rather than a
 fixed pipeline:
 
 | | runs | measures |
 |---|---|---|
-| `make eval-retrieval` | free, instant, no key | retrieval alone — the `bm25_b`/`k1` sweep loop |
-| `make eval` | 35 model calls | the whole phase, plus deterministic groundedness |
+| `make eval-retrieval` | free, instant, no key | lexical retrieval alone — the `bm25_b`/`k1` sweep loop |
+| `make eval-retrieval-vector` | ~30 embedding calls (a fraction of a cent) | semantic retrieval alone |
+| `make eval` / `eval-lexical` / `eval-vector` | 35 model calls | the whole phase at one toolset |
 | `make eval-judge` | +35 model calls | answer correctness, per key fact |
 
-`make smoke` (§8) sits below all of these: one call, and it asks whether the live path works at all
+**The two retrieval rows are the only ones comparable run-to-run**, because no model touches them.
+That is what made them the instrument Phase 1b's decision was taken on rather than a convenience:
+§5's agent rows carry a 0.200 spread and the effect under test is smaller than that.
+
+`make smoke` (§9) sits below all of these: one call, and it asks whether the live path works at all
 rather than how well it answers.
 
 `groundedness` and `citation_resolution` should be **1.000 on every agent run**. The output

@@ -23,6 +23,7 @@ from health_coverage_navigator.evals.answerers import (
     AnswerFn,
     bm25_answerer,
     stub_answerer,
+    vector_answerer,
 )
 from health_coverage_navigator.evals.grading import groundedness_grader, key_fact_coverage_grader
 from health_coverage_navigator.evals.judge import (
@@ -80,7 +81,7 @@ async def test_the_bm25_answerer_says_it_did_not_answer(agent_kit):
     """Same reasoning as `HealthResponse.stub`: output that is not an answer must never be
     mistakable for one, including by whoever opens the run file six months from now."""
     response = await bm25_answerer(agent_kit.index)(_question())
-    assert response.answer == NO_ANSWER
+    assert response.answer == NO_ANSWER.format(retriever="lexical search")
     assert "No model was called" in response.answer
 
 
@@ -101,6 +102,83 @@ async def test_the_bm25_answerer_scores_through_the_normal_runner(agent_kit):
     assert run.model is None, "no model was involved; the record must not imply one"
     assert run.config_fingerprint
     assert "recall@5" in run.metrics
+
+
+# ---------------------------------------------------------------- the vector runner ----------
+#
+# Phase 1b's headline number comes from here, so what these check is that it lands in the record
+# comparably to the bm25 one — not that semantic search retrieves well, which is a question about
+# a real model and belongs to `make eval-retrieval-vector`.
+
+
+async def test_the_vector_answerer_cites_real_chunks(agent_kit):
+    """Every citation must resolve to a chunk in the corpus. A vector runner whose ids did not
+    resolve would score zero on every question while looking like a retrieval failure."""
+    answer = vector_answerer(agent_kit.index, agent_kit.vectors)
+    chunk = agent_kit.index.chunk(agent_kit.DEDUCTIBLE_ID)
+    assert chunk is not None
+    response = await answer(_question(question=chunk.retrieval_text))
+
+    assert response.citations
+    for citation in response.citations:
+        assert agent_kit.index.chunk(citation.chunk_id) is not None
+        assert citation.source_type == "reference"
+
+
+async def test_the_vector_answerer_says_it_did_not_answer(agent_kit):
+    """Same reasoning as the bm25 one and as `HealthResponse.stub`: output that is not an answer
+    must never be mistakable for one — and it must say *which* retriever produced it, since two
+    retrieval-only runners now write into the same run directory."""
+    response = await vector_answerer(agent_kit.index, agent_kit.vectors)(_question())
+    assert response.answer == NO_ANSWER.format(retriever="semantic search")
+    assert "No model was called" in response.answer
+
+
+async def test_the_vector_answerer_never_abstains(agent_kit):
+    """A bare retriever always returns its top k, however weak, which is why the CLI runs it over
+    `in_corpus()` only."""
+    response = await vector_answerer(agent_kit.index, agent_kit.vectors)(
+        _question(question="unrelated nonsense")
+    )
+    assert response.abstained is False
+
+
+async def test_the_vector_runner_scores_through_the_normal_runner(agent_kit):
+    """The point of the whole exercise: `recall@5` from a vector run comes out of the same scorer
+    as `recall@5` from a bm25 run, so the two are directly comparable."""
+    gold = GoldSet(questions=[_question(expected_doc_ids=["glossary_deductible"])])
+    run = await run_gold_set(
+        vector_answerer(agent_kit.index, agent_kit.vectors),
+        gold,
+        runner="vector",
+        vectors_snapshot_id=agent_kit.vectors.snapshot_id,
+    )
+
+    assert run.runner == "vector"
+    assert run.model is None, "no model was involved; the record must not imply one"
+    assert run.toolset is None, "there is no agent here, so there was no toolset to choose"
+    assert run.vectors_snapshot_id == agent_kit.vectors.snapshot_id
+    assert "recall@5" in run.metrics
+
+
+async def test_the_run_record_pins_the_toolset_and_the_embeddings(agent_kit):
+    """Phase 1b's comparison is between runs that differ *only* in `toolset`. A run that does not
+    name it, or does not name the embeddings behind it, cannot take part in that comparison —
+    which is the same argument `config_fingerprint` and `chunker_snapshot_id` already won."""
+    gold = GoldSet(questions=[_question()])
+    run = await run_gold_set(
+        bm25_answerer(agent_kit.index),
+        gold,
+        runner="agent",
+        model="openai:test",
+        toolset="both",
+        vectors_snapshot_id="vectors@abc123",
+    )
+
+    assert run.toolset == "both"
+    assert run.vectors_snapshot_id == "vectors@abc123"
+    assert run.chunker_snapshot_id, "the chunk pin must survive alongside the new ones"
+    assert run.config_fingerprint
 
 
 # ---------------------------------------------------------------- groundedness --------------
