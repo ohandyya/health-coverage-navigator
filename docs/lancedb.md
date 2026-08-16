@@ -3,6 +3,11 @@
 Scope: Phase 1-b of Health Coverage Navigator — adding a `vector_search()` tool **alongside**
 the Phase 1-a full-text toolset, without changing the agent or the eval set.
 
+**Status: built and measured (2026-08-16).** Code in `src/health_coverage_navigator/vectors/`;
+`make embed` builds the store, `make embed-check` verifies it. What the decision below cost and
+bought, measured on the 30 in-corpus gold questions with no model in the loop: BM25 0.567 recall@5,
+vector **0.733**. Numbers and the per-question breakdown: [agent.md](agent.md) §5.
+
 ---
 
 ## 1. Why we chose LanceDB
@@ -36,6 +41,14 @@ the Phase 1-a full-text toolset, without changing the agent or the eval set.
 - **Built-in hybrid search.** Vector *and* full-text (BM25-style) search live in the same
   table — useful later if Phase 2+ wants hybrid retrieval without adding a second system.
 
+  > **Not used in Phase 1-b, and that is a decision rather than an omission (2026-08-16).**
+  > The phase asks whether the *agent* can choose between two ways of searching, so "both" means
+  > both **tools registered**, with the agent reconciling them — a fused ranker would do the
+  > reconciling itself and hide the thing being measured. It would also put a second BM25
+  > implementation beside the stdlib one in `agent/bm25.py`, so the lexical baseline and the
+  > lexical half of the hybrid could drift apart. Still available for a later phase; the store's
+  > schema does not preclude it.
+
   > **Superseded, 2026-08-14.** This bullet originally argued that the Phase 1-a lexical
   > baseline and the Phase 1-b vector backend could *share one store*, making the
   > comparison cleaner. That is no longer true and is no longer a reason to pick LanceDB:
@@ -68,6 +81,38 @@ We compute embeddings ourselves and hand LanceDB plain vectors, rather than usin
 built-in embedding-function registry. LanceDB just stores and indexes vectors — it never
 calls OpenAI on our behalf, so there's no hidden billing, and we keep full control over
 batching (needed to use OpenAI's Batch API discount on bulk ingestion).
+
+> **As built (2026-08-16), the sketch below differs from the shipped code in three ways.**
+> The code is `vectors/`; this section is kept because the *reasoning* still holds, but read
+> these first:
+>
+> 1. **The table stores no text** — columns are `chunk_id, doc_id, source, vector`. The sketch
+>    below spreads `**chunk` into the row. The corpus already holds the text and is the one
+>    source of truth; a second copy is a second thing to drift, after which a citation's snippet
+>    could be validated against text the corpus no longer contains. It also keeps the store at
+>    40 MB.
+> 2. **No ANN index — exhaustive search, always.** At 6,722 rows a flat scan is sub-millisecond,
+>    and an approximate index would make recall approximate. That is disqualifying here: the
+>    `vector` eval runner exists *because* it is deterministic, and a recall number that wobbles
+>    with the index cannot settle the question the phase is asking. Revisit above ~100k rows.
+> 3. **The embedder is batch-in / batch-out**, not one string per call. The bulk build embeds
+>    6,722 chunks in ~53 requests instead of 6,722, and the query path uses the same function
+>    through `embed_one` — one implementation, so the dimensionality check cannot disagree with
+>    itself.
+>
+> Two things the sketch does not mention at all, both of which turned out to matter more than
+> anything above:
+>
+> - **`retrieval_text` is embedded; `text` is what gets cited** (docs/chunking.md §6). The
+>   context header is real retrieval signal but is not text from the source document, so letting
+>   it reach the model as quotable text would send the grounding validator into a retry loop it
+>   cannot win.
+> - **The store records the chunk snapshots it was built from, and refuses to open against a
+>   corpus that no longer matches.** A chunk id is only meaningful against the chunk set that
+>   produced it. Without that check a store built before a re-chunk answers every query
+>   plausibly, from passages that no longer exist — and the failure surfaces two layers away, as
+>   the grounding validator rejecting citations for reasons that look like a model problem.
+>   `make embed-check` is the offline half of the same guarantee.
 
 ### Requirements our `embed()` function must satisfy
 - **Fixed dimensionality, every call** — must match the table's `Vector(n)` schema field,
@@ -111,7 +156,7 @@ rows = [
     if chunk["text"].strip()  # guard against empty chunks
 ]
 
-db = lancedb.connect("data/lancedb")
+db = lancedb.connect("data/lancedb")   # git-ignored; see paths.VECTOR_STORE_DIR
 table = db.create_table("corpus", data=rows)
 ```
 

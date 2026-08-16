@@ -42,8 +42,8 @@ retrieve → stuff-context → generate.
 ## Commands
 
 `uv sync` · `uv run pytest` · `uv run ruff check .` · `make check-all` (ruff, pyright, pytest,
-frontend gate) · `make dev` · `make types` · `make chunk` · `make eval` · `make smoke` ·
-`make scan` · `make help` for the rest. Full list, toolchain pins, and the gotchas:
+frontend gate) · `make dev` · `make types` · `make chunk` · `make embed` · `make eval` ·
+`make smoke` · `make scan` · `make help` for the rest. Full list, toolchain pins, and the gotchas:
 [docs/development.md](docs/development.md).
 
 **`check-all` never reaches a model provider** — the suite sets `ALLOW_MODEL_REQUESTS = False`, so
@@ -132,7 +132,7 @@ rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0�
 |---|---|---|
 | **0** | Corpus + eval scaffold, before any agent: ingestion, gold set, runner over a **pluggable answerer**, frozen contract, UI on a stub | retrieval quality |
 | **1a** | **The agent itself** — one PydanticAI agent, small full-text toolset it composes (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`), **no database of any kind** (stdlib BM25, no vector store, no DuckDB/SQLite FTS, no embeddings). Output schema, provenance, grounding rule, step limits written once, here | answer correctness + groundedness |
-| **1b** | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them | lexical vs. vector vs. both |
+| **1b** ✅ | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them. Toolset (`lexical`/`vector`/`both`) is a per-run flag | lexical vs. vector vs. both |
 | **2** | Web search (Tavily or Exa, chosen by measurement — not a scraped SERP) as a second lane | routing correctness |
 | **3** | Typed tools for Marketplace API, openFDA, NPPES + rate limits, caching, fixtures | tri-modal routing |
 | **4** | Planning and decomposition, per-claim provenance, tracing, cycle detection + hop ceiling | multi-hop + citation accuracy |

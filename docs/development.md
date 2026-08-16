@@ -29,10 +29,13 @@ A `Makefile` wraps every gate — `make help` lists them all.
 | `make types` / `make types-check` | OpenAPI → TypeScript codegen (`frontend/src/api/schema.d.ts`). |
 | `make ui-install` / `ui-dev` / `ui-build` / `ui-test` | Frontend equivalents. |
 | `make chunk` / `make chunk-check` | Rebuild `chunks.jsonl`; verify committed manifests still describe it. |
+| `make embed` / `make embed-check` | Build the LanceDB vector store; verify it matches its manifest. **~$0.03, ~50 s**, idempotent. |
 | `make smoke` | One real question through the live agent — checks the streaming path. **1 model call.** |
 | `make smoke-abstain` | Same, out-of-corpus: the agent must decline rather than invent sources. |
 | `make eval` | Run the gold set through the agent → `data/eval_runs/`. **35 model calls**, ~90 s at the default `--concurrency 3`. |
 | `make eval-retrieval` | Score BM25 retrieval alone — free, instant, no key. The `bm25_b`/`k1` sweep loop. |
+| `make eval-retrieval-vector` | Score semantic retrieval alone — deterministic, ~30 embedding calls. **The lexical-vs-vector decision is taken here**, not on an agent A/B. |
+| `make eval-lexical` / `make eval-vector` | The agent restricted to one toolset. **35 model calls each.** |
 | `make eval-judge` | `eval` plus an LLM judge over answer correctness. **70 model calls.** |
 | `make eval-stub` | Re-measure the Phase 0 canned answerer, the baseline real scores are read against. |
 | `make scan` | Secrets / PII / licensing scan — run before publishing anything under `data/`. |
@@ -59,10 +62,15 @@ A `Makefile` wraps every gate — `make help` lists them all.
   `ALLOW_MODEL_REQUESTS = False` suite-wide, so `make check-all` needs no `OPENAI_API_KEY` and
   costs nothing. Only the `smoke*` and `eval*` targets spend money, and they are outside
   `check-all`. That invariant is why the live check is `make smoke` rather than a pytest marker —
-  see [`agent.md`](agent.md) §8.
+  see [`agent.md`](agent.md) §9.
 - **The agent needs the OpenAI Responses API, not Chat Completions.** The `gpt-5.6-*` family
   returns a hard 400 for function tools on `/v1/chat/completions`; `agent/runtime.py` builds an
-  `OpenAIResponsesModel`. See [`agent.md`](agent.md) §7.
+  `OpenAIResponsesModel`. See [`agent.md`](agent.md) §8.
+- **Do not run the three agent evals back to back.** One run is ~210k tokens against a
+  200k/minute allowance, so the third starts inside a rate limit: `eval-lexical`, `eval-vector`,
+  `eval` in sequence put 16 of 35 questions into an ERR row and scored 0.400 where a paced re-run
+  scored 0.800. Pause between them, or drop to `--concurrency 2`. **Read a run's error list before
+  its score** — a TPM-starved run looks like a quality regression in every column at once.
 - **`make eval`'s speed is capped by tokens per minute, not by concurrency.** One agent run is
   ~6,000 tokens, so the 35-question set is ~210k — more than a 200k TPM allowance permits inside one
   minute at *any* setting. `--concurrency 5` finished in 46 s and failed 16 questions on 429s,

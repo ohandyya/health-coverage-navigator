@@ -349,16 +349,23 @@ retrieval, and you can compare lexical-only, vector-only, and both-tools runs on
 set.
 
 **User-facing capability**
-- [ ] Same Q&A experience as Phase 1-a, now able to find chunks by meaning rather than wording
-- [ ] The trace shows *which* kind of search produced each citation
+- [x] Same Q&A experience as Phase 1-a, now able to find chunks by meaning rather than wording
+- [x] The trace shows *which* kind of search produced each citation (`TraceStep.tool`; no contract change was needed)
 
 **Software capability**
-- [ ] Embedding model configured — same model for documents and queries, fixed dimensionality
-- [ ] LanceDB wired up, populated from `data/processed`
-- [ ] `vector_search` tool registered **alongside** the Phase 1-a tools, not in place of them
-- [ ] Toolset composition as an eval axis (which tools the agent is allowed to see), so lexical-only / vector-only / both is one runner with a flag rather than three code paths
-- [ ] Eval comparison across those three configurations on the same gold set (recall@k, MRR, answer correctness)
-- [ ] Eval dashboard gains a **run-comparison view** so the lexical-vs-vector-vs-both call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
+- [x] Embedding model configured — same model for documents and queries, fixed dimensionality
+- [x] LanceDB wired up, populated from `data/processed` (`make embed`, 6,722 vectors)
+- [x] `vector_search` tool registered **alongside** the Phase 1-a tools, not in place of them
+- [x] Toolset composition as an eval axis (which tools the agent is allowed to see), so lexical-only / vector-only / both is one runner with a flag rather than three code paths
+- [x] Eval comparison across those three configurations on the same gold set (recall@k, MRR, answer correctness)
+- [x] Eval dashboard gains a **run-comparison view** so the lexical-vs-vector-vs-both call is made from data, not vibes — *the only frontend work this phase needs; the chat UI is untouched by design*
+
+**Measured (2026-08-16).** Vector beats lexical and "both" beats each alone, so it earned its
+place. Retrieval only, deterministic, 30 in-corpus questions: BM25 0.567 recall@5 / 0.416 MRR
+against vector **0.733 / 0.561**. Through the agent, 35 questions: lexical 0.667, vector 0.733,
+both **0.800**. The decision was deliberately taken on the retrieval-only pair rather than an agent
+A/B — the agent's known run-to-run spread is 0.200, wider than the effect. Detail and the
+per-question breakdown: [agent.md](agent.md) §6.
 
 ### Phase 2 — Add the web-search tool
 
