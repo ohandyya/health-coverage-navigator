@@ -13,6 +13,13 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Work Log
 
+### Aug 16, 2026
+
+#### To Dos
+
+- Update the plan.md to include a step 1c to include a SQL for `exchange_puf` and `part_d_spuf`
+   - Check and if this mens we shall remove phase 5
+
 ### Aug 14, 2026
 
 #### To Dos
