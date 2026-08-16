@@ -17,7 +17,46 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-15.*
+*Updated 2026-08-16.*
+
+> ### ⏸️ PAUSED MID-PHASE — read this first
+>
+> **Phase 1b's code is built, committed and green; nothing has been measured.** Branch
+> `phase-1b-vector-search`, commit `df7023a`. `make check-all` passes (248 pytest, pyright 0, tsc,
+> oxlint, 15 vitest, `types-check`) and `make scan` is clean with every advisory count at baseline.
+>
+> **The vector store does not exist on this machine yet — `make embed` has never been run.** So
+> `agent.toolset` is `both` in `config.yaml`, and `/api/chat` will 503 naming `make embed` until it
+> has. That is the guardrail working, not a bug. To use the app lexically in the meantime, set
+> `agent.toolset: lexical`.
+>
+> **Resume here, in this order:**
+>
+> 1. `make embed` — ~6,722 chunks, ~53 requests, **~$0.04**, under two minutes. Then
+>    `make embed-check` to confirm it is idempotent, and **commit `data/processed/vectors_meta.json`**
+>    (the store itself is git-ignored).
+> 2. `make eval-retrieval` and `make eval-retrieval-vector` — **the Phase 1b decision.** Both
+>    deterministic, both scored by the same scorer. `bm25` is the standing 0.567 / 0.416.
+> 3. `make eval-lexical`, `make eval-vector`, `make eval` — one each, ~35 model calls apiece. Read
+>    these as a sanity check on the agent's tool *choice*, not as the comparison, and read each
+>    run's error list before its score.
+> 4. `make smoke` and `make smoke-abstain` against the live path.
+> 5. In a browser (`make dev`): a question BM25 misses on vocabulary, confirm `vector_search` in the
+>    trace; then tick two runs on `/evals` to exercise the new comparison view. **Two of Phase 1a's
+>    real UI defects were found in a browser and zero by tests.**
+> 6. **Docs are the outstanding work item** — none were touched. See the checklist below.
+>
+> **Docs still to write** (the plan called for them in the same change; they were not reached):
+> `lancedb.md` (correct the `data/lancedb` path, record the three deviations from its §2 sketch —
+> no text column, no ANN index, batch embedder — and add hybrid search as *rejected* for 1b) ·
+> `agent.md` (§2 becomes five tools, a section on toolset composition, §5 gains the numbers, §9's
+> grading table gains `eval-retrieval-vector`) · `plan.md` §1b checkboxes · `README.md` results
+> table · a Log entry here. `glossary.md` was checked: no new health-insurance term, so nothing owed.
+>
+> **One decision worth knowing before reading any old number:** `Config.fingerprint()` moved, because
+> `config.yaml` gained `agent.toolset` and a `vectors:` block. **No future run's `config_fingerprint`
+> will match any historical one.** That is intended and unavoidable, but it means the pre-1b runs in
+> `data/eval_runs/` can no longer be matched to a current run by fingerprint.
 
 - **Phase:** **1a is complete and shippable.** One PydanticAI agent answers coverage questions from
   the reference corpus with a four-tool full-text toolset over stdlib BM25 — no database of any
@@ -30,7 +69,24 @@ mid-stream.
   Answer correctness has two samples, 0.739 and 0.770, both from the *previous* judge model.
   Retrieval alone is a flat, deterministic 0.567/0.416, so the ~0.13 gap to the agent's mean is what
   query reformulation buys. Design: [agent.md](agent.md).
-- **Next up:** **Phase 1b — `vector_search` alongside the 1a tools** —
+- **Phase 1b, as built (unmeasured).** Design decisions taken, each with a reason that outlives the
+  code: **`text-embedding-3-small` at 1536d** (~$0.04 a build; `-3-large` was rejected not on cost
+  but because 30 in-corpus questions cannot resolve the difference between two good embedding
+  models). **No hybrid search** — LanceDB carries BM25 in the same table and it is deliberately
+  unused, because "both" means both *tools registered* with the agent reconciling them, which is
+  what the phase is about; a fused ranker would hide exactly that. **The table stores no text** —
+  `chunk_id, doc_id, source, vector` only, so the corpus stays the single source of truth and a
+  citation cannot be validated against a second, drifting copy. **No ANN index** — at 6,722 rows a
+  flat scan is sub-millisecond, and an approximate index would make recall approximate, destroying
+  the one property the `vector` eval runner exists for. **Navigation tools (`get_chunk`,
+  `list_documents`) are in every toolset** — dropping them from the vector-only run would fold
+  "lost the ability to widen a hit" into the lexical-vs-vector number.
+- **Measurement protocol, decided before the tool was written** (progress.md asked for this):
+  the headline comes from a **deterministic retrieval-only `vector` runner**, not from an agent A/B.
+  Seven agent runs at fixed config span recall@5 0.600–0.867, and the effect Phase 1b is looking for
+  is that size — so an agent pair cannot resolve it, while a pair of runs with no model in them can.
+  Agent runs per toolset are a sanity check on tool choice. No `--repeat` mode was built.
+- **Superseded — Phase 1b is now in progress, see the paused block above.** Original entry:
   [plan.md](plan.md#phase-1-b--add-vector-search-alongside-the-full-text-tools) and
   [lancedb.md](lancedb.md). Register the tool on the **same** agent rather than replacing anything;
   the comparison is three-way (lexical-only / vector-only / both) with toolset composition as an
@@ -137,6 +193,42 @@ Beyond the F1 list, because the real agent made them necessary:
 - [x] A working state while the agent searches — several seconds pass before the first token
 - [x] Abstentions render through `AnswerBody`, since the agent can abstain *and* cite
 - [x] Citation DOM ids scoped by message id — `c1` is unique per answer, not per conversation
+
+### Phase 1b checklist
+
+*As of 2026-08-16. Code complete on branch `phase-1b-vector-search` (`df7023a`); nothing measured.*
+
+Backend (plan.md, Phase 1b):
+
+- [x] Embedding model configured — same model for documents and queries, fixed dimensionality,
+  enforced by `VectorIndex.open` refusing a store whose manifest disagrees
+- [x] LanceDB wired up, populated from `data/processed` by `make embed`
+- [x] `vector_search` registered **alongside** the 1a tools, not in place of them
+- [x] Toolset composition as an eval axis — `select_tools(toolset)` + `--toolset`, one runner
+- [x] `system_prompt(toolset)` so no configuration is told about a tool it does not have
+- [x] `vectors_meta.json` + `make embed-check` — the store is git-ignored but reproducible
+- [ ] **`make embed` has never been run here** — no store, no `vectors_meta.json` committed
+- [ ] **Eval comparison across the three configurations** — the point of the phase, not yet done
+
+Frontend (frontend_plan.md):
+
+- [x] Run-comparison view — pick two runs, provenance diff, metric deltas, fixed/regressed/unchanged
+- [x] `toolset` badge beside the runner badge; `vectors_snapshot_id` in the run detail
+- [ ] Not yet opened in a browser
+- [x] Chat UI untouched, by design
+
+Not in the plan, added because the code demanded it:
+
+- [x] A **second money guard** in `conftest.py`. `ALLOW_MODEL_REQUESTS = False` is PydanticAI's
+  switch and has no bearing on a direct `AsyncOpenAI().embeddings.create()` — so the suite could
+  have reached a provider with the developer's own key and still gone green. `openai_embedder` is
+  now replaced suite-wide, and consumers call it *through the module* so the patch actually lands.
+- [x] `chunker_snapshots()` moved from `evals/runner.py` to `corpus.py`, which gave it a second
+  caller with a stronger need: the store records those ids and refuses to open against a corpus
+  that no longer matches.
+- [x] `.gitignore` gained `data/lancedb/`. The existing `.lancedb/` line is dot-prefixed and
+  **does not match** the path `lancedb.md` documents — an ingest following that doc verbatim would
+  have left ~41 MB untracked, un-ignored, and in scope for `make scan`.
 
 ---
 
