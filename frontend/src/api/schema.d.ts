@@ -368,6 +368,10 @@ export interface components {
             results: components["schemas"]["EvalQuestionResult"][];
             /** Runner */
             runner: string;
+            /** Toolset */
+            toolset?: string | null;
+            /** Vectors Snapshot Id */
+            vectors_snapshot_id?: string | null;
         };
         /**
          * EvalRunEventEnvelope
@@ -457,6 +461,10 @@ export interface components {
             n_questions: number;
             /** Runner */
             runner: string;
+            /** Toolset */
+            toolset?: string | null;
+            /** Vectors Snapshot Id */
+            vectors_snapshot_id?: string | null;
         };
         /** GoldQuestion */
         GoldQuestion: {

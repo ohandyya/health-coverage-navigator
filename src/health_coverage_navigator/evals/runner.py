@@ -26,26 +26,34 @@ at a moment, not a source of truth.
 
 import argparse
 import asyncio
-import json
 import sys
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
+from health_coverage_navigator.agent.tools import needs_vectors
 from health_coverage_navigator.api.models import (
     ChatResponse,
     EvalQuestionResult,
     EvalRun,
     EvalRunSummary,
 )
-from health_coverage_navigator.config import get_config
-from health_coverage_navigator.corpus import CORPUS_NAMES, chunks_meta_path
+from health_coverage_navigator.config import Toolset, get_config
+from health_coverage_navigator.corpus import chunker_snapshots
 from health_coverage_navigator.evals.answerers import AnswerFn
 from health_coverage_navigator.evals.grading import Grader
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
 from health_coverage_navigator.paths import EVAL_RUNS_DIR
+from health_coverage_navigator.vectors import embedder as embedder_module
+from health_coverage_navigator.vectors.store import (
+    VectorIndex,
+    VectorsNotBuiltError,
+    VectorsStaleError,
+)
 
 #: The *k* in recall@k. Five because the chat UI shows a handful of citations and a hit ranked
 #: below that is not one a reader would find.
@@ -154,21 +162,6 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
     return metrics
 
 
-def chunker_snapshots() -> dict[str, str]:
-    """The `snapshot_id` of each corpus's committed chunk manifest.
-
-    Pins a score to the corpus and chunk parameters it was measured under. Without it, a recall
-    number that moved between two runs is ambiguous between "the retriever changed" and "the
-    chunks changed" — which is precisely the comparison Phase 1b exists to make.
-    """
-    snapshots: dict[str, str] = {}
-    for source in CORPUS_NAMES:
-        path = chunks_meta_path(source)
-        if path.is_file():
-            snapshots[source] = json.loads(path.read_text(encoding="utf-8"))["snapshot_id"]
-    return snapshots
-
-
 def _runs_dir(runs_dir: Path | None) -> Path:
     """Resolve the runs directory at call time, not at import time.
 
@@ -261,6 +254,8 @@ async def run_gold_set(
     on_progress: ProgressFn | None = None,
     graders: Sequence[Grader] = (),
     model: str | None = None,
+    toolset: str | None = None,
+    vectors_snapshot_id: str | None = None,
     max_concurrency: int = 1,
 ) -> EvalRun:
     """Answer every gold question, score it, and return the run.
@@ -292,6 +287,12 @@ async def run_gold_set(
         # say why. `None` when no model was involved (a stub or retrieval-only run).
         config_fingerprint=get_config().fingerprint(),
         model=model,
+        # Phase 1b's comparison is between runs that differ *only* in `toolset`, so a run that does
+        # not name it cannot take part in that comparison. `vectors_snapshot_id` does the same job
+        # for the embeddings that `chunker_snapshot_id` does for the chunks — a recall number that
+        # moved is otherwise ambiguous between "the retriever changed" and "what it searches did".
+        toolset=toolset,
+        vectors_snapshot_id=vectors_snapshot_id,
         chunker_snapshot_id=chunker_snapshots(),
         n_questions=len(results),
         n_passed=sum(1 for r in results if r.passed),
@@ -351,18 +352,39 @@ def list_runs(runs_dir: Path | None = None) -> list[EvalRunSummary]:
 # ---- CLI ----
 
 
-def _build(runner: str, judge: bool) -> tuple[AnswerFn, GoldSet, list[Grader], str | None]:
-    """Resolve `--runner` into an answerer, the questions to ask it, and how to grade it.
+@dataclass(frozen=True, slots=True)
+class RunPlan:
+    """Everything `--runner` and `--toolset` resolve to: what to ask, who answers, how to grade.
+
+    A dataclass rather than a longer tuple. It was already returning four values, and Phase 1b
+    needs two more (`toolset`, `vectors_snapshot_id`) — at six, positional unpacking stops being
+    readable and starts being a place to transpose two `str | None`s silently.
+    """
+
+    answer_fn: AnswerFn
+    gold: GoldSet
+    graders: list[Grader]
+    model: str | None = None
+    toolset: str | None = None
+    vectors_snapshot_id: str | None = None
+
+
+async def _build(runner: str, judge: bool, toolset: str | None) -> RunPlan:
+    """Resolve the flags into an answerer, the questions to ask it, and how to grade it.
 
     The gold *set* varies by runner, which is the non-obvious part. A retrieval-only run is asked
     only the in-corpus questions: a bare retriever always returns its top k and can never abstain,
     so scoring it on the five abstention questions would report a guaranteed zero as if it were a
     finding.
+
+    Async since Phase 1b, because opening the vector store is — and it is opened here, once per
+    run, rather than per question, for the same reason the index is.
     """
     from health_coverage_navigator.evals.answerers import (
         agent_answerer,
         bm25_answerer,
         stub_answerer,
+        vector_answerer,
     )
     from health_coverage_navigator.evals.grading import (
         groundedness_grader,
@@ -373,23 +395,61 @@ def _build(runner: str, judge: bool) -> tuple[AnswerFn, GoldSet, list[Grader], s
     if runner == "stub":
         if judge:
             raise SystemExit("--judge on the stub runner would only measure canned text")
-        return stub_answerer(), gold, [key_fact_coverage_grader()], None
+        return RunPlan(stub_answerer(), gold, [key_fact_coverage_grader()])
 
     from health_coverage_navigator.agent.index import get_corpus_index
 
     index = get_corpus_index()
     graders: list[Grader] = [groundedness_grader(index), key_fact_coverage_grader()]
+    in_corpus = GoldSet(questions=gold.in_corpus())
 
     if runner == "bm25":
         if judge:
             raise SystemExit("--judge on the bm25 runner has no answer to judge")
-        return bm25_answerer(index), GoldSet(questions=gold.in_corpus()), graders, None
+        return RunPlan(bm25_answerer(index), in_corpus, graders)
+
+    if runner == "vector":
+        if judge:
+            raise SystemExit("--judge on the vector runner has no answer to judge")
+        vectors = await _open_vectors()
+        return RunPlan(
+            vector_answerer(index, vectors),
+            in_corpus,
+            graders,
+            vectors_snapshot_id=vectors.snapshot_id,
+        )
 
     if judge:
         from health_coverage_navigator.evals.judge import judge_grader
 
         graders.append(judge_grader())
-    return agent_answerer(index), gold, graders, get_config().agent.model
+
+    resolved = cast(Toolset, toolset or get_config().agent.toolset)
+    vectors = await _open_vectors() if needs_vectors(resolved) else None
+    return RunPlan(
+        agent_answerer(index, vectors, resolved),
+        gold,
+        graders,
+        model=get_config().agent.model,
+        toolset=resolved,
+        vectors_snapshot_id=None if vectors is None else vectors.snapshot_id,
+    )
+
+
+async def _open_vectors() -> VectorIndex:
+    """Open the embedding store, or exit with the command that builds it.
+
+    A `SystemExit` rather than a degraded run: silently falling back to lexical would produce a
+    plausible score for a configuration nobody asked for, and the run record would name the
+    toolset that was *requested*. That is the one failure that would corrupt the comparison this
+    phase exists to make.
+    """
+    config = get_config().vectors
+    embedder = embedder_module.openai_embedder(config.embedding_model, config.dimensions)
+    try:
+        return await VectorIndex.open(embedder)
+    except (VectorsNotBuiltError, VectorsStaleError) as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _status(result: EvalQuestionResult) -> str:
@@ -461,11 +521,22 @@ async def main() -> int:
     parser.add_argument(
         "--runner",
         default="agent",
-        choices=("agent", "bm25", "stub"),
+        choices=("agent", "bm25", "vector", "stub"),
         help=(
-            "agent: the Phase 1a agent (costs a model call per question). "
-            "bm25: retrieval only, no model, no key, sub-second. "
+            "agent: the agent itself (costs a model call per question). "
+            "bm25: lexical retrieval only, no model, no key, sub-second. "
+            "vector: semantic retrieval only, no model, one cheap embedding call per question. "
             "stub: the Phase 0 canned answerer, kept as the baseline. Default: agent."
+        ),
+    )
+    parser.add_argument(
+        "--toolset",
+        default=None,
+        choices=("lexical", "vector", "both"),
+        help=(
+            "which retrieval tools the agent may see (agent runner only). Phase 1b's eval axis: "
+            "lexical-only / vector-only / both, recorded on the run so the three are comparable. "
+            "Default: agent.toolset from config.yaml."
         ),
     )
     parser.add_argument(
@@ -489,13 +560,18 @@ async def main() -> int:
     args = parser.parse_args()
     if args.concurrency < 1:
         raise SystemExit("--concurrency must be at least 1")
+    if args.toolset and args.runner != "agent":
+        raise SystemExit(
+            f"--toolset applies to the agent runner; the {args.runner} runner has no tools to "
+            f"choose between."
+        )
 
-    answer_fn, gold, graders, model = _build(args.runner, args.judge)
+    plan = await _build(args.runner, args.judge, args.toolset)
 
     # Printed before the first call rather than after, so the cost is visible while there is still
     # time to interrupt it.
-    total = len(gold.questions)
-    calls = 0 if model is None else total * (2 if args.judge else 1)
+    total = len(plan.gold.questions)
+    calls = 0 if plan.model is None else total * (2 if args.judge else 1)
     concurrency = args.concurrency if calls else 1  # threads buy nothing without network waits
     print(
         f"{args.runner} runner · {total} questions"
@@ -503,17 +579,23 @@ async def main() -> int:
         + (f" · {concurrency} at a time" if concurrency > 1 else ""),
         file=sys.stderr,
     )
-    if model:
-        print(f"  model  {model}", file=sys.stderr)
+    if plan.model:
+        print(f"  model    {plan.model}", file=sys.stderr)
+    if plan.toolset:
+        print(f"  toolset  {plan.toolset}", file=sys.stderr)
+    if plan.vectors_snapshot_id:
+        print(f"  vectors  {plan.vectors_snapshot_id}", file=sys.stderr)
     if args.judge:
-        print(f"  judge  {get_config().evals.judge_model}", file=sys.stderr)
+        print(f"  judge    {get_config().evals.judge_model}", file=sys.stderr)
 
     run = await run_gold_set(
-        answer_fn,
-        gold,
+        plan.answer_fn,
+        plan.gold,
         runner=args.runner,
-        graders=graders,
-        model=model,
+        graders=plan.graders,
+        model=plan.model,
+        toolset=plan.toolset,
+        vectors_snapshot_id=plan.vectors_snapshot_id,
         on_progress=_progress_printer(total),
         max_concurrency=concurrency,
     )
@@ -531,6 +613,8 @@ async def main() -> int:
     print(f"\n{run.id}  runner={run.runner}  {run.n_passed}/{run.n_questions} passed", file=out)
     if run.model:
         print(f"  model                    {run.model}", file=out)
+    if run.toolset:
+        print(f"  toolset                  {run.toolset}", file=out)
     for name, value in sorted(run.metrics.items()):
         print(f"  {name:<24} {value:.3f}", file=out)
 

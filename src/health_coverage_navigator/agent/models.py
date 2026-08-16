@@ -53,9 +53,11 @@ class ChunkHit(BaseModel):
     """The passage itself, verbatim. Quote from this and nowhere else."""
 
     score: float | None = None
-    """Lexical relevance, when the tool that produced this hit ranks. Comparable only within one
-    result list — a BM25 score has no absolute meaning, so a low one is not evidence of a bad
-    match."""
+    """How well this passage matched, when the tool that produced it ranks. **Comparable only
+    within one result list.** `search_corpus` returns a BM25 score and `vector_search` returns a
+    similarity; the two are different scales, so a 0.8 from one says nothing about a 12.4 from the
+    other, and neither has an absolute meaning — a low score is not evidence of a bad match. Use it
+    to order results from a single call, never to choose between two calls."""
 
     @classmethod
     def of(cls, chunk: Chunk, score: float | None = None) -> "ChunkHit":

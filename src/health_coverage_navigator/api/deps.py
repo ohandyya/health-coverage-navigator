@@ -13,6 +13,7 @@ from fastapi import Request
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.evals.models import GoldSet
+from health_coverage_navigator.vectors.store import VectorIndex
 
 
 @dataclass(slots=True, frozen=True)
@@ -34,6 +35,13 @@ class AppContext:
     none — and it is not a failure to boot: `make types` imports this app, and `/api/health` and
     the eval dashboard must still work. It *is* a failure to answer, and `routes/chat.py` says so
     with a 503 that names `make chunk`."""
+
+    vectors: VectorIndex | None = None
+    """The embedding store `vector_search` queries, or `None` when it has never been built here.
+    Same reasoning as `index` above, with one addition: building this one costs a paid embedding
+    call, so `None` is a *more* ordinary state than a missing chunk file. Whether it is a failure
+    to answer depends on `agent.toolset` — a `lexical` configuration does not need it, and
+    `routes/chat.py` is where that question is asked."""
 
 
 def get_context(request: Request) -> AppContext:

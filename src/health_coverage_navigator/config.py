@@ -26,7 +26,7 @@ here rather than imported, and why `chunking/params.py` now holds only `CHUNKER_
 import hashlib
 import json
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -34,6 +34,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from health_coverage_navigator.paths import CONFIG_PATH
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
+
+#: Which retrieval tools the agent is allowed to see. Phase 1b's eval axis, defined here rather
+#: than in `agent/` so `config.py` can type the setting without importing the agent package —
+#: `agent/tools.py` imports it back. The navigation tools (`get_chunk`, `list_documents`) are in
+#: every configuration; what this selects is the *ranked retrieval* the agent may reach for.
+Toolset = Literal["lexical", "vector", "both"]
 
 
 def _fingerprint(model: BaseModel) -> str:
@@ -71,6 +77,11 @@ class AgentConfig(BaseModel):
     #: success or a recorded error, and that changes an eval score.
     request_retries: int = Field(ge=0, le=10)
 
+    #: Which retrieval tools the agent may see. Committed rather than flag-only because it decides
+    #: what the *shipped* app does; `--toolset` on the eval runner overrides it for one run, and
+    #: the run record carries which was used.
+    toolset: Toolset
+
 
 class EvalsConfig(BaseModel):
     """Grading. Separate from `agent:` because the judge must be swappable without touching what
@@ -89,6 +100,39 @@ class RetrievalConfig(BaseModel):
     top_k: int = Field(gt=0)
     bm25_k1: float = Field(gt=0)
     bm25_b: float = Field(ge=0, le=1)
+
+
+class VectorsConfig(BaseModel):
+    """Phase 1b semantic retrieval: the embedding model, and how the store is built and queried.
+
+    Separate from `RetrievalConfig` rather than folded into it, because the two are tuned against
+    different things and on different budgets — `bm25_k1`/`bm25_b` sweep for free, while changing
+    `embedding_model` or `dimensions` is a full re-ingest (docs/lancedb.md §2). Keeping them apart
+    means a lexical sweep cannot silently invalidate the vector store.
+    """
+
+    model_config = _FROZEN
+
+    #: OpenAI embeddings model. The **same model must embed documents and queries**, which is why
+    #: there is one key and not two: two keys is a way to get an incompatible embedding space.
+    #: Changing this is not a config tweak — it invalidates every stored vector, and
+    #: `VectorIndex.open` refuses a store whose manifest disagrees.
+    embedding_model: str = Field(min_length=1)
+
+    #: Native dimensionality of `embedding_model`. Recorded rather than inferred so the Arrow
+    #: schema, the manifest and the store cannot disagree about a table that is expensive to
+    #: rebuild — a mismatch is a startup error rather than a silently wrong nearest neighbour.
+    dimensions: int = Field(gt=0)
+
+    #: How many passages `vector_search` returns by default. Mirrors `retrieval.top_k` today and is
+    #: deliberately a separate key: Phase 1b compares lexical against vector, and a shared value
+    #: would make "retrieve more" impossible to try on one side alone.
+    top_k: int = Field(gt=0)
+
+    #: Inputs per embeddings request during a bulk build. Only the offline build reads this; a
+    #: query embeds one string. 128 keeps the 6,722-chunk ingest to ~53 requests without putting a
+    #: single failure in charge of a large batch.
+    batch_size: int = Field(gt=0)
 
 
 class ChunkParams(BaseModel):
@@ -130,6 +174,7 @@ class Config(BaseModel):
 
     agent: AgentConfig
     retrieval: RetrievalConfig
+    vectors: VectorsConfig
     evals: EvalsConfig
     chunking: ChunkParams
 

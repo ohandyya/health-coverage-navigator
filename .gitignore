@@ -37,6 +37,16 @@ htmlcov/
 .chroma/
 .lancedb/
 
+# The LanceDB vector store (~41 MB: 6,722 chunks x 1,536 float32). Same reasoning as
+# chunks.jsonl below — a pure function of committed inputs, rebuilt by `make embed` — with one
+# addition: rebuilding it costs a paid embedding call, so the committed
+# data/processed/vectors_meta.json records the embedding model, the dimensionality, the row count
+# and the chunk snapshot ids it was built from. `make embed-check` verifies the store on disk
+# still matches that manifest without re-embedding anything.
+# This pattern is deliberately spelled out rather than relying on `.lancedb/` above: that one is
+# dot-prefixed and does NOT match this path.
+data/lancedb/
+
 # Raw Medicare publication PDFs (~44 MB of binaries) — the one exception to the rule
 # above. data/raw/medicare_pubs/catalog.json records the url, sha256, and Last-Modified
 # of every file, so `uv run python scripts/download_medicare_pubs.py` reproduces this

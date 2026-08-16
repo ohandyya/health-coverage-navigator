@@ -5,6 +5,12 @@ real request raise instead of going out, so `make check-all` cannot spend money,
 `OPENAI_API_KEY`, and cannot fail because a provider is having a bad afternoon. Tests that need a
 model use `FunctionModel` through `agent.override(model=...)`, which the flag does not affect.
 
+**That flag is not enough on its own since Phase 1b.** It guards PydanticAI's model requests, and
+an embedding call goes out through the OpenAI SDK directly — `openai_embedder` would happily reach
+the network with the developer's own key while every test appeared to pass. `_no_live_embeddings`
+below closes that, so the invariant is "no test reaches a *provider*", not just "no test reaches a
+model".
+
 Everything else here exists because `tests/` is not a package, so `test_agent_stream.py` cannot
 import a helper from `test_agent.py`. Fixtures are pytest's answer to that, and the shared piece —
 a scripted model — is genuinely shared rather than incidentally duplicated: both files need a model
@@ -16,8 +22,12 @@ avoiding for a fixture with exactly one consumer.
 """
 
 import asyncio
+import hashlib
 import json
+import math
+from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -30,6 +40,9 @@ from health_coverage_navigator.agent.models import AgentAnswer
 from health_coverage_navigator.agent.runtime import answer_question, build_agent, stream_answer
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, StreamEvent
 from health_coverage_navigator.chunking.models import Chunk
+from health_coverage_navigator.config import Toolset
+from health_coverage_navigator.vectors.embedder import Embedder
+from health_coverage_navigator.vectors.store import VectorIndex, build_store
 
 
 @pytest.fixture(autouse=True)
@@ -37,6 +50,29 @@ def _no_live_model_requests(monkeypatch: pytest.MonkeyPatch) -> None:
     import pydantic_ai.models
 
     monkeypatch.setattr(pydantic_ai.models, "ALLOW_MODEL_REQUESTS", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_embeddings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The embedding half of the no-provider invariant.
+
+    `ALLOW_MODEL_REQUESTS` is PydanticAI's switch and has no bearing on a direct
+    `AsyncOpenAI().embeddings.create()`, which is exactly what `openai_embedder` does. Without this
+    the suite would need a key, would spend money, and — worst — a test that accidentally used the
+    real embedder would *pass*, quietly, at whatever the developer's rate limit allowed.
+
+    Patched at the factory rather than at the SDK, so the failure names the seam a test should have
+    used instead of surfacing as an authentication error from somewhere in `openai`.
+    """
+    import health_coverage_navigator.vectors.embedder as embedder_module
+
+    def refuse(*_args: Any, **_kwargs: Any):
+        raise AssertionError(
+            "a test tried to build the live OpenAI embedder. Use the `fake_embedder` fixture; "
+            "the suite must not reach a provider."
+        )
+
+    monkeypatch.setattr(embedder_module, "openai_embedder", refuse)
 
 
 # ---------------------------------------------------------------- the agent kit -------------
@@ -54,10 +90,39 @@ PREMIUM_ID = "healthcare_gov:glossary_premium#000"
 #: reach for first, so the scripts start where a real run does.
 SEARCH = ("search_corpus", {"query": "deductible", "k": 5})
 
+
 #: How finely a scripted stream chops its JSON. Deliberately small and aligned to nothing, so
 #: fragments split mid-key, mid-string and mid-escape — the same instinct as `stream.test.ts`
 #: feeding the SSE parser a frame split across a chunk boundary. The bug lives at the seam.
 CHUNK_CHARS = 17
+
+
+#: Width of the fake embedding space. Small on purpose — nothing here measures retrieval quality,
+#: and 1,536 floats per chunk in a fixture is noise in a failure message.
+FAKE_DIM = 16
+
+#: The embedding model name the fixture store records. Not a real model, and it says so, so a
+#: manifest that somehow reached a real store would be rejected by `VectorIndex.open` rather than
+#: quietly used.
+FAKE_MODEL = "fake-embedding-model"
+
+
+def fake_embed(texts: Sequence[str]) -> list[list[float]]:
+    """A deterministic hash-based embedding: same text, same unit vector, every time.
+
+    **Not semantic, and deliberately not pretending to be.** Two paraphrases get unrelated vectors,
+    so this can never stand in for a judgement about whether vector search *works* — that is what
+    `make eval-retrieval-vector` measures, against the real corpus and a real model. What it does
+    give is the two properties the plumbing tests need: an exact-text query lands its own chunk at
+    similarity 1.0, and the ordering is stable across runs.
+    """
+    out: list[list[float]] = []
+    for text in texts:
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        raw = [(digest[i % len(digest)] / 255.0) - 0.5 for i in range(FAKE_DIM)]
+        norm = math.sqrt(sum(x * x for x in raw)) or 1.0
+        out.append([x / norm for x in raw])
+    return out
 
 
 def make_chunk(doc_id: str, title: str, text: str) -> Chunk:
@@ -73,6 +138,18 @@ def make_chunk(doc_id: str, title: str, text: str) -> Chunk:
         title=title,
         url=f"/glossary/{title.lower()}",
     )
+
+
+#: A `vector_search` call that actually retrieves the deductible chunk under `fake_embed`.
+#: The query is that chunk's exact `retrieval_text` — with a hash embedder a paraphrase retrieves
+#: nothing (see `fake_embed`), so anything else would be testing the fixture rather than the tool.
+VECTOR_SEARCH = (
+    "vector_search",
+    {
+        "query": make_chunk("glossary_deductible", "Deductible", DEDUCTIBLE_TEXT).retrieval_text,
+        "k": 5,
+    },
+)
 
 
 def _turn(turns: tuple, messages: list[ModelMessage]) -> tuple[str, dict]:
@@ -151,30 +228,55 @@ class AgentKit:
     """
 
     index: CorpusIndex
+    vectors: VectorIndex
 
     script = staticmethod(scripted_model)
     answer = staticmethod(grounded_answer)
     chunk = staticmethod(make_chunk)
+    embed = staticmethod(fake_embed)
 
     SEARCH = SEARCH
+    VECTOR_SEARCH = VECTOR_SEARCH
     DEDUCTIBLE_ID = DEDUCTIBLE_ID
     PREMIUM_ID = PREMIUM_ID
     DEDUCTIBLE_TEXT = DEDUCTIBLE_TEXT
     PREMIUM_TEXT = PREMIUM_TEXT
 
-    def run(self, *turns: Any, message: str = "what is a deductible?") -> ChatResponse:
+    def run(
+        self,
+        *turns: Any,
+        message: str = "what is a deductible?",
+        toolset: Toolset | None = None,
+    ) -> ChatResponse:
         """One full agent run against the scripted turns."""
-        with build_agent().override(model=scripted_model(*turns)):
-            return asyncio.run(answer_question(ChatRequest(message=message), self.index))
+        with build_agent(toolset=toolset).override(model=scripted_model(*turns)):
+            return asyncio.run(
+                answer_question(
+                    ChatRequest(message=message),
+                    self.index,
+                    toolset=toolset,
+                    vectors=self.vectors,
+                )
+            )
 
-    def stream(self, *turns: Any, message: str = "what is a deductible?") -> list[StreamEvent]:
+    def stream(
+        self,
+        *turns: Any,
+        message: str = "what is a deductible?",
+        toolset: Toolset | None = None,
+    ) -> list[StreamEvent]:
         """Every SSE event one run emits, in order."""
 
         async def drain() -> list[StreamEvent]:
             request = ChatRequest(message=message)
-            return [event async for event in stream_answer(request, self.index)]
+            return [
+                event
+                async for event in stream_answer(
+                    request, self.index, toolset=toolset, vectors=self.vectors
+                )
+            ]
 
-        with build_agent().override(model=scripted_model(*turns)):
+        with build_agent(toolset=toolset).override(model=scripted_model(*turns)):
             return asyncio.run(drain())
 
     def expect_rejection(self, *turns: Any) -> str:
@@ -202,20 +304,107 @@ class AgentKit:
         return retries[-1]
 
 
-@pytest.fixture(scope="session")
-def agent_kit() -> AgentKit:
-    """Two hand-written chunks, not the real 6,722.
+@dataclass(frozen=True, slots=True)
+class VectorKit:
+    """Everything `test_vectors.py` needs to build and open a store offline, in one fixture.
 
-    These tests are about what happens to a citation, not about whether BM25 ranks well;
-    `tests/test_corpus_index.py` covers the latter against the real corpus. A two-document index
-    also makes "the model cited something it never retrieved" easy to set up, which is the single
-    most important thing the guardrail does.
+    Same reason `AgentKit` is one object: `tests/` is not a package, so a test module can reach all
+    of this through a single parameter but cannot import any of it by name from here.
     """
-    return AgentKit(
-        index=CorpusIndex(
-            [
-                make_chunk("glossary_deductible", "Deductible", DEDUCTIBLE_TEXT),
-                make_chunk("glossary_premium", "Premium", PREMIUM_TEXT),
-            ]
+
+    DIM = FAKE_DIM
+    MODEL = FAKE_MODEL
+
+    embed = staticmethod(fake_embed)
+
+    @staticmethod
+    async def embedder(texts: Sequence[str]) -> list[list[float]]:
+        """`fake_embed` behind the async `Embedder` signature."""
+        return fake_embed(texts)
+
+    @staticmethod
+    async def build(chunks: Sequence[Chunk], root: Path) -> VectorIndex:
+        return await build_fake_store(chunks, root)
+
+    @staticmethod
+    async def open(root: Path, **overrides: Any) -> VectorIndex:
+        """Reopen a store `build` wrote, with the staleness inputs overridable."""
+        return await VectorIndex.open(
+            VectorKit.embedder,
+            **{
+                "store_dir": root / "lancedb",
+                "meta_path": root / "vectors_meta.json",
+                "embedding_model": FAKE_MODEL,
+                **overrides,
+            },
         )
+
+
+@pytest.fixture
+def vector_kit() -> VectorKit:
+    return VectorKit()
+
+
+@pytest.fixture
+def fake_embedder() -> Embedder:
+    """`fake_embed` behind the async `Embedder` signature."""
+    return VectorKit.embedder
+
+
+async def build_fake_store(chunks: Sequence[Chunk], root: Path) -> VectorIndex:
+    """A real LanceDB store over `chunks`, embedded with the hash embedder.
+
+    Real rather than a stub object, because the things most likely to break are LanceDB's own —
+    the fixed-width Arrow schema, the pre-filter, the `_distance` column — and a hand-written fake
+    `VectorIndex` would only assert that our mock behaves like our mock. It costs milliseconds,
+    needs no network, and writes only under `tmp_path`.
+
+    The snapshot check passes rather than being bypassed: `build_store` records the live committed
+    `chunker_snapshots()`, and the reopen compares against those same ids. So this exercises the
+    agreeing path; `tests/test_vectors.py` drives the disagreeing one directly.
+    """
+
+    async def embedder(texts: Sequence[str]) -> list[list[float]]:
+        return fake_embed(texts)
+
+    store_dir, meta_path = root / "lancedb", root / "vectors_meta.json"
+    await build_store(
+        chunks,
+        embedder,
+        dimensions=FAKE_DIM,
+        embedding_model=FAKE_MODEL,
+        batch_size=2,
+        store_dir=store_dir,
+        meta_path=meta_path,
+    )
+    return await VectorIndex.open(
+        embedder,
+        store_dir=store_dir,
+        meta_path=meta_path,
+        embedding_model=FAKE_MODEL,
+    )
+
+
+@pytest.fixture(scope="session")
+def agent_kit(tmp_path_factory: pytest.TempPathFactory) -> AgentKit:
+    """Two hand-written chunks, not the real 6,722, plus a vector store over the same two.
+
+    These tests are about what happens to a citation, not about whether retrieval ranks well;
+    `tests/test_corpus_index.py` and `make eval-retrieval-vector` cover that against the real
+    corpus. A two-document index also makes "the model cited something it never retrieved" easy to
+    set up, which is the single most important thing the guardrail does.
+
+    The vector store is built from the *same* two chunks as the BM25 index on purpose: the
+    grounding path resolves every hit through `CorpusIndex`, so a store over different chunks would
+    make every vector citation silently uncitable — the exact failure `VectorIndex.open`'s staleness
+    check exists to prevent in production.
+    """
+    chunks = [
+        make_chunk("glossary_deductible", "Deductible", DEDUCTIBLE_TEXT),
+        make_chunk("glossary_premium", "Premium", PREMIUM_TEXT),
+    ]
+    root = tmp_path_factory.mktemp("agent_kit")
+    return AgentKit(
+        index=CorpusIndex(chunks),
+        vectors=asyncio.run(build_fake_store(chunks, root)),
     )

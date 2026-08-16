@@ -23,6 +23,7 @@ surface for the agent to get wrong.
 
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from pydantic_ai import ModelRetry, RunContext
@@ -31,20 +32,27 @@ from health_coverage_navigator.agent.index import MAX_HITS, MAX_PATTERN_CHARS, C
 from health_coverage_navigator.agent.models import ChunkHit, CorpusOverview
 from health_coverage_navigator.api.models import TraceStep
 from health_coverage_navigator.chunking.models import Chunk
-from health_coverage_navigator.config import RetrievalConfig, get_config
+from health_coverage_navigator.config import RetrievalConfig, Toolset, get_config
 from health_coverage_navigator.corpus import CorpusName
+from health_coverage_navigator.vectors.store import VectorIndex
 
 
 @dataclass(slots=True)
 class AnswerDeps:
     """Everything one agent run needs, and everything it records.
 
-    Mutable by design and scoped to a single run — never shared between requests. `CorpusIndex` is
-    the one thing here that *is* shared: it is read-only after construction and costs ~200 ms to
-    build, so it is passed in rather than rebuilt.
+    Mutable by design and scoped to a single run — never shared between requests. `CorpusIndex` and
+    `VectorIndex` are the two things here that *are* shared: both are read-only after construction
+    and expensive to build (~200 ms for the BM25 index, a paid embedding run for the store), so
+    they are passed in rather than rebuilt.
     """
 
     index: CorpusIndex
+
+    vectors: VectorIndex | None = None
+    """The embedding store, or `None` when this run has no vector tool. `None` is a real, expected
+    state — a lexical-only eval run, or an app whose store has never been built — and
+    `select_tools` is what guarantees `vector_search` is not registered when it would be."""
 
     retrieval: RetrievalConfig = field(default_factory=lambda: get_config().retrieval)
     """BM25 parameters, resolved once per run. Held here rather than read inside `search_corpus`
@@ -151,8 +159,7 @@ def search_corpus(
     k: int = 5,
     source: CorpusName | None = None,
 ) -> list[ChunkHit]:
-    """Rank passages by lexical relevance to a query. This is the general-purpose search — start
-    here.
+    """Rank passages by **keyword** relevance to a query.
 
     Matching is on **words, not meaning**: a passage is found because it contains the query's terms,
     so a question phrased in a patient's words may miss a document written in the regulator's.
@@ -160,6 +167,7 @@ def search_corpus(
     "deductible" or "out-of-pocket limit", not "what exactly is a deductible?", because a rare
     filler word like "exactly" will outweigh the term you care about.
 
+    Best when you know the vocabulary the documents use: a defined benefit term, a programme name.
     If the results look off-topic, reformulate and search again rather than settling. If they look
     right but land mid-definition, widen the best one with `get_chunk`. For an exact string — a
     specific NCD number, a statutory phrase — `grep_corpus` is the better tool.
@@ -193,7 +201,7 @@ def grep_corpus(
     Use this when you know the precise wording and ranking would only get in the way: an NCD
     section number ("240.4"), a defined term you want every occurrence of, a statutory phrase. It
     returns matches in corpus order, not by relevance, so it is the wrong tool for an open question
-    — use `search_corpus` for those.
+    — use one of the ranked searches for those.
 
     Args:
         pattern: A Python regular expression, at most 200 characters. Escape regex metacharacters
@@ -255,17 +263,109 @@ def get_chunk(
     return ctx.deps.remember(hits)
 
 
-#: Registered on the agent in `runtime.py`. Order is the order the model sees them in, so the
-#: general-purpose one comes first and the two recovery moves come last.
-TOOLS = (search_corpus, grep_corpus, get_chunk, list_documents)
+async def vector_search(
+    ctx: RunContext[AnswerDeps],
+    query: str,
+    k: int = 5,
+    source: CorpusName | None = None,
+) -> list[ChunkHit]:
+    """Rank passages by **meaning** rather than wording.
+
+    Finds passages that are about the same thing as your query even when they share none of its
+    words — so a question in a patient's language can reach a document written in a regulator's.
+    Unlike `search_corpus`, you do **not** need to guess the source's vocabulary: phrase the query
+    as the underlying question, in a full sentence if that expresses it best.
+
+    It is correspondingly weaker where `search_corpus` is strong. A passage that is merely on a
+    related topic can outrank the one that actually defines the term, and an exact identifier — an
+    NCD number, a specific dollar figure — is better found with `grep_corpus`. Read what comes
+    back rather than trusting the order.
+
+    Its score is a similarity, on a different scale from `search_corpus`'s, so the two cannot be
+    compared across calls. When both tools return the same passage, that agreement is stronger
+    evidence than either result alone; when they disagree, read both before choosing.
+
+    Args:
+        query: What you want to find, in natural language. A full question works well here.
+        k: How many passages to return, at most 10.
+        source: Restrict to one corpus, as described by `list_documents`.
+    """
+    if ctx.deps.vectors is None:  # pragma: no cover - `select_tools` makes this unreachable
+        raise ModelRetry(
+            "Semantic search is not available in this session. Use search_corpus for keyword "
+            "search or grep_corpus for an exact string."
+        )
+
+    started = time.perf_counter()
+    ranked = await ctx.deps.vectors.search(query, min(max(k, 0), MAX_HITS), source=source)
+    # Resolved through the *same* `CorpusIndex` the lexical tools use, which is what makes a vector
+    # hit citable: `remember` records chunks by looking them up here, and the grounding validator
+    # only accepts what `remember` recorded. An id the index cannot resolve is dropped rather than
+    # surfaced — it would be uncitable anyway — and `VectorIndex.open` is what stops that from
+    # happening quietly at scale, by refusing a store built against different chunks.
+    hits = [
+        ChunkHit.of(chunk, score)
+        for chunk_id, score in ranked
+        if (chunk := ctx.deps.index.chunk(chunk_id)) is not None
+    ]
+    ctx.deps._record(
+        "vector_search",
+        {"query": query, "k": k, "source": source},
+        _summarize(hits),
+        int((time.perf_counter() - started) * 1000),
+    )
+    return ctx.deps.remember(hits)
+
+
+#: Tools every configuration gets. These are how a hit is *widened or oriented*, not how one is
+#: found, so removing them from a vector-only run would measure "lost the ability to widen a hit"
+#: alongside "vector vs lexical" — two effects on one number.
+NAVIGATION_TOOLS = (get_chunk, list_documents)
+
+#: Phase 1a's ranked-and-exact retrieval over words.
+LEXICAL_TOOLS = (search_corpus, grep_corpus)
+
+#: Phase 1b's ranked retrieval over meaning.
+VECTOR_TOOLS = (vector_search,)
+
+
+def select_tools(toolset: Toolset) -> list[Callable[..., object]]:
+    """Which tools the agent may see, for one run.
+
+    Phase 1b's eval axis (docs/plan.md §1b): lexical-only / vector-only / both is *one runner with
+    a flag*, not three code paths, and this function is the flag. `runtime._build_agent` caches on
+    the result, so the return has to depend on nothing but the argument.
+
+    Order is the order the model sees the tools in, and it is preserved deliberately: the
+    general-purpose ranker first, the recovery moves last. Under `both`, lexical leads because it
+    is the cheaper call and the one that wins on exact vocabulary; the prompt says when to reach
+    past it.
+    """
+    ranked = {
+        "lexical": LEXICAL_TOOLS,
+        "vector": VECTOR_TOOLS,
+        "both": LEXICAL_TOOLS + VECTOR_TOOLS,
+    }[toolset]
+    return [*ranked, *NAVIGATION_TOOLS]
+
+
+def needs_vectors(toolset: Toolset) -> bool:
+    """Whether this configuration cannot run without the vector store."""
+    return toolset in ("vector", "both")
+
 
 __all__ = [
+    "LEXICAL_TOOLS",
     "MAX_HITS",
     "MAX_PATTERN_CHARS",
-    "TOOLS",
+    "NAVIGATION_TOOLS",
+    "VECTOR_TOOLS",
     "AnswerDeps",
     "get_chunk",
     "grep_corpus",
     "list_documents",
+    "needs_vectors",
     "search_corpus",
+    "select_tools",
+    "vector_search",
 ]

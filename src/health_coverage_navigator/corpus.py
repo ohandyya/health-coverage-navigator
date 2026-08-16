@@ -46,6 +46,26 @@ def chunks_meta_path(source: CorpusName) -> Path:
     return PROCESSED_DIR / source / "chunks_meta.json"
 
 
+def chunker_snapshots() -> dict[str, str]:
+    """The `snapshot_id` of each corpus's committed chunk manifest.
+
+    Pins a measurement to the corpus and chunk parameters it was taken under. Without it, a recall
+    number that moved between two runs is ambiguous between "the retriever changed" and "the chunks
+    changed" — precisely the comparison Phase 1b exists to make.
+
+    Lives here rather than in `evals/runner.py` (where it started) because Phase 1b gave it a second
+    caller with a stronger need: the vector store records these ids and **refuses to open** against
+    a corpus that no longer matches, since a chunk id from a different snapshot is one the in-memory
+    index cannot resolve.
+    """
+    snapshots: dict[str, str] = {}
+    for source in CORPUS_NAMES:
+        path = chunks_meta_path(source)
+        if path.is_file():
+            snapshots[source] = json.loads(path.read_text(encoding="utf-8"))["snapshot_id"]
+    return snapshots
+
+
 def load_corpus(source: CorpusName) -> list[dict]:
     """Read one corpus in file order, checking the invariants chunking relies on.
 

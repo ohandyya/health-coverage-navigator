@@ -24,11 +24,15 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from health_coverage_navigator.agent.index import ChunksNotBuiltError, CorpusIndex, get_corpus_index
+from health_coverage_navigator.agent.tools import needs_vectors
 from health_coverage_navigator.api.deps import AppContext
 from health_coverage_navigator.api.routes import chat, corpus, evals, health
+from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import load_doc_index
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.paths import FRONTEND_DIST
+from health_coverage_navigator.vectors import embedder as embedder_module
+from health_coverage_navigator.vectors.store import VectorIndex, VectorsNotBuiltError
 
 DESCRIPTION = """
 Answers U.S. health-coverage questions by routing each sub-question to the right source type:
@@ -114,6 +118,36 @@ def _load_index() -> CorpusIndex | None:
         return None
 
 
+async def _load_vectors() -> VectorIndex | None:
+    """The agent's embedding store, or `None` with an explanation on the console.
+
+    Two failure modes, treated **differently on purpose**:
+
+    * `VectorsNotBuiltError` — nothing has been embedded here. Ordinary, like a missing
+      `chunks.jsonl` but more so, since building costs a paid call. Logged and degraded to `None`;
+      `routes/chat.py` decides whether that is fatal for the configured toolset.
+    * `VectorsStaleError` — a store exists but was built against different chunks or a different
+      model. **Deliberately allowed to propagate and stop the boot.** A missing store is visibly
+      unbuilt; a stale one answers every query plausibly from the wrong passages, and it would be
+      the citations — the one thing this tool must never get wrong — that were wrong. Failing at
+      startup with a message naming `make embed` is the cheap version of that discovery.
+
+    Skipped entirely when the configured toolset has no vector tool, so a lexical-only run is not
+    blocked by a store it will never query.
+    """
+    config = get_config()
+    if not needs_vectors(config.agent.toolset):
+        return None
+    embedder = embedder_module.openai_embedder(
+        config.vectors.embedding_model, config.vectors.dimensions
+    )
+    try:
+        return await VectorIndex.open(embedder)
+    except VectorsNotBuiltError as exc:
+        logger.warning("semantic search unavailable: %s", exc)
+        return None
+
+
 def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """Build the application.
 
@@ -158,6 +192,7 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             stub=stub,
             version=_version(),
             index=None if stub else _load_index(),
+            vectors=None if stub else await _load_vectors(),
         )
         yield
         app.state.ctx = None

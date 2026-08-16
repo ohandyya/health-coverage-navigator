@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.responses import StreamingResponse
 
 from health_coverage_navigator.agent.runtime import answer_question, stream_answer
+from health_coverage_navigator.agent.tools import needs_vectors
 from health_coverage_navigator.api.deps import AppContext, get_context
 from health_coverage_navigator.api.models import (
     ChatRequest,
@@ -42,6 +43,7 @@ from health_coverage_navigator.api.models import (
     sse_frame,
 )
 from health_coverage_navigator.api.stub import stub_answer
+from health_coverage_navigator.config import get_config
 
 router = APIRouter()
 
@@ -55,6 +57,28 @@ NO_CORPUS = (
     "The reference corpus has not been built on this machine. `chunks.jsonl` is git-ignored, so a "
     "fresh clone has none — run `make chunk` and restart the server."
 )
+
+NO_VECTORS = (
+    "Semantic search is configured (`agent.toolset` in config.yaml) but the vector store has not "
+    "been built on this machine. It is git-ignored, so a fresh clone has none — run `make embed` "
+    "and restart the server. To answer without it, set `agent.toolset: lexical`."
+)
+
+
+def _unavailable(ctx: AppContext) -> str | None:
+    """Why this server cannot answer, or `None` when it can.
+
+    Both cases are 503s that name the command that fixes them, and neither falls back to the stub:
+    canned output must never be mistakable for a real answer, which is the whole reason
+    `HealthResponse.stub` is a boolean. Degrading a `both` configuration to lexical-only would be
+    the same mistake in a subtler form — the answer would be real but measured against a retrieval
+    setup nobody chose, and nothing in the response would say so.
+    """
+    if ctx.index is None:
+        return NO_CORPUS
+    if needs_vectors(get_config().agent.toolset) and ctx.vectors is None:
+        return NO_VECTORS
+    return None
 
 
 class EventStreamResponse(StreamingResponse):
@@ -80,9 +104,10 @@ async def post_chat(
 ) -> ChatResponse:
     if ctx.stub:
         return stub_answer(request)
-    if ctx.index is None:
-        raise HTTPException(status_code=503, detail=NO_CORPUS)
-    return await answer_question(request, ctx.index)
+    if (detail := _unavailable(ctx)) is not None:
+        raise HTTPException(status_code=503, detail=detail)
+    assert ctx.index is not None  # narrowed by _unavailable
+    return await answer_question(request, ctx.index, vectors=ctx.vectors)
 
 
 async def _stub_events(request: ChatRequest) -> AsyncIterator[str]:
@@ -121,7 +146,7 @@ async def _agent_events(request: ChatRequest, ctx: AppContext) -> AsyncIterator[
     """
     assert ctx.index is not None  # guarded by the route
     try:
-        async for event in stream_answer(request, ctx.index):
+        async for event in stream_answer(request, ctx.index, vectors=ctx.vectors):
             yield sse_frame(event)
     except asyncio.CancelledError:  # pragma: no cover - client hung up
         raise
@@ -148,10 +173,10 @@ async def _agent_events(request: ChatRequest, ctx: AppContext) -> AsyncIterator[
 async def post_chat_stream(
     request: ChatRequest, ctx: Annotated[AppContext, Depends(get_context)]
 ) -> EventStreamResponse:
-    if not ctx.stub and ctx.index is None:
+    if not ctx.stub and (detail := _unavailable(ctx)) is not None:
         # Raised before the response starts, so this one *can* be a status code. Once the stream is
         # open, `_agent_events` has to use an error frame instead.
-        raise HTTPException(status_code=503, detail=NO_CORPUS)
+        raise HTTPException(status_code=503, detail=detail)
 
     events = _stub_events(request) if ctx.stub else _agent_events(request, ctx)
     return EventStreamResponse(

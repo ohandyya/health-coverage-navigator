@@ -42,14 +42,40 @@ def client():
         yield c
 
 
+def _patch_vectors(monkeypatch: pytest.MonkeyPatch, vectors) -> None:
+    async def load_vectors():
+        return vectors
+
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_vectors", load_vectors)
+
+
+@pytest.fixture(autouse=True)
+def _no_vector_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every app in this module boots without a vector store unless it asks for one.
+
+    Autouse because `create_app`'s lifespan calls `_load_vectors`, which builds the *live* OpenAI
+    embedder — and `conftest._no_live_embeddings` refuses that, correctly. Without this, every test
+    that merely stands up an app (the SPA-fallback and static-mount ones included) would fail on a
+    provider call it never wanted to make.
+    """
+    _patch_vectors(monkeypatch, None)
+
+
+def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None) -> None:
+    """Point the app's lifespan at the fixture corpus and vector store instead of loading them.
+
+    The index would otherwise build all 6,722 chunks, and these tests are about HTTP wiring rather
+    than retrieval.
+    """
+    index = None if agent_kit is None else agent_kit.index
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: index)
+    _patch_vectors(monkeypatch, None if agent_kit is None else agent_kit.vectors)
+
+
 @pytest.fixture
 def agent_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
-    """The real answering path, with the two-chunk fixture corpus and a scripted model.
-
-    The index is substituted rather than loaded: the app's lifespan would otherwise build all 6,722
-    chunks, and these tests are about the HTTP wiring, not about retrieval.
-    """
-    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: agent_kit.index)
+    """The real answering path, with the two-chunk fixture corpus and a scripted model."""
+    _use_fixture_stores(monkeypatch, agent_kit)
     with (
         build_agent().override(model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())),
         TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c,
@@ -60,7 +86,7 @@ def agent_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture
 def no_corpus_client(monkeypatch: pytest.MonkeyPatch):
     """A server that booted on a fresh clone, where `make chunk` has never run."""
-    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: None)
+    _use_fixture_stores(monkeypatch)
     with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
         yield c
 
@@ -282,7 +308,7 @@ def test_an_agent_failure_arrives_as_an_error_frame(agent_kit, monkeypatch: pyte
     failure cannot become a status code — it would truncate the body and the browser would report a
     network error for what was really a step limit or a rate limit. `useChat.ts` already renders
     `ErrorEvent`; this is what feeds it."""
-    monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: agent_kit.index)
+    _use_fixture_stores(monkeypatch, agent_kit)
     # A script that never produces a final answer, so the run trips its tool-call ceiling.
     with (
         build_agent().override(model=agent_kit.script(agent_kit.SEARCH)),

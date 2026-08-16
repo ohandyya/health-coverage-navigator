@@ -11,8 +11,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from health_coverage_navigator.agent.tools import needs_vectors
 from health_coverage_navigator.api.deps import AppContext, get_context
 from health_coverage_navigator.api.models import CorpusStatus, HealthResponse, LaneStatus
+from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import CORPUS_NAMES, chunks_meta_path, chunks_path
 
 router = APIRouter()
@@ -44,6 +46,29 @@ def _corpus_status() -> list[CorpusStatus]:
     return statuses
 
 
+def _retrieval_detail(ctx: AppContext) -> str:
+    """How the reference lane is being searched — lexical, semantic, or both.
+
+    Reported inside the existing `reference` lane rather than as a fourth `LaneStatus`, because
+    Phase 1a and 1b are two ways of searching **one** lane, not two lanes. The `source_type`
+    vocabulary is the frozen contract's three-value routing dimension; adding `vector` to it would
+    say the agent routes to it, which is exactly the confusion the phase order avoids.
+
+    `detail` is a free string, so this needs no contract change and no `make types`.
+    """
+    configured = get_config().agent.toolset
+    if not needs_vectors(configured):
+        return "lexical search (BM25)"
+    if ctx.vectors is None:
+        return f"toolset '{configured}' needs the vector store — run `make embed` and restart"
+    manifest = ctx.vectors.manifest
+    lexical = "BM25 + " if configured == "both" else ""
+    return (
+        f"{lexical}semantic search ({manifest.row_count:,} vectors, "
+        f"{manifest.embedding_model}, {manifest.snapshot_id})"
+    )
+
+
 @router.get("/health", response_model=HealthResponse, summary="Liveness and configured lanes")
 def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthResponse:
     corpora = _corpus_status()
@@ -59,7 +84,8 @@ def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthRespon
             # server that can only 503.
             configured=ctx.index is not None,
             detail=(
-                f"{documents:,} documents, {chunks:,} chunks across {len(corpora)} corpora"
+                f"{documents:,} documents, {chunks:,} chunks across {len(corpora)} corpora "
+                f"· {_retrieval_detail(ctx)}"
                 if ctx.index is not None
                 else "corpus not chunked on this machine — run `make chunk` and restart"
             ),

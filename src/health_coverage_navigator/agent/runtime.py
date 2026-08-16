@@ -41,8 +41,8 @@ from pydantic_core import from_json
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.agent.models import MARKER_RE, AgentAnswer
-from health_coverage_navigator.agent.prompt import SYSTEM_PROMPT
-from health_coverage_navigator.agent.tools import TOOLS, AnswerDeps
+from health_coverage_navigator.agent.prompt import system_prompt
+from health_coverage_navigator.agent.tools import AnswerDeps, select_tools
 from health_coverage_navigator.api.models import (
     AnswerClaim,
     ChatRequest,
@@ -57,8 +57,9 @@ from health_coverage_navigator.api.models import (
     TraceStep,
     Usage,
 )
-from health_coverage_navigator.config import get_config
+from health_coverage_navigator.config import Toolset, get_config
 from health_coverage_navigator.settings import get_secrets
+from health_coverage_navigator.vectors.store import VectorIndex
 
 
 def _normalize(text: str) -> str:
@@ -119,29 +120,40 @@ def _resolve_model(model: str) -> object:
     )
 
 
-def build_agent(model: str | None = None) -> Agent[AnswerDeps, AgentAnswer]:
+def build_agent(
+    model: str | None = None, toolset: Toolset | None = None
+) -> Agent[AnswerDeps, AgentAnswer]:
     """The one agent. Every later phase registers more tools here rather than building another.
 
-    Resolves the default *before* the cache lookup, which is load-bearing rather than tidy:
+    Resolves **both** defaults *before* the cache lookup, which is load-bearing rather than tidy:
     `lru_cache` keys on the call's arguments, so `build_agent()` and `build_agent(None)` are
     different keys and would hand back two different `Agent` objects. Tests substitute a model with
     `agent.override(...)` on the instance they hold, so a second instance means the override
     silently does not apply and the run goes to the real provider — which is exactly how this was
-    found.
+    found. Phase 1b added a second argument with a default, i.e. a second chance to make the same
+    mistake, which is why the resolution happens here and not in the cached function.
     """
-    return _build_agent(model or get_config().agent.model)
+    config = get_config().agent
+    return _build_agent(model or config.model, toolset or config.toolset)
 
 
-@lru_cache(maxsize=4)
-def _build_agent(model: str) -> Agent[AnswerDeps, AgentAnswer]:
-    """Cached because construction resolves the credential and builds every tool schema."""
+#: Three toolsets x a handful of models. Sized so a `make eval` sweep across configurations does
+#: not evict the agent it is about to reuse.
+@lru_cache(maxsize=12)
+def _build_agent(model: str, toolset: Toolset) -> Agent[AnswerDeps, AgentAnswer]:
+    """Cached because construction resolves the credential and builds every tool schema.
+
+    `toolset` is part of the key rather than read inside, because it changes both the registered
+    tools and the instructions — two agents that differ in what they can do must not share one
+    cached object.
+    """
     config = get_config().agent
     agent = Agent(
         _resolve_model(model),  # type: ignore[arg-type]
         deps_type=AnswerDeps,
         output_type=AgentAnswer,
-        instructions=SYSTEM_PROMPT,
-        tools=list(TOOLS),
+        instructions=system_prompt(toolset),
+        tools=select_tools(toolset),
         # Retries are the grounding guardrail's budget: a rejected answer is re-attempted with the
         # validator's complaint attached. Two is enough for the realistic failures (a mistyped
         # chunk id, a paraphrased quotation) and short of enough to burn a run on a model that has
@@ -307,18 +319,26 @@ async def stream_answer(
     index: CorpusIndex,
     *,
     model: str | None = None,
+    toolset: Toolset | None = None,
+    vectors: VectorIndex | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Answer one question, as the SSE event sequence the frontend already renders.
 
     Event order mirrors what the Phase 0 stub established, because the UI was built against it: the
     trace fills in first (you want to see what it is doing while it thinks), then the answer
     streams, then citations land, then `done` carries the authoritative object.
+
+    `toolset` and `vectors` travel together in practice but are separate arguments on purpose: the
+    toolset decides which tools are *registered* (and so what the model is told it can do), while
+    `vectors` is the handle those tools need. Passing a store without selecting a vector toolset is
+    harmless; selecting one without a store is what the caller must not do, and `routes/chat.py`
+    turns that into a 503 rather than letting it reach the model.
     """
     started = time.perf_counter()
     resolved_model = model or get_config().agent.model
     limits = get_config().agent
 
-    deps = AnswerDeps(index=index)
+    deps = AnswerDeps(index=index, vectors=vectors)
     conversation_id = request.conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
 
@@ -333,7 +353,7 @@ async def stream_answer(
 
     yield step("plan", f"Search the reference corpus for: {request.message}")
 
-    agent = build_agent(model)
+    agent = build_agent(model, toolset)
     buffers: dict[int, str] = {}
     streamed = ""
     drained = 0
@@ -442,13 +462,15 @@ async def answer_question(
     index: CorpusIndex,
     *,
     model: str | None = None,
+    toolset: Toolset | None = None,
+    vectors: VectorIndex | None = None,
 ) -> ChatResponse:
     """The same answer, without the stream.
 
     Implemented by draining `stream_answer` rather than beside it. Two answer paths that "should"
     agree is precisely the kind of thing that silently stops agreeing; there is only one here.
     """
-    async for event in stream_answer(request, index, model=model):
+    async for event in stream_answer(request, index, model=model, toolset=toolset, vectors=vectors):
         if isinstance(event, DoneEvent):
             return event.response
     raise RuntimeError("the agent stream ended without a done event")  # pragma: no cover
