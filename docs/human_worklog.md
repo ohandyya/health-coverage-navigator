@@ -20,6 +20,10 @@ AI (e.g., Claude) should **NOT** read this document.
 - Update the plan.md to include a step 1c to include a SQL for `exchange_puf` and `part_d_spuf`
    - Check and if this mens we shall remove phase 5
 
+#### Questions
+
+- Where does it store the embeded vector?
+
 
 #### Logs
 
