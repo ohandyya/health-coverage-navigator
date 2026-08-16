@@ -20,6 +20,12 @@ AI (e.g., Claude) should **NOT** read this document.
 - Update the plan.md to include a step 1c to include a SQL for `exchange_puf` and `part_d_spuf`
    - Check and if this mens we shall remove phase 5
 
+
+#### Logs
+
+1. Phase 1-c plan document
+    - /Users/andytseng/.claude/plans/i-am-read-to-eager-wind.md
+
 ### Aug 14, 2026
 
 #### To Dos
