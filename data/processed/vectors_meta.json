@@ -1,0 +1,16 @@
+{
+  "embedded_at": "2026-08-16T20:11:13.012946+00:00",
+  "tool": "health-coverage-navigator/0.1 (vectors)",
+  "embedder_version": 1,
+  "embedding_model": "text-embedding-3-small",
+  "dimensions": 1536,
+  "distance": "cosine",
+  "row_count": 6722,
+  "chunker_snapshot_id": {
+    "healthcare_gov": "healthcare_gov@967f0e606ab0",
+    "medicare_ncd": "medicare_ncd@a3d0f70582c6",
+    "medicare_pubs": "medicare_pubs@746612fc0d26"
+  },
+  "snapshot_id": "vectors@b693b82f4350",
+  "empty_chunk_ids": []
+}
