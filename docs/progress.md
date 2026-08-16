@@ -38,6 +38,13 @@ mid-stream.
   rank 1. But `ncd-05` and `pub-10` go the other way, and **six of thirty defeat both methods**.
   That complementarity is the empirical case for `both`; the six mutual misses say the remaining
   gap is not one more index.
+- **Still on a branch.** All of 1b lives on `phase-1b-vector-search`, not `main`. Two things are
+  worth doing before it merges: open the eval dashboard's new run-comparison view in a browser (it
+  has never been looked at — see the log), and un-mix `docs/human_worklog.md` from commit `b4770e0`.
+- **New doc: [technical_highlights.md](technical_highlights.md)** — the mechanisms worth
+  *presenting*, which is deliberately not a job any of the four canonical docs has. Three entries so
+  far (grounding, the test-suite provider guard, missing-vs-stale). It is **not** listed in
+  CLAUDE.md's doc table; whether it should be is an open call for the author.
 - **Next up:** **Phase 2 — the web-search tool** —
   [plan.md](plan.md#phase-2--add-the-web-search-tool). The first real *lane* routing decision, and
   a harder question than 1b's: the wrong answer is a confident abstention, or a web answer to
@@ -103,12 +110,18 @@ mid-stream.
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
     ever touched for another reason.
-  - **Eval run records carry no tool trace, so "how often did the agent actually reach for
-    `vector_search`?" cannot be answered from a run file.** `EvalQuestionResult` has
-    `retrieved_doc_ids` but not the tool sequence. It was noticed while trying to explain why
-    `both` beats `vector` alone, and answered by hand against the live agent instead. A
-    `tools_used: list[str]` on the result would be additive and cheap, and Phase 2's routing slice
-    will want the same thing for lanes.
+  - **Eval run records carry no tool trace, so no question about tool *choice* can be answered from
+    a run file.** `EvalQuestionResult` has `retrieved_doc_ids` but not the tool sequence. Two
+    separate questions have now hit this — "how often does the agent reach for `vector_search`?"
+    (while explaining why `both` beats `vector` alone) and "how often does it reach for
+    `get_chunk`?" — and both were answered from a handful of hand-captured traces instead of the
+    175 agent questions this branch actually ran. A `tools_used: list[str]` on the result would be
+    additive and cheap, and **Phase 2's routing slice needs exactly this shape for lanes**, so it is
+    close to a prerequisite rather than a nicety.
+  - **Commit `b4770e0` carries four lines of `docs/human_worklog.md`** alongside its `smoke.py`
+    change, swept in by a `git add -A`. Harmless to the code, but that file is the author's and the
+    commit message does not mention it. Worth un-mixing before the branch merges; `git add <path>`
+    rather than `-A` is the habit that prevents it.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
@@ -215,6 +228,48 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-16 (later) — a walkthrough of Phase 1b, and the doc it produced
+
+**Did:** walked the Phase 1b branch step by step with the author, who was reading the code to own it
+rather than approve it. No code changed. Three of the mechanisms surfaced during that reading were
+written up in a **new document, `docs/technical_highlights.md`** — grounding, the test-suite
+provider guard, and the missing-vs-stale asymmetry.
+
+**Decided: `technical_highlights.md` is a presentation artifact, not a fifth reference doc.** Its
+job is "which parts of this build are worth *presenting*", which is a different question from any of
+the four docs CLAUDE.md names — those answer what to build, how the UI works, what is built, and
+what the words mean. Each entry follows one shape: **problem → approach → the alternative that lost
+→ evidence → why it presents well**. The last line of each is the one that justifies the file
+existing; without it this would just be `agent.md` with worse organisation.
+
+**Decided: the three topics were chosen by the reader, not by the writer**, and that is worth
+preserving as the selection rule. Each was picked when the author stopped mid-walkthrough and said
+*this is a highlight* — `remember()` plus the output validator, then `fake_embed` plus
+`_no_live_embeddings`, then the two vector-store error types. What a reader independently finds
+notable is better evidence of what presents well than an author's own sense of what was hard.
+
+**Observed, and it revises a plausible mental model:** in every trace captured this session
+(`make smoke`, `make smoke --toolset vector`, and a live Part D question through the app),
+**`get_chunk` was never called.** The search tools already return `ChunkHit.text` verbatim, so there
+is no fetch-the-body step — the ranked result *is* the body, and `get_chunk` is a recovery move for a
+hit truncated mid-definition. The common second step is **reformulating and searching again**, which
+is what `agent.md` credits for the agent beating raw retrieval. The live `both` run did the thing
+the toolset exists for: one `search_corpus`, then one `vector_search`, then answered from five
+citations.
+
+**Stopped at:** clean, nothing uncommitted. Three limits, all pre-existing and none introduced here:
+
+- The observation above rests on **three traces**, and cannot be turned into a number, because
+  eval run records store no tool sequence. That was already an open question; it now has a concrete
+  use case rather than a hypothetical one.
+- The eval dashboard's run-comparison view is **still unverified in a browser** — unchanged from the
+  entry below, and worth doing before the branch merges.
+- Commit `b4770e0` (a `smoke.py` change) **also carries four lines of `docs/human_worklog.md`**,
+  swept in by a `git add -A`. Nothing was lost or altered, but the author's file is inside a commit
+  whose message is about something else.
+
+**Commits:** `40a3a62`, `7d5ec27`, `bc1b23e`
 
 ### 2026-08-16 — Phase 1b: vector search joins the toolset, and wins on the number that can be trusted
 
