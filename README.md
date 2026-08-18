@@ -26,8 +26,9 @@ API contract, the eval harness, and the phase order.
 
 It also decides the shape of the build. This is **one agent that grows a toolset**, not a RAG app
 that grows features: Phase 1 stands up a single PydanticAI agent over the reference corpus, and
-every phase after it registers more tools on that same agent — vector search, then web search,
-then typed API tools — rather than adding a pipeline beside it. Nothing anywhere chains
+every phase after it registers more tools on that same agent — vector search, then relational
+queries over the vendored plan data, then web search, then typed API tools — rather than adding a
+pipeline beside it. Nothing anywhere chains
 retrieve → stuff-context → generate; the agent chooses its own tools, and choosing is the thing
 being graded.
 
@@ -113,9 +114,11 @@ current `config.yaml` reproduces.
 
 ### What does not work yet
 
-- **Only one lane of three.** No web search (Phase 2) and no live API tools — Marketplace, openFDA,
-  NPPES (Phase 3). Ask about a specific plan, premium, provider or formulary and it will correctly
-  tell you it cannot answer. **The tri-modal routing this project is about is not built yet.**
+- **Only one lane of three.** Nothing queries the structured plan data yet — the Exchange PUF and
+  Part D SPUF mirrors are committed and sitting on disk, but the tools that read them are Phase 1-c,
+  and the live APIs (Marketplace, openFDA, NPPES) are Phase 3. No web search either (Phase 2). Ask
+  about a specific plan, premium, provider or formulary and it will correctly tell you it cannot
+  answer. **The tri-modal routing this project is about is not built yet.**
 - **Retrieval is still the bottleneck, though less of one.** recall@5 0.800 means the agent never
   saw the right document for about 2 of 10 in-corpus questions. Six of the thirty defeat *both*
   retrieval methods, so the remaining gap is not one more index — it is chunking, the gold set's
@@ -138,33 +141,39 @@ flowchart TD
 
     AG -->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
     AG -->|Phase 1b| V["vector_search()<br/>reference lane"]
+    AG -.->|Phase 1c| D["relational tools<br/>list · describe · SQL · joins<br/>structured lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
-    AG -.->|Phase 3| S["typed API tools<br/>structured_api lane"]
+    AG -.->|Phase 3| S["typed API tools<br/>structured lane"]
 
     R --> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
-    V -.-> C1
+    V --> C1
+    D -.-> C4["Exchange PUFs · Part D SPUF<br/>vendored Parquet mirrors"]
     W -.-> C2["Live web"]
     S -.-> C3["Marketplace API · openFDA · NPPES"]
 
     R --> SY["Synthesize<br/>every claim tagged with its lane + source"]
     V --> SY
+    D --> SY
     W --> SY
     S --> SY
     SY --> RESP["ChatResponse<br/>answer · citations · claims · trace · abstained"]
 
-    style V stroke-dasharray: 5 5
+    style D stroke-dasharray: 5 5
     style W stroke-dasharray: 5 5
     style S stroke-dasharray: 5 5
     style C2 stroke-dasharray: 5 5
     style C3 stroke-dasharray: 5 5
+    style C4 stroke-dasharray: 5 5
 ```
 
 *Dashed = not built yet. The agent and its reference lane are live; the other three tool sets are
 not, so **routing between lanes — the problem this project is about — has nothing to route between
 yet.** Each phase label is a set of tools added to the same agent; the box marked `Agent` is never
 rebuilt after Phase 1a. Note that 1a and 1b both point at the reference lane — they are two ways of
-searching one corpus, and 1b's vector tool joins the lexical ones rather than replacing them.
-"Decompose" is Phase 4; today the agent routes and loops but does not split a question up.*
+searching one corpus, and 1b's vector tool joins the lexical ones rather than replacing them. 1c
+and 3 both feed the structured lane the same way: 1c reads rows out of the vendored mirrors, 3 adds
+rows fetched live, and they share one `source_type`. "Decompose" is Phase 4; today the agent routes
+and loops but does not split a question up.*
 
 ### What runs today
 
@@ -208,7 +217,7 @@ flowchart LR
     PROC --> APP["app-ready<br/>corpus.jsonl<br/>(3 text corpora)"]
     PROC --> MIR["lossless mirror<br/>every column VARCHAR<br/>(2 structured sources)"]
     APP --> CH["chunks.jsonl<br/>+ committed manifest"]
-    MIR --> L5["typed layer<br/>(Phase 5)"]
+    MIR --> L5["relational query tools<br/>(Phase 1-c)"]
 
     style L5 stroke-dasharray: 5 5
 ```
@@ -372,8 +381,9 @@ loudly instead of landing as plausible garbage.
 Every column of the Exchange PUFs is stored as `VARCHAR`, byte-for-byte. Every "numeric" column
 there is publisher-formatted text (`'$450 '`, `'70.88%'`, `'Not Applicable'` sitting beside an
 empty field — and those two mean *different* things), and Plan Attributes carries **36
-max-out-of-pocket columns**. Choosing which one is "the" MOOP needs real query requirements from
-Phase 5. Guessing once at ingestion time is worse than not guessing.
+max-out-of-pocket columns**. Choosing which one is "the" MOOP needs real query requirements, which
+arrive in Phase 1-c when the agent starts querying this data. Guessing once at ingestion time is
+worse than not guessing.
 
 ---
 
@@ -489,14 +499,16 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | **0** | Corpus + eval scaffold | Contract frozen, UI on a stub | ✅ **Complete** |
 | **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ✅ **Complete** |
 | **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ✅ **Done** |
+| **1c** | Relational tools over the vendored PUF mirrors — DuckDB querying Parquet in place | `structured_api` badge, row-shaped citations | ⬜ |
 | **2** | Web-search tool (Tavily / Exa) + routing eval | `web` badge, routing accuracy | ⬜ |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |
-| **5** | Plan comparison, drug costs, "what changed" monitor | Tables + monitor view | ⬜ |
+| **5** | Plan comparison, drug costs, network checks, "what changed" monitor — built on the Phase 1-c tools | Tables + monitor view | ⬜ |
 
 The tri-modal core is complete at the end of Phase 3; everything after is additive. Each phase
 pairs new capability with a new **eval slice** — retrieval quality → answer correctness and
-groundedness → routing correctness → multi-hop correctness and citation accuracy → regression.
+groundedness → structured-lookup correctness and lane routing → routing across all three lanes →
+multi-hop correctness and citation accuracy → regression.
 
 ---
 

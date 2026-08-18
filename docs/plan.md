@@ -24,8 +24,8 @@ which is directly borrowable from binary-decomposition eval thinking.
 **This is an agent, not a pipeline.** There is no fixed retrieve-then-answer chain anywhere in
 the build. From Phase 1 onward there is a single PydanticAI `Agent` that decides which tools to
 call, how often, and when it has enough to answer or must abstain. Each phase hands that same
-agent more tools — full-text search, then vector search, then web search, then typed APIs — and
-never replaces the agent underneath. What is written once in Phase 1 and then inherited: the
+agent more tools — full-text search, then vector search, then relational lookups over the
+vendored plan data, then web search, then typed APIs — and never replaces the agent underneath. What is written once in Phase 1 and then inherited: the
 output schema, the provenance plumbing, the grounding/abstention rule, and the step limits.
 
 Each phase below is independently shippable and has an **acceptance test** — the phase is done
@@ -55,8 +55,8 @@ guidance under the No Surprises Act.
 
 Two kinds live here, and the difference matters: the **text corpora** get chunked for the
 reference lane's search tools (and embedded once Phase 1-b adds vectors), while the
-**structured** sources land as a lossless columnar mirror that a later typed layer queries —
-never chunked, never embedded.
+**structured** sources land as a lossless columnar mirror that **Phase 1-c**'s relational tools
+query in place — never chunked, never embedded.
 
 **HealthCare.gov consumer-education content (the cleanest starting corpus).** HealthCare.gov
 publishes every article and glossary term as machine-readable JSON, explicitly for third-party
@@ -94,8 +94,8 @@ available for plan years 2014 through 2026, with the Benefits and Cost Sharing P
 Attributes PUF. The Plan Attributes PUF contains plan-level data on max out-of-pocket,
 deductibles, cost sharing, HSA eligibility, and formulary ID. These are large enough that the Rate
 PUF and Benefits and Cost Sharing PUF exceed Excel's row limit and need a database or statistical
-tool to open — good, because loading them into DuckDB/SQLite is exactly the kind of
-structured-tool backend you want to practice against.
+tool to open — good, because a query engine over them is exactly the kind of structured-tool
+backend you want to practice against, which is what Phase 1-c builds.
 [CMS](https://www.cms.gov/marketplace/resources/data/public-use-files)
 
 **Medicare Part D formulary files (the Part D structured corpus).** CMS publishes quarterly
@@ -244,14 +244,15 @@ a stubbed answer end to end.
 - [ ] FastAPI app skeleton with a stubbed answer endpoint returning canned data
 - [ ] Web UI scaffolded and rendering that stub
 
-### Phase 1 — The agent itself, over the reference corpus
+### Phase 1 — The agent itself, over local data
 
 This is where the agentic system gets built, and it is the only phase that builds one. A single
 PydanticAI `Agent`: a model named in `config.yaml`, typed dependencies, a structured output type,
 a system prompt carrying the grounding rule, and a toolset over the reference corpus. It answers
 coverage and terminology questions with citations back to chunks, and abstains when the question
-falls outside the corpus. One lane — no web, no structured APIs — so that when the loop
-misbehaves there is exactly one thing it could be. Ship it; this alone is useful.
+falls outside what it holds. Nothing it touches reaches the network except the model itself — no
+web search, no third-party APIs — so that when the loop misbehaves there is exactly one thing it
+could be. Ship 1-a; that alone is useful.
 
 What is deliberately *not* built here is a RAG pipeline. Nothing chains
 retrieve → stuff-context → generate. The agent is handed search tools and left to decide how to
@@ -263,8 +264,9 @@ Everything built here is scaffolding the later phases inherit rather than replac
 schema, provenance plumbing, grounding guardrail, step limits. Later phases register more tools
 on this same agent.
 
-Split into two sub-phases: first prove the loop with the crudest search that could work, then
-grow the toolset with vector search and let the agent choose between them.
+Split into three sub-phases: first prove the loop with the crudest search that could work; then
+grow the toolset with vector search and let the agent choose between them; then point it at the
+vendored structured data, where the answer is a row rather than a passage.
 
 #### Phase 1-a — full-text tools, no database
 
@@ -367,14 +369,114 @@ both **0.800**. The decision was deliberately taken on the retrieval-only pair r
 A/B — the agent's known run-to-run spread is 0.200, wider than the effect. Detail and the
 per-question breakdown: [agent.md](agent.md) §6.
 
+#### Phase 1-c — relational tools over the vendored structured data
+
+Grow the toolset a third time, and this time it points somewhere new. Phases 1-a and 1-b gave the
+agent two ways of searching one corpus of prose; this gives it a way to *look a fact up* — against
+the per-plan and per-drug rows already sitting in `data/processed/exchange_puf` (Plan Attributes,
+Benefits & Cost Sharing, Service Area — PY2026) and `data/processed/part_d_spuf` (the seven Part D
+files — 2026Q2). Same agent, same output schema, same grounding rule, same abstention. What is new
+is a second *kind* of source.
+
+This is the lane where retrieval is not merely weaker but actively wrong. *"What is this plan's
+deductible"* has an answer that is a cell in a table; a search tool handed that question returns a
+fluent passage about what deductibles are — cited, plausible, and not an answer. The fix is not a
+better index, it is a different tool over a different shape of data.
+
+**Why here, rather than after web search.** Three reasons, in order of weight:
+
+1. **The data is already vendored and the lane is deterministic** — no key, no rate limit, no
+   network. So the structured lane can be debugged the way Phase 1-a's was, with every failure
+   necessarily the agent's rather than possibly someone else's uptime. Phase 3 introduces live
+   APIs into a lane that is by then known-good.
+2. **It opens the structured lane, so Phase 3 extends one instead of introducing one** — the same
+   "one agent, more tools" shape that made 1-b a growth rather than a swap.
+3. **It makes the domain's most dangerous routing error observable.** Answering a plan-specific
+   question out of the reference corpus is the mistake this project exists to prevent, and it
+   cannot be *scored* until the correct destination exists. Two-lane routing is measurable here;
+   Phase 2 widens the measurement rather than inventing it.
+
+**No new storage engine, again.** DuckDB queries the Parquet mirrors in place — no load step, no
+server, no second copy of the data. That is the same argument Phase 1-a made about BM25:
+**DuckDB is a query engine over files already on disk, not a database to stand up and maintain.**
+It is already a dependency (the downloaders write the mirrors with it); Phase 1-c is the first
+time it appears in `src/`. The mirrors themselves do not change: **still never chunked, still
+never embedded, still lossless `VARCHAR`.**
+
+Narrow tools the agent composes, mirroring the 1-a shape — orient, inspect, query, join:
+
+| Tool | What it does |
+|---|---|
+| `list_tables(source?)` | What structured data exists at all — tables, plan year / quarter, row counts. The structured counterpart of `list_documents`, and the honest basis for *"what plan data do you actually have?"* |
+| `describe_table(table)` | Columns **and real sample values**. Not garnish: every column in the mirror is publisher-formatted text (`'$450 '`, `'70.88%'`, `'Not Applicable'` sitting beside an empty cell — and those two mean *different* things), and Plan Attributes carries 36 max-out-of-pocket columns. An agent that writes a filter without looking at the values will compare a dollar sign against a number. |
+| `query_structured(sql, limit)` | One read-only `SELECT` over the mirrors. The general-purpose tool of this lane, as `search_corpus` is of the reference lane. |
+| `lookup_plan_formulary(...)` / `lookup_service_area(...)` | Thin typed helpers over the two joins whose *wrong* version is silently plausible: plan → `FORMULARY_ID` → covered drugs, and plan → `ServiceAreaId` → counties/ZIPs. |
+
+**Why raw SQL, and not a typed function per question.** A typed-only tool surface means deciding
+at design time which questions this data can answer — the same guess the ingestion layer already
+refused to make when it stored every column as `VARCHAR` instead of picking one of the 36 MOOP
+columns. Real query requirements come from watching the agent write queries. So the general tool
+is SQL, and the typed helpers cover only what the sources' own documented caveats make easy to get
+wrong ([exchange_puf_data.md](exchange_puf_data.md), [part_d_spuf_data.md](part_d_spuf_data.md)):
+standalone PDP rows carry a blank `STATE`, so filtering Part D by state silently drops exactly the
+plans the question is usually about; suppressed plans appear in Plan Information and in no other
+file, so an empty join there is missing data rather than a bug; the formulary is keyed by
+`FORMULARY_ID`, not by plan.
+
+The trade is that model-written SQL needs a guard, and the guard is deliberately boring: a
+read-only connection, one statement, `SELECT` only, an enforced row cap and a timeout. A query
+that violates it comes back as a tool error the agent can read and retry — not a string that gets
+sanitized and run anyway.
+
+**What the grounding rule becomes here.** Verbatim quotation from a chunk was 1-a's guardrail; the
+structured analogue is that a claim carries the actual cell value plus the row it came from —
+table, key column, plan year. An empty result set is reported as *"no row for that plan"* and
+never softened into prose that reads like a finding, and `'Not Applicable'` and an empty cell stay
+distinguishable in the answer, because in this data they are different answers.
+
+**The contract does not reshape.** These answers are `source_type="structured_api"` — that enum
+value has meant *deterministic row-level lookup* since Phase 0, and whether the row came from a
+vendored mirror or a live endpoint is a property of the citation (`title` naming the table and
+plan year, `url` the CMS PUF landing page, `snippet` the row itself), not a fourth lane. Phase 3
+then adds live-API citations to this same lane. `doc_id` and `chunk_id` stay null: the first
+citations in this repo that are not chunks.
+
+**`plan_year` stops being decorative.** It has ridden along in the request contract since Phase 0,
+unused. Here it selects which partition is queried, and a question about a year that is not on
+disk is an abstention rather than an answer from whichever year happens to be vendored — the
+cross-cutting "pin the plan year" principle, finally enforced somewhere.
+
+**Milestone / acceptance test:** you can ask in the browser for a fact about a specific plan or
+drug — *"what's the medical deductible on plan 21989AK0030001 for 2026?"*, *"is [NDC] on formulary
+[id], on what tier, and does it need prior authorization?"* — and get the actual value out of the
+mirror, with a citation naming the table, the row key and the plan year, and the query visible in
+the trace; and it abstains when the plan, drug or plan year is not in the vendored data.
+
+**User-facing capability**
+- [ ] Ask per-plan / per-drug factual questions and get the value from the vendored data rather than a passage about the concept
+- [ ] See a row-shaped citation — table, row key, plan year, the cells used — visibly distinct from a chunk citation
+- [ ] See the query the agent wrote in the trace, alongside the searches from 1-a and 1-b
+- [ ] Get an honest abstention when the plan, drug, or plan year is not in the vendored mirror — including for a year CMS publishes but this repo has not vendored
+
+**Software capability**
+- [ ] DuckDB reading `data/processed/{exchange_puf,part_d_spuf}` Parquet in place — read-only, no load step, no new storage engine, mirrors untouched
+- [ ] Structured toolset registered **alongside** the 1-a and 1-b tools: `list_tables` / `describe_table` / `query_structured` + the typed join helpers
+- [ ] SQL guard: read-only connection, single statement, `SELECT`-only, row cap, timeout — violations returned to the agent as retryable tool errors
+- [ ] Row → citation provenance (table, plan year, row key, cell values), populating the frozen contract with `source_type="structured_api"` and no chunk id
+- [ ] Request `plan_year` bound to the partition queried; a year that is not vendored produces an abstention, never a silent fallback
+- [ ] Grounding guardrail extended to cells: exact values, empty result ≠ hedge, `'Not Applicable'` ≠ blank
+- [ ] Gold set gains structured questions with expected lane `structured_api` and **exact expected values**, generated from the Parquet rather than hand-typed
+- [ ] New eval slice: **structured-lookup correctness** (exact match, not fuzzy overlap), plus the first **routing** measurement — prose vs. rows — which Phase 2 widens to three lanes
+- [ ] UI: the `structured_api` badge goes live and citation cards learn a row shape; a slice of the existing chat page rather than a new surface — see [frontend_plan.md](frontend_plan.md)
+
 ### Phase 2 — Add the web-search tool
 
-Grow the same agent with a second *lane*. Until now every tool it had pointed at the same corpus;
-now it must decide whether the corpus is the right place at all. This is the first real routing
-decision — "is this in my indexed reference material, or do I need the open web?" — and it is a
-harder question than Phase 1-b's, because the wrong answer here is a confident abstention or a
-web answer to something the corpus already settles. Add an eval slice specifically for routing
-correctness (did it pick the right lane?), separate from answer correctness.
+Grow the same agent with a third *lane*. Phase 1-c already made it choose between prose and rows,
+but both of those sit on disk where it can look before deciding. The web is the first destination
+whose contents it cannot inventory in advance — "is this in anything I hold at all, or do I need
+the open web?" — and the wrong answer is a confident abstention, or a web answer to something the
+corpus already settles. The routing eval slice introduced in Phase 1-c widens from two lanes to
+three: the measurement exists; what grows is the number of ways to be wrong.
 
 Use an **agent-oriented search API — Tavily or Exa** — not a scraped SERP. Both return extracted
 page content with source URLs in one call, which is exactly what the per-claim provenance
@@ -396,17 +498,24 @@ web-sourced answer — and the agent chose the right lane on its own.
 - [ ] Web-search tool (Tavily or Exa) registered on the existing agent, with the key read server-side from `.env`
 - [ ] Tool-choice behaviour where the agent decides reference-corpus vs. web — a system-prompt and tool-description problem, not a separate router component
 - [ ] Source-type tagging in the output
-- [ ] New eval slice measuring **routing correctness** (did it pick the right lane?), separate from answer correctness
+- [ ] **Routing correctness** extended from two lanes to three (reference vs. structured vs. web), still separate from answer correctness
 - [ ] Basic web-result hygiene (dedupe, source filtering)
 - [ ] UI: the `web` source badge goes live alongside `reference`, and routing accuracy joins the eval dashboard — see [frontend_plan.md](frontend_plan.md) (Phase F2)
 
 ### Phase 3 — Add structured-API tools
 
-Grow the agent with the third lane: the Marketplace API (plan/drug/provider lookups), openFDA
-(drug facts/recalls), and NPPES (provider lookup), wrapped as **typed tools** — Pydantic models
-in and out, so a malformed API response is a validation error rather than plausible-looking
-prose. Now it's genuinely tri-modal. The interesting failure mode to eval here: the agent
-reaching for web search when a deterministic API would've given an exact answer, or vice versa.
+Put live sources into the structured lane: the Marketplace API (plan/drug/provider lookups),
+openFDA (drug facts/recalls), and NPPES (provider lookup), wrapped as **typed tools** — Pydantic
+models in and out, so a malformed API response is a validation error rather than plausible-looking
+prose. Note this **extends** the structured lane rather than opening it. Phase 1-c already gave
+the agent deterministic row lookups over vendored data; what is new here is that some of those
+rows now come from someone else's server, with the keys, rate limits, caching, and failure modes
+that implies. Now it's genuinely tri-modal, since only now is every lane reachable.
+
+Two failure modes worth an eval each: the agent reaching for web search when a deterministic API
+would have given an exact answer (or vice versa), and — new this phase — the agent calling a
+rate-limited endpoint for something the vendored mirror answers offline, or trusting the mirror
+where only the live endpoint is current.
 
 **Milestone / acceptance test:** you can ask for exact facts about a specific plan, drug, or
 provider and get a deterministic answer, not prose from a document.
@@ -419,13 +528,14 @@ provider and get a deterministic answer, not prose from a document.
   - *"has drug X been recalled"*
 
 **Software capability**
-- [ ] Typed tool wrappers (Pydantic models) for Marketplace API, openFDA, and NPPES
+- [ ] Typed tool wrappers (Pydantic models) for Marketplace API, openFDA, and NPPES, registered beside the Phase 1-c mirror tools in the same lane
+- [ ] Mirror-vs-live reconciliation: which source is authoritative for a given question, and what the agent does when they disagree
 - [ ] API-key / secrets management
 - [ ] Rate-limit handling, retries, and a response cache
 - [ ] Synthetic fixtures so tests/evals don't depend on live APIs
 - [ ] Tri-modal routing (reference vs. structured-API vs. web) with an eval slice for it
 - [ ] Schema validation on every API response
-- [ ] UI: the `structured-API` badge goes live, completing the three-lane vocabulary; plan-year selector wired to every request — see [frontend_plan.md](frontend_plan.md) (Phase F2)
+- [ ] UI: no new lane vocabulary — the `structured_api` badge went live in Phase 1-c; what this phase adds is live-API citations rendering beside mirror ones — see [frontend_plan.md](frontend_plan.md) (Phase F2)
 
 ### Phase 4 — Multi-step agent + provenance
 
@@ -455,12 +565,19 @@ get one synthesized answer where every claim is traceable.
 - [ ] Loop safety: cycle detection + hop ceiling
 - [ ] UI: trace panel handles nested multi-hop steps; hovering a claim highlights exactly the sources behind it — see [frontend_plan.md](frontend_plan.md) (Phase F3)
 
-### Phase 5 — Growth surface
+### Phase 5 — Growth surface: from bot to tool
 
-Once the tri-modal core is solid, the functionality tree is long: plan comparison across the PUFs,
-formulary/drug-cost lookup, provider-network checks, appeals guidance under the No Surprises Act,
-and a scheduled "what changed for this plan year" monitor (which turns the whole thing from a Q&A
-bot into a monitoring product). Each is additive and doesn't disturb the core.
+The lookups already exist by this point — Phase 1-c built the query tools over the PUFs and Phase
+3 put the live APIs beside them. **What this phase adds is not access to the data but what you do
+with it**: comparing plans rather than reporting one, breaking a cost down rather than quoting a
+cell, checking a network, walking someone through an appeal, and noticing that something changed
+without being asked. Each is additive over the existing tools and doesn't disturb the core.
+
+Two things here are genuinely new rather than additive, and they are the reason this is a phase
+and not a backlog. The **pharmacy-network file** — 2.29 GB, deliberately left unfetched in Phase 0
+— is finally needed by the network checks. And the monitor is the first feature that requires
+**state that outlives a request**: to say what changed it has to remember what last week's answer
+was.
 
 **Milestone / acceptance test:** it stops being a single-shot Q&A bot and becomes a tool —
 comparisons, cost breakdowns, and scheduled monitoring.
@@ -473,8 +590,8 @@ comparisons, cost breakdowns, and scheduled monitoring.
 - [ ] Scheduled "what changed for this plan year" monitor that alerts on diffs
 
 **Software capability**
-- [ ] Structured backend for the PUFs (DuckDB / SQLite) with query tools over it
-- [ ] Comparison / aggregation logic
+- [ ] Comparison / aggregation layer **over the Phase 1-c query tools** — multi-plan queries, ranking, tabular results — not a second storage engine
+- [ ] The two Phase 0 skips finally fetched where a capability needs them: Part D **pharmacy network** (network checks) and **pricing** (drug-cost breakdowns), mirrored the same lossless way
 - [ ] Scheduler for monitoring runs + state persistence to diff against
 - [ ] Alert / output channel
 - [ ] UI: comparison tables, cost breakdowns, and a "what changed" view — the first phase whose UI is more than chat + provenance — see [frontend_plan.md](frontend_plan.md) (Phase F4)
@@ -487,10 +604,11 @@ comparisons, cost breakdowns, and scheduled monitoring.
 Phase 0    (no agent yet)                       corpus + gold eval set         contract frozen, UI on a stub
 Phase 1a   the agent + full-text toolset        BM25 in memory, no DB          stub → real agent   [SHIPPABLE MVP]
 Phase 1b   + vector search alongside            LanceDB                        eval run comparison
+Phase 1c   + relational tools over the mirrors  DuckDB over Parquet, in place  structured_api badge + rows
 Phase 2    + web search (Tavily / Exa)          search API                     web badge + routing metrics
-Phase 3    + typed structured-API tools         Marketplace / openFDA / NPPES  API badge   [tri-modal core complete]
+Phase 3    + typed structured-API tools         Marketplace / openFDA / NPPES  live-API citations  [tri-modal core]
 Phase 4    + planning & decomposition           tracing / observability        multi-hop trace, per-claim highlight
-Phase 5    (same agent, more domain tools)      DuckDB over the PUFs           tables + monitor    [product, not bot]
+Phase 5    (same agent, more domain tools)      scheduler + state to diff      tables + monitor    [product, not bot]
 ```
 
 Read the first column downward: it is one agent gaining tools, never a rewrite. The tri-modal
