@@ -1,57 +1,80 @@
 # The agent
 
-One PydanticAI `Agent` over the reference corpus. Phase 1a built it with a full-text toolset and
+One PydanticAI `Agent`, grown a toolset at a time. Phase 1a built it with a full-text toolset and
 **no database of any kind**; Phase 1b registered `vector_search` alongside those tools and made
-*which* tools it sees a per-run choice. Same agent, same corpus, same output contract. Written
-alongside the code rather than before it, unlike [chunking.md](chunking.md) and
-[lancedb.md](lancedb.md) — the decisions here needed a running loop to make.
+*which* tools it sees a per-run choice; Phase 1-c added a second **lane** — three tools over the
+vendored CMS plan data, where the answer is a row rather than a passage. Same agent, same output
+contract, throughout. Written alongside the code rather than before it, unlike
+[chunking.md](chunking.md) and [lancedb.md](lancedb.md) — the decisions here needed a running loop
+to make.
 
-Code: `src/health_coverage_navigator/agent/`, with semantic retrieval in `vectors/`. Ask it
-something with `make dev`; measure it with `make eval`.
+The relational lane has its own design document, [relational-tool.md](relational-tool.md), which
+owns the engine, the SQL guard and the row-citation model. This file covers what changed *in the
+agent* to hold two lanes.
+
+Code: `src/health_coverage_navigator/agent/`, with semantic retrieval in `vectors/` and the
+relational lane in `structured/`. Ask it something with `make dev`; measure it with `make eval`.
 
 ---
 
 ## 1. Shape
 
 ```
-                        ┌─▶ CorpusIndex ──▶ BM25 over chunks.jsonl
-question ──▶ Agent ──▶ tools                          │
-               │        └─▶ VectorIndex ─▶ LanceDB ───┤
-               │                                      │
-               │        every hit resolves to a Chunk ┘
-               │        and lands in deps.seen_chunks
+                        ┌─▶ CorpusIndex ──▶ BM25 over chunks.jsonl ──┐
+question ──▶ Agent ──▶ tools                                        ├─▶ deps.seen_chunks
+               │        ├─▶ VectorIndex ──▶ LanceDB ────────────────┘
+               │        │
+               │        └─▶ StructuredStore ─▶ DuckDB over Parquet ──▶ deps.seen_rows
                ▼
           AgentAnswer ──▶ output validator ──▶ ChatResponse
-       (abstained,          (rejects an          (citations rebuilt
-        answer, citations)   ungrounded answer)   from the real chunks)
+       (abstained,          (rejects an          (citations rebuilt from
+        answer, citations)   ungrounded answer)   the real chunk or row)
 ```
 
-Both retrieval paths converge on the same `Chunk`, which is what lets one grounding rule cover
-them and one citation shape serve both.
+Both *retrieval* paths converge on the same `Chunk`, which is what lets one grounding rule cover
+them and one citation shape serve both. The relational lane deliberately does **not** converge
+there — a row is not a chunk and pretending otherwise would mean inventing a passage — so it gets
+its own citable set, its own validator branch, and the same rule: cite only what a tool returned,
+quote it exactly.
 
 | module | holds |
 |---|---|
 | `bm25.py` | the ranking formula and an inverted index. Standard library only |
 | `index.py` | `CorpusIndex` — the chunks and the four lexical primitives. No `pydantic_ai` import |
 | `models.py` | what the *model* sees: `ChunkHit` in, `AgentAnswer` out |
-| `prompt.py` | `system_prompt(toolset)` — the grounding rule, plus per-toolset search guidance |
-| `tools.py` | the five tools, `select_tools`, and `AnswerDeps` — the run-scoped trace and citable set |
+| `prompt.py` | `system_prompt(toolset, structured)` — the grounding rule, plus per-configuration guidance |
+| `deps.py` | `AnswerDeps` — the run-scoped trace and the two citable sets |
+| `tools.py` | the five reference-lane tools and `select_tools` |
+| `structured_tools.py` | the three relational-lane tools |
 | `runtime.py` | `build_agent()`, the grounding validator, `stream_answer()`, `answer_question()` |
 | `../vectors/` | `VectorIndex` and the embedder. No `pydantic_ai` import either |
+| `../structured/` | `StructuredStore` and the SQL guard. No `pydantic_ai` import either |
 
-`index.py` and `vectors/` sit below `tools.py` deliberately: retrieval is then testable and
-tunable with no model and no agent, which is what makes `make eval-retrieval` and
-`make eval-retrieval-vector` possible.
+`index.py`, `vectors/` and `structured/` sit below the tool modules deliberately: retrieval and
+querying are then testable with no model and no agent, which is what makes `make eval-retrieval`,
+`make eval-retrieval-vector` and the whole of `tests/test_structured.py` possible.
 
-## 2. Five tools, not one `retrieve()`
+**`AnswerDeps` lives in its own module since Phase 1-c**, and not for tidiness: both tool modules
+need the type and `tools.py` needs the structured tools to build `select_tools`, so leaving it in
+`tools.py` closes an import cycle.
 
-| tool | for | in toolset |
+## 2. Eight tools, not one `retrieve()`
+
+| tool | for | when registered |
 |---|---|---|
-| `search_corpus(query, k, source?)` | ranked retrieval by **words** | lexical, both |
-| `grep_corpus(pattern, source?, ...)` | an exact string: an NCD number, a statutory phrase | lexical, both |
-| `vector_search(query, k, source?)` | ranked retrieval by **meaning** | vector, both |
+| `search_corpus(query, k, source?)` | ranked retrieval by **words** | toolset lexical, both |
+| `grep_corpus(pattern, source?, ...)` | an exact string: an NCD number, a statutory phrase | toolset lexical, both |
+| `vector_search(query, k, source?)` | ranked retrieval by **meaning** | toolset vector, both |
 | `get_chunk(chunk_id, before, after)` | widen a hit that landed mid-definition | every |
 | `list_documents(source?, limit)` | what is in the corpus at all | every |
+| `list_tables()` | what plan data exists, and for which years | `structured_tools` |
+| `describe_table(table, contains?)` | a table's columns **and their real values** | `structured_tools` |
+| `query_structured(sql, limit?)` | one guarded read-only `SELECT` | `structured_tools` |
+
+The three relational tools are a *lane*, not more retrieval: they answer "what is the deductible on
+plan X", which no amount of better search over prose can. Why three and not a typed function per
+question, and what the guard around model-written SQL is:
+[relational-tool.md](relational-tool.md) §3–4.
 
 A single `retrieve(query)` would hide the search strategy inside a ranking function, which is the
 part of the exercise worth doing. With narrow tools a bad query and the recovery from it are both
@@ -70,13 +93,19 @@ unbounded `k` is a context-window problem before it is a latency one) and
 Python's engine — a length cap does not make catastrophic backtracking impossible, it removes the
 room to construct one by accident).
 
-## 3. The toolset is a per-run choice
+## 3. What the agent can see is a per-run choice — on two independent axes
 
-`config.Toolset` is `lexical | vector | both`; `tools.select_tools()` turns it into the registered
-list and `prompt.system_prompt()` into the matching instructions. `agent.toolset` in `config.yaml`
-sets what the app ships (`both`); `--toolset` overrides it for one eval run, and the run record
-carries which was used. That is what makes Phase 1b's comparison **one runner with a flag rather
-than three code paths** (docs/plan.md §1b).
+`config.Toolset` is `lexical | vector | both` and `agent.structured_tools` is a boolean;
+`tools.select_tools(toolset, structured)` turns the pair into the registered list and
+`prompt.system_prompt(toolset, structured)` into the matching instructions. `config.yaml` sets what
+the app ships (`both`, and the relational lane on); `--toolset` and `--structured` /
+`--no-structured` override them for one eval run, and the run record carries both. That is what
+makes each comparison **one runner with a flag rather than several code paths** (docs/plan.md §1b).
+
+**Two axes rather than a four-valued toolset**, because they select different things: `toolset`
+picks how the *reference lane* is searched, `structured` picks whether a *second lane* exists.
+Folding them together would make six combinations, three of them meaningless, and would redefine
+the three names Phase 1b's measurement is already recorded under.
 
 Three things about it are load-bearing rather than incidental:
 
@@ -91,11 +120,15 @@ tool the agent does not have is not a cosmetic flaw in an eval: it would make th
 a measurement of how well each configuration copes with misleading instructions.
 `tests/test_agent.py` asserts that no prompt names a tool its toolset does not register.
 
-**`_build_agent` caches on `(model, toolset)`.** Two agents that differ in what they can do must
-not share one cached object, and both defaults are resolved *before* the lookup — docs/progress.md
-records the Phase 1a bug where `build_agent()` and `build_agent(None)` were two cache keys and an
-`override` silently went to the real provider. A second defaulted argument is a second chance at
-exactly that.
+**`_build_agent` caches on `(model, toolset, structured)`.** Two agents that differ in what they
+can do must not share one cached object, and every default is resolved *before* the lookup —
+docs/progress.md records the Phase 1a bug where `build_agent()` and `build_agent(None)` were two
+cache keys and an `override` silently went to the real provider. Each new defaulted argument is
+another chance at exactly that, and **Phase 1-c took it**: adding the third key made every agent
+test build a *structured* agent while the run under test built a reference-only one, so the
+override applied to an object nobody used and the run tried to reach OpenAI. The suite-wide
+`ALLOW_MODEL_REQUESTS = False` is what turned a would-be bill into a red test, and
+`tests/conftest.py`'s `AgentKit._agent` now derives the key the same way `stream_answer` does.
 
 ## 4. The grounding guardrail is code
 
@@ -106,6 +139,9 @@ runs on every candidate answer and raises `ModelRetry` — handing the model the
 |---|---|
 | a `chunk_id` no tool returned this run | a fabricated source: the worst failure this tool has |
 | a `snippet` not verbatim in that chunk | a real source with words put in its mouth — *worse*, because it reads as more trustworthy |
+| a `row_id` no query returned this run | the same fabrication, one lane over |
+| a cell value that differs from the row's, by so much as a trailing space | an edited figure, presented as what CMS published |
+| a column the cited row does not have | a value attributed to a field that does not exist |
 | a `[cN]` marker with no matching citation | `ChatResponse` would reject it with a 500 |
 | an answer with no citations and `abstained=false` | an assertion with nothing behind it |
 
@@ -129,9 +165,22 @@ will not ground its answer must fail loudly rather than serve an ungrounded one.
 Snippets are compared **whitespace-normalized**. The corpora wrap mid-sentence, so a byte-exact
 test would reject genuine quotations and send the model into a retry loop it cannot win.
 
-**Citations are then rebuilt from the corpus.** The model contributes `chunk_id` and `snippet`,
-both checked; title, url, `doc_id` and `source_type` are read off the real `Chunk`. No invented
-title can reach the browser.
+**Cells are compared byte-exactly, and the asymmetry is deliberate.** A cell has no line wrapping
+to survive, and its whitespace is data: the mirror stores `'$4,500 '` with a trailing space, and
+`'Not Applicable'` sits beside `''` meaning something different. A model that tidies `$4,500 ` to
+`$4,500` in a *citation* has edited the evidence, so it is told to copy it again — while its prose
+is free to read `$4,500`, which is what a person should see. Same rule as the chunk path (quote it
+exactly), applied to a unit whose exactness means something stricter.
+
+**Citations are then rebuilt from the source.** The model contributes an identifier and a
+quotation — `chunk_id` + `snippet`, or `row_id` + `cells` — both checked; title, url, `doc_id` and
+`source_type` are read off the real `Chunk` or `Row`. No invented title can reach the browser.
+
+A row citation carries `source_type="structured_api"`, a title naming the table and plan year, the
+CMS landing page as its url, the cited cells as its snippet, and **null `doc_id` and `chunk_id`** —
+the first citations in this repo that are not chunks. That is also how the frontend tells the two
+apart: cells or prose, decided by the absence of a chunk rather than by the lane name, because
+Phase 3 will put live-API answers in the same lane without them being rows.
 
 **`claims` are derived, not asked for.** `AnswerClaim.text` must be a verbatim substring of the
 answer, and a model reproducing its own prose character-for-character is a coin flip that fails the
@@ -140,15 +189,98 @@ construction.
 
 ## 5. Loop safety, from day one
 
-`config.yaml`'s `agent:` block carries `request_limit: 8` and `tool_calls_limit: 12`, applied as
-`UsageLimits` on every run. Without them, a model that keeps reformulating a query it will never
-satisfy runs until the request times out, and the reader watches a spinner instead of getting an
-answer or an honest abstention.
+`config.yaml`'s `agent:` block carries `request_limit: 12` and `tool_calls_limit: 16`, applied as
+`UsageLimits` on every run. They were 8 and 12 through Phase 1b and were **raised by measurement**,
+not by feel: see the note below on what the relational lane spends.
+
+Without them, a model that keeps reformulating a query it will never satisfy runs until the request
+times out, and the reader watches a spinner instead of getting an answer or an honest abstention.
 
 Phase 4 adds cycle detection and a hop ceiling **on top of** these rather than introducing the
 idea — cheap now, painful to retrofit.
 
+**The relational lane spends more of that budget than the reference lane does**, and it is worth
+knowing why before raising the ceilings. A plan question runs `list_tables` → `describe_table` →
+`query_structured`, sometimes with a second describe or a corrected query, where a corpus question
+is often one search and an answer. A single live plan question measured 12 tool steps and ~42k
+tokens against roughly a third of that for a definitional one. Two consequences, both measured on
+the first structured eval run rather than predicted: the old `request_limit: 8` **lost a working
+question outright** to `UsageLimitExceeded` (str-01, which the lane can answer), and a concurrent
+sweep hit the provider's tokens-per-minute limit far sooner than the Phase 1b runs did. The
+ceilings are now 12/16; the concurrency lesson is in §6.
+
+**`plan_year` reaches the loop for the first time here.** It has ridden in `ChatRequest` since
+Phase 0 and nothing read it; now it selects which partition of the vendored data a query may touch,
+and a query naming another year's table is rejected before it runs. That is the cross-cutting "pin
+the plan year" principle enforced by code rather than stated — and it is enforced in the *guard*
+rather than in the prompt, because the failure it prevents (a figure from the wrong year) looks
+exactly as authoritative as the right answer.
+
 ## 6. What the numbers actually say
+
+### Phase 1-c: what does a second lane cost the first one?
+
+**Nothing measurable, and it answers the questions the corpus never could.** Measured 2026-08-19,
+two agent runs differing only in `--structured` / `--no-structured`, sequentially (see the
+concurrency note below).
+
+| | reference questions (30) | | structured (4) | abstentions (6) | |
+|---|---|---|---|---|---|
+| | recall@5 | MRR | exact cell match | accuracy | routing |
+| `--no-structured` | 0.767 | 0.711 | — | **1.000** | — |
+| `--structured` | **0.800** | **0.733** | **0.875** | 0.833 | **1.000** |
+
+**The reference numbers do not move.** 0.800 against 0.767 is one question on a set of thirty, and
+this repo's own figure for agent run-to-run spread at fixed configuration is 0.200 — so the honest
+reading is *no measurable cost*, not *a small gain*. That was the question worth asking: the risk of
+adding a lane is that the agent starts reaching for it on questions the corpus already answers, and
+that would have shown up here as a drop.
+
+**Routing is 1.000, and it is the number this phase exists for.** Every structured question was
+answered from a row, and every reference question from a passage. The failure this guards against —
+answering *"what is the deductible on plan X"* with a fluent passage defining "deductible" — did not
+happen once. It is also the metric to distrust first when the gold set grows: four structured
+questions is not many, and they are unambiguous by construction.
+
+**Structured exact match is 0.875, and the missing eighth was a bad gold question.** `str-02` asked
+for a plan's monthly premium while grading both the premium *and* the deductible; the agent cited
+the premium and scored 0.5. The question now asks for both. Worth stating plainly because the fix
+was to the eval, not to the agent: a question must ask for everything it grades, and this lane makes
+that sloppiness visible in a way a prose question does not.
+
+**Abstention 0.833 is one question, and that question got genuinely harder.** `abs-02` — *"is
+metformin covered under the Humana Gold Plus HMO plan's formulary?"* — is a coin flip now. Asked
+again directly, the agent abstained, and did it better than the reference-only build ever could:
+
+> I can't determine that from the plan name alone. The 2026 data contains multiple Humana Gold Plus
+> HMO plans tied to different contracts and formularies — for example, contract H0028, plan 077 uses
+> formulary 00026409, while contract H1036, plan 302 uses formulary 00026412. Please provide the
+> plan's contract and plan IDs, or your state and county.
+
+That is an abstention that **used the tables to show its own limit**, with rows cited for the claim
+that the plan name is ambiguous. The lane did not teach the agent to over-reach; it gave it enough
+to investigate, and investigating sometimes ends in an answer and sometimes in a better refusal. Two
+things follow. A six-question abstention set cannot resolve a difference of one. And `abs-02` should
+probably be re-authored, because "abstain" and "answer for the one plan you can identify" are both
+defensible now, which is not what a gold label is for.
+
+**Two bugs this measurement found, both fixed before these numbers were taken:**
+
+- **`request_limit: 8` lost a working question.** `str-01` died on `UsageLimitExceeded` in the first
+  run. A plan question spends `list_tables` → `describe_table` (often twice) → `query_structured` →
+  a corrected query → answer, where a corpus question spends two or three calls. Now 12/16.
+- **`groundedness_grader` scored row citations as fabricated sources**, reporting 0.889 where the
+  guardrail guarantees 1.000, because a row has no `chunk_id` to resolve. A metric that punishes a
+  capability for existing reads exactly like a regression — see §4 and `evals/grading.py`.
+
+**Concurrency, measured the hard way.** Three sweeps were thrown away to rate limits before these
+two completed: at `--concurrency 3`, ten questions errored; at `--concurrency 5`, twenty-five and
+thirty-three did, reporting `recall@5 0.033` for a set that was never answered. The cause is this
+lane's token appetite — ~40k tokens for one structured question against roughly a third of that for
+a definitional one, because the whole conversation is resent each turn and `describe_table` is a
+large reply. Five in flight is ~200k tokens, which is the account's per-minute ceiling exactly.
+**Run this lane's evals sequentially**, and read any run with errored questions as broken rather
+than weak — the errors are in the run record for exactly that reason.
 
 ### Phase 1b: does vector search beat lexical?
 
@@ -230,7 +362,7 @@ The answer streams even though the output is a structured object rather than tex
 that object as JSON fragments; `_partial_answer()` parses a prefix of the buffer with
 `from_json(allow_partial=...)`, reads `answer`, and emits the **diff** against what was already
 sent. Which streamed part is the output is identified **by shape** — a buffer that parses to an
-object with a string `answer`, and none of the four tools takes an argument by that name. The
+object with a string `answer`, and no tool takes an argument by that name. The
 alternative was tracking part indices across `FinalResultEvent`, which differs between
 tool-output, native-output and prompted-output modes and between providers.
 

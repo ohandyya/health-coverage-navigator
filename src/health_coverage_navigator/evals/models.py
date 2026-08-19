@@ -39,7 +39,28 @@ class GoldQuestion(BaseModel):
     plan_year: int | None = None
     volatile: bool = False
     notes: str = ""
-    becomes_answerable_at_phase: int | None = None
+    becomes_answerable_at_phase: str | None = None
+    """Which phase turns an abstention into an answer — `"1c"`, `"2"`, `"3"`. A **string** since
+    Phase 1-c, because the phases are not integers: `abs-02` ("is metformin on this plan's
+    formulary") was labelled `3` and is in fact answered by 1-c's vendored Part D data."""
+
+    expected_table: str | None = None
+    """Structured questions only: the `<source>.<table>` the answer must come from."""
+
+    expected_cells: list[str] = Field(default_factory=list)
+    """Structured questions only: the cell values a correct answer has to cite, **verbatim** —
+    including the trailing space in `'$4,500 '`. Generated from the mirror by
+    `python -m health_coverage_navigator.evals.structured_gold`, never retyped: a value that has
+    been tidied by hand asserts something the source does not say."""
+
+    @property
+    def is_structured(self) -> bool:
+        """Whether this question is answered from a table rather than from a passage.
+
+        Keyed off `expected_source_type` rather than a separate flag: the lane a question belongs
+        to *is* the thing the routing metric grades, so a second field could disagree with it.
+        """
+        return self.expected_source_type == "structured_api"
 
     @model_validator(mode="after")
     def _check_shape(self) -> "GoldQuestion":
@@ -54,6 +75,29 @@ class GoldQuestion(BaseModel):
                 raise ValueError(f"{self.id}: abstention must have difficulty=null")
             if self.expected_snippet:
                 raise ValueError(f"{self.id}: abstention must have no expected_snippet")
+        elif self.is_structured:
+            # A third shape, and it shares almost nothing with the reference one: a row has no
+            # document, no chunk and no snippet, so requiring those here would force a structured
+            # question to carry fields that mean nothing for it — and would drag it into the
+            # recall@5 denominator, where it can only ever count as a miss.
+            if not self.expected_table:
+                raise ValueError(f"{self.id}: a structured_api question needs an expected_table")
+            if not self.expected_cells:
+                raise ValueError(f"{self.id}: a structured_api question needs expected_cells")
+            if self.expected_doc_ids or self.expected_snippet or self.corpus:
+                raise ValueError(
+                    f"{self.id}: a structured_api question is answered from a table, so it must "
+                    f"not carry corpus, expected_doc_ids or expected_snippet"
+                )
+            if self.plan_year is None:
+                raise ValueError(
+                    f"{self.id}: a structured_api question needs a plan_year — the tables are "
+                    f"per-year and an unpinned question cannot be scored against one"
+                )
+            if not self.answer_key_facts:
+                raise ValueError(f"{self.id}: non-abstention needs at least one answer_key_facts")
+            if self.difficulty is None:
+                raise ValueError(f"{self.id}: non-abstention needs a difficulty")
         else:
             if not self.expected_doc_ids:
                 raise ValueError(f"{self.id}: non-abstention needs at least one expected_doc_id")
@@ -69,10 +113,13 @@ class GoldQuestion(BaseModel):
                 raise ValueError(f"{self.id}: non-abstention needs an expected_answer")
             if not self.answer_key_facts:
                 raise ValueError(f"{self.id}: non-abstention needs at least one answer_key_facts")
-            if self.becomes_answerable_at_phase is not None:
+            if self.expected_table or self.expected_cells:
                 raise ValueError(
-                    f"{self.id}: becomes_answerable_at_phase only applies to abstentions"
+                    f"{self.id}: expected_table/expected_cells belong to a structured_api question"
                 )
+
+        if not self.expected_abstain and self.becomes_answerable_at_phase is not None:
+            raise ValueError(f"{self.id}: becomes_answerable_at_phase only applies to abstentions")
         return self
 
 
@@ -89,4 +136,13 @@ class GoldSet(BaseModel):
         return [q for q in self.questions if q.expected_abstain]
 
     def in_corpus(self) -> list[GoldQuestion]:
-        return [q for q in self.questions if not q.expected_abstain]
+        """Questions answered from the reference corpus.
+
+        Structured questions are **not** in here, and that is the point: a retrieval-only runner is
+        asked this set, and asking it for a table lookup would score a guaranteed miss as if it
+        were a finding — the same argument that keeps abstentions out of it.
+        """
+        return [q for q in self.questions if not q.expected_abstain and not q.is_structured]
+
+    def structured(self) -> list[GoldQuestion]:
+        return [q for q in self.questions if q.is_structured]

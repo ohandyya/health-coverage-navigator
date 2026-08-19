@@ -39,8 +39,18 @@ agent:
   # results and search again, one to answer, plus the retry budget above. tool_calls_limit is the
   # real ceiling on a model that keeps reformulating a query it will never satisfy — without it the
   # failure is a spinner until the request times out, instead of an answer or an honest abstention.
-  request_limit: 8
-  tool_calls_limit: 12
+  #
+  # RAISED FROM 8/12 BY MEASUREMENT, at Phase 1-c. A reference question spends two or three model
+  # calls: search, maybe search again, answer. A plan question spends `list_tables`, then
+  # `describe_table` (often twice — a 151-column table is read through the `contains` filter), then
+  # `query_structured`, then a corrected query when a column name was guessed wrong, then the
+  # answer. The first structured eval run lost str-01 outright to
+  # `UsageLimitExceeded: the next request would exceed the request_limit of 8` — a working
+  # capability recorded as a failed question, which is the worst way for a ceiling to be wrong.
+  # 12/16 leaves room for that path plus the grounding retries, and is still far below the runaway
+  # loop these exist to stop.
+  request_limit: 12
+  tool_calls_limit: 16
 
   # Transport-level retries, which is a DIFFERENT THING from `retries` above: that one is about
   # whether an answer is grounded, this one is about whether the request arrived. The OpenAI SDK
@@ -64,6 +74,18 @@ agent:
   # records which was used, so a comparison is one runner with a flag rather than three code paths
   # (docs/plan.md §1b).
   toolset: both
+
+  # Whether the agent sees the Phase 1-c relational lane — list_tables / describe_table /
+  # query_structured over the vendored CMS plan data. A SEPARATE SWITCH from `toolset` above, not a
+  # fourth value of it: `toolset` picks how the reference corpus is searched, this picks whether a
+  # second KIND of source exists at all. Folding them together would make six combinations, three
+  # of them meaningless, and would redefine the three names Phase 1b's measurement is recorded
+  # under.
+  #
+  # Requires the Parquet mirrors (`make puf`). With this true and the mirrors missing, the app
+  # returns a 503 naming the command rather than quietly answering plan questions from prose —
+  # the same refusal-to-degrade as a missing vector store.
+  structured_tools: true
 
 retrieval:
   # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
@@ -115,6 +137,31 @@ vectors:
   # this. 128 puts the 6,722-chunk ingest in ~53 requests. Larger batches are fewer round trips
   # but put more work behind a single failure, and the whole build is under two minutes either way.
   batch_size: 128
+
+# Phase 1-c relational lane. These bound a query the MODEL wrote, which is why they are ceilings
+# rather than tunables: nothing here makes an answer better, and every value exists to make a bad
+# query cheap. The guard itself (single SELECT, locked connection, sandboxed to data/processed) is
+# code, not configuration — docs/relational-tool.md §4.
+structured:
+  # Rows one query may return before the result says it truncated. Every statement is wrapped in
+  # this cap, so the model cannot forget to write LIMIT. Sized for LOOKUPS, which is what this
+  # phase is for; Phase 5's plan comparisons are the thing that would justify raising it.
+  max_rows: 200
+
+  # Deadline for one statement, enforced by interrupting the cursor — DuckDB has no statement
+  # timeout, so this is a threading.Timer, measured to fire within ~16 ms of the deadline. Very
+  # generous against the 3-16 ms a real lookup takes: what it exists to catch is an accidental
+  # cross join, not a slow filter.
+  query_timeout_s: 5.0
+
+  # DuckDB's working-memory ceiling for the whole connection. The mirrors are READ FROM PARQUET,
+  # never loaded, so this does not have to hold the data — 1.46M rows of Benefits & Cost Sharing
+  # sit on disk and are scanned. It bounds a hash join gone wrong.
+  memory_limit: 512MB
+
+  # DuckDB worker threads. Deliberately small: this shares a process with the API's event loop,
+  # and a query that saturates every core makes an unrelated request look like a hang.
+  threads: 2
 
 evals:
   # The LLM judge behind `make eval-judge`, which grades each answer against the gold set's

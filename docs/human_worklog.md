@@ -11,7 +11,36 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - Today, there is no memory on the Chat panel. How do we add memory?
 
+2. QA Agent
+    
+    - After the answering agent answers it, we want to pass the infromation to a QA agent to further validate the result.
+    - The QA Agent can have its own tool.
+    - We want the UI to see that `QAing now...`
+
+
+3. Use AI to see if we miss any technical highlights.
+    - Ask AI to list out potential highlights that are missing
+    - User confirm which one to add
+    - Then AI add
+
 ## Work Log
+
+### Aug 18, 2026
+
+#### To Dos
+
+- [Done] Open the frontend, and validate it worked
+
+    - Specifcally check the use of SQL tool
+
+- [Done] Try running evals with concurrency = 5
+
+    - If still getting 200k 429 rate limit error, try create a new API key.
+
+- [Done] Use walkthrough to understand what has been implenented.
+
+- [Done] Document `how do we design the guard to have AI write SQL`, and add to technical_highlights.md
+
 
 ### Aug 16, 2026
 

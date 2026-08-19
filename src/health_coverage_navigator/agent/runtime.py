@@ -39,10 +39,11 @@ from pydantic_ai import (
 )
 from pydantic_core import from_json
 
+from health_coverage_navigator.agent.deps import AnswerDeps
 from health_coverage_navigator.agent.index import CorpusIndex
-from health_coverage_navigator.agent.models import MARKER_RE, AgentAnswer
+from health_coverage_navigator.agent.models import MARKER_RE, AgentAnswer, AgentCitation
 from health_coverage_navigator.agent.prompt import system_prompt
-from health_coverage_navigator.agent.tools import AnswerDeps, select_tools
+from health_coverage_navigator.agent.tools import select_tools
 from health_coverage_navigator.api.models import (
     AnswerClaim,
     ChatRequest,
@@ -59,6 +60,9 @@ from health_coverage_navigator.api.models import (
 )
 from health_coverage_navigator.config import Toolset, get_config
 from health_coverage_navigator.settings import get_secrets
+from health_coverage_navigator.structured.catalog import source_label, source_url
+from health_coverage_navigator.structured.models import Row
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
 
 
@@ -121,7 +125,9 @@ def _resolve_model(model: str) -> object:
 
 
 def build_agent(
-    model: str | None = None, toolset: Toolset | None = None
+    model: str | None = None,
+    toolset: Toolset | None = None,
+    structured: bool | None = None,
 ) -> Agent[AnswerDeps, AgentAnswer]:
     """The one agent. Every later phase registers more tools here rather than building another.
 
@@ -134,26 +140,31 @@ def build_agent(
     mistake, which is why the resolution happens here and not in the cached function.
     """
     config = get_config().agent
-    return _build_agent(model or config.model, toolset or config.toolset)
+    return _build_agent(
+        model or config.model,
+        toolset or config.toolset,
+        config.structured_tools if structured is None else structured,
+    )
 
 
-#: Three toolsets x a handful of models. Sized so a `make eval` sweep across configurations does
-#: not evict the agent it is about to reuse.
-@lru_cache(maxsize=12)
-def _build_agent(model: str, toolset: Toolset) -> Agent[AnswerDeps, AgentAnswer]:
+#: Three toolsets x two lane configurations x a handful of models. Sized so a `make eval` sweep
+#: across configurations does not evict the agent it is about to reuse.
+@lru_cache(maxsize=24)
+def _build_agent(model: str, toolset: Toolset, structured: bool) -> Agent[AnswerDeps, AgentAnswer]:
     """Cached because construction resolves the credential and builds every tool schema.
 
-    `toolset` is part of the key rather than read inside, because it changes both the registered
-    tools and the instructions — two agents that differ in what they can do must not share one
-    cached object.
+    Both axes are part of the key rather than read inside, because both change the registered tools
+    *and* the instructions — two agents that differ in what they can do must not share one cached
+    object. Phase 1-c's addition makes that sharper than Phase 1b's did: a structured agent is told
+    that plan-specific questions are answerable, and a reference-only one is told they are not.
     """
     config = get_config().agent
     agent = Agent(
         _resolve_model(model),  # type: ignore[arg-type]
         deps_type=AnswerDeps,
         output_type=AgentAnswer,
-        instructions=system_prompt(toolset),
-        tools=select_tools(toolset),
+        instructions=system_prompt(toolset, structured),
+        tools=select_tools(toolset, structured),
         # Retries are the grounding guardrail's budget: a rejected answer is re-attempted with the
         # validator's complaint attached. Two is enough for the realistic failures (a mistyped
         # chunk id, a paraphrased quotation) and short of enough to burn a run on a model that has
@@ -191,7 +202,11 @@ def _validate_grounding(ctx: RunContext[AnswerDeps], answer: AgentAnswer) -> Age
         raise ModelRetry(f"Citation ids must be unique; {duplicates} appear more than once.")
 
     for citation in answer.citations:
-        chunk = ctx.deps.seen_chunks.get(citation.chunk_id)
+        if citation.is_row:
+            _validate_row_citation(ctx, citation)
+            continue
+
+        chunk = ctx.deps.seen_chunks.get(citation.chunk_id or "")
         if chunk is None:
             known = sorted(ctx.deps.seen_chunks)[:10]
             raise ModelRetry(
@@ -199,7 +214,7 @@ def _validate_grounding(ctx: RunContext[AnswerDeps], answer: AgentAnswer) -> Age
                 f"returned in this conversation. You may only cite passages you retrieved. "
                 f"Chunks you have seen: {known or 'none — search first'}."
             )
-        if _normalize(citation.snippet) not in _normalize(chunk.text):
+        if _normalize(citation.snippet or "") not in _normalize(chunk.text):
             raise ModelRetry(
                 f"Citation {citation.id}'s snippet is not present in chunk "
                 f"{citation.chunk_id!r}. Copy the supporting words exactly from that passage's "
@@ -216,30 +231,105 @@ def _validate_grounding(ctx: RunContext[AnswerDeps], answer: AgentAnswer) -> Age
     return answer
 
 
+def _validate_row_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation) -> None:
+    """The relational lane's half of the grounding guardrail.
+
+    Same rule as a passage citation, one lane over: cite only what a tool returned, and quote it
+    exactly. What changes is what "exactly" means. A passage quotation is normalised for whitespace
+    because the corpora wrap mid-sentence, so a byte-exact test would reject genuinely verbatim
+    quotations. **A cell has no wrapping to survive**, and its whitespace is data — `'$4,500 '`
+    carries a trailing space that distinguishes the published value from a tidied one — so this
+    comparison is byte-exact, and deliberately stricter than the chunk path.
+    """
+    row = ctx.deps.seen_rows.get(citation.row_id or "")
+    if row is None:
+        known = sorted(ctx.deps.seen_rows)[:10]
+        raise ModelRetry(
+            f"Citation {citation.id} names row_id {citation.row_id!r}, which no query returned in "
+            f"this conversation. You may only cite rows you queried. Rows you have seen: "
+            f"{known or 'none — query first'}."
+        )
+    for column, value in (citation.cells or {}).items():
+        if column not in row.cells:
+            raise ModelRetry(
+                f"Citation {citation.id} names column {column!r}, which row {citation.row_id!r} "
+                f"does not have. Its columns are: {sorted(row.cells)}."
+            )
+        actual = row.cells[column]
+        if actual is None:
+            raise ModelRetry(
+                f"Citation {citation.id} gives a value for {column!r} in row "
+                f"{citation.row_id!r}, but that cell is NULL — the query produced no value there. "
+                f"Do not report a value for it."
+            )
+        if value != actual:
+            raise ModelRetry(
+                f"Citation {citation.id} gives {column!r} as {value!r}, but the row holds "
+                f"{actual!r}. Copy the cell exactly, including any spaces, commas or symbols; "
+                f"your answer text may present it more readably."
+            )
+
+
 # ---------------------------------------------------------------- mapping out ----------------
 
 
-def _citations(answer: AgentAnswer, deps: AnswerDeps) -> list[Citation]:
-    """Build the wire citations from the real chunks.
+def _row_citation(citation: AgentCitation, row: Row) -> Citation:
+    """One relational-lane citation, built from the row rather than from the model.
 
-    The model supplies `chunk_id` and `snippet`, both already validated. Everything else — title,
-    url, doc_id, score, source_type — is read off the `Chunk`, so a title the model would like the
-    reader to see cannot become the title the reader sees.
+    Same rule as the chunk path: the model contributes *which* row and *which* cells, both already
+    validated, and every displayed field is derived here. The snippet is the cited cells rendered
+    one per line — a row shown as a paragraph hides which columns were read, which is the part that
+    makes it evidence.
+
+    `doc_id` and `chunk_id` stay `None`: these are the first citations in this repo that are not
+    chunks, and the frontend renders that as a different card rather than an empty drill-down.
+    """
+    label = (
+        f"{source_label(row.source)} · {row.view.rsplit('/', 1)[-1]} ({row.partition})"
+        if row.source and row.partition
+        else "Structured query result"
+    )
+    return Citation(
+        id=citation.id,
+        # `structured_api` has meant *deterministic row-level lookup* since Phase 0. Whether the
+        # row came from a vendored mirror or (Phase 3) a live endpoint is a property of the
+        # citation, not a fourth lane — so nothing about the contract moves here.
+        source_type="structured_api",
+        title=label,
+        url=source_url(row.source),
+        doc_id=None,
+        chunk_id=None,
+        snippet="\n".join(
+            f"{column}: {'NULL' if value is None else value}"
+            for column, value in (citation.cells or {}).items()
+        ),
+        score=None,
+    )
+
+
+def _citations(answer: AgentAnswer, deps: AnswerDeps) -> list[Citation]:
+    """Build the wire citations from the real evidence — never from the model.
+
+    The model supplies an identifier and a quotation (a `chunk_id` + `snippet`, or a `row_id` +
+    `cells`), all already validated. Everything else — title, url, doc_id, source_type — is read
+    off the `Chunk` or the `Row`, so a title the model would like the reader to see cannot become
+    the title the reader sees.
     """
     citations: list[Citation] = []
     for citation in answer.citations:
-        chunk = deps.seen_chunks[citation.chunk_id]
+        if citation.is_row:
+            citations.append(_row_citation(citation, deps.seen_rows[citation.row_id or ""]))
+            continue
+        chunk = deps.seen_chunks[citation.chunk_id or ""]
         citations.append(
             Citation(
                 id=citation.id,
-                # The only lane that exists at Phase 1a. Phases 2 and 3 add values here; nothing
-                # about this shape changes when they do.
                 source_type="reference",
                 title=chunk.citation_label,
                 url=chunk.url or None,
                 doc_id=chunk.doc_id,
                 chunk_id=chunk.id,
-                snippet=citation.snippet,
+                snippet=citation.snippet or "",
                 score=None,
             )
         )
@@ -321,6 +411,7 @@ async def stream_answer(
     model: str | None = None,
     toolset: Toolset | None = None,
     vectors: VectorIndex | None = None,
+    structured: StructuredStore | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Answer one question, as the SSE event sequence the frontend already renders.
 
@@ -338,7 +429,12 @@ async def stream_answer(
     resolved_model = model or get_config().agent.model
     limits = get_config().agent
 
-    deps = AnswerDeps(index=index, vectors=vectors)
+    # `plan_year` finally does something. It has ridden in the contract since Phase 0, and here it
+    # chooses which partition of the vendored plan data the structured tools may read — so a
+    # question about a year that is not on disk abstains instead of answering from another year.
+    deps = AnswerDeps(
+        index=index, vectors=vectors, structured=structured, plan_year=request.plan_year
+    )
     conversation_id = request.conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
 
@@ -351,9 +447,15 @@ async def stream_answer(
         trace.append(entry)
         return StepEvent(step=entry)
 
-    yield step("plan", f"Search the reference corpus for: {request.message}")
+    where = (
+        "the reference corpus and the vendored plan data" if structured else "the reference corpus"
+    )
+    yield step("plan", f"Search {where} for: {request.message}")
 
-    agent = build_agent(model, toolset)
+    # No store, no structured tools — whatever the configuration says. `routes/chat.py` turns a
+    # configured-but-missing store into a 503 before this point; a caller that builds deps by hand
+    # (a test, a script) gets a reference-only agent rather than tools that would raise on use.
+    agent = build_agent(model, toolset, structured=structured is not None)
     buffers: dict[int, str] = {}
     streamed = ""
     drained = 0
@@ -464,13 +566,16 @@ async def answer_question(
     model: str | None = None,
     toolset: Toolset | None = None,
     vectors: VectorIndex | None = None,
+    structured: StructuredStore | None = None,
 ) -> ChatResponse:
     """The same answer, without the stream.
 
     Implemented by draining `stream_answer` rather than beside it. Two answer paths that "should"
     agree is precisely the kind of thing that silently stops agreeing; there is only one here.
     """
-    async for event in stream_answer(request, index, model=model, toolset=toolset, vectors=vectors):
+    async for event in stream_answer(
+        request, index, model=model, toolset=toolset, vectors=vectors, structured=structured
+    ):
         if isinstance(event, DoneEvent):
             return event.response
     raise RuntimeError("the agent stream ended without a done event")  # pragma: no cover

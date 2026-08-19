@@ -82,6 +82,12 @@ class AgentConfig(BaseModel):
     #: the run record carries which was used.
     toolset: Toolset
 
+    #: Whether the agent sees the Phase 1-c relational lane at all. A separate boolean rather than a
+    #: fourth `Toolset` value because it selects a different *lane*, not a different way of
+    #: searching the same one — see `agent/tools.select_tools`. Also an eval axis: `--structured` /
+    #: `--no-structured` overrides it for one run, and the run record carries which was used.
+    structured_tools: bool
+
 
 class EvalsConfig(BaseModel):
     """Grading. Separate from `agent:` because the judge must be swappable without touching what
@@ -135,6 +141,38 @@ class VectorsConfig(BaseModel):
     batch_size: int = Field(gt=0)
 
 
+class StructuredConfig(BaseModel):
+    """Phase 1-c relational lane: the ceilings on one model-written query.
+
+    Every value here bounds a query the *model* wrote, which is the difference from
+    `RetrievalConfig` — those parameters tune a ranking we control, these are the blast radius of
+    SQL we do not. They live in the committed config for the usual reason (an eval run must be
+    reproducible from the repo), and they are separate from `agent:` because they bound the engine
+    rather than the loop.
+    """
+
+    model_config = _FROZEN
+
+    #: Rows one query may return before the result reports itself truncated. The tool wraps every
+    #: statement in this cap, so the model cannot forget to write `LIMIT`. Sized for lookups:
+    #: Phase 5's comparison work is what would justify raising it.
+    max_rows: int = Field(gt=0)
+
+    #: Deadline for one statement, enforced by interrupting the cursor — DuckDB has no statement
+    #: timeout. Generous against the 3-16 ms a real lookup takes, because the failure it exists to
+    #: catch is an accidental cross join, not a slow filter.
+    query_timeout_s: float = Field(gt=0)
+
+    #: DuckDB's memory ceiling for the whole connection, as a DuckDB size string (`512MB`). The
+    #: mirrors are read from Parquet rather than loaded, so this bounds working memory — a hash
+    #: join gone wrong — not the data.
+    memory_limit: str = Field(min_length=1)
+
+    #: DuckDB worker threads. Small on purpose: this shares a process with the API's event loop,
+    #: and a query that saturates every core makes an unrelated request look like a hang.
+    threads: int = Field(gt=0)
+
+
 class ChunkParams(BaseModel):
     """Chunking parameters, and the fingerprint that pins an eval run to them.
 
@@ -175,6 +213,7 @@ class Config(BaseModel):
     agent: AgentConfig
     retrieval: RetrievalConfig
     vectors: VectorsConfig
+    structured: StructuredConfig
     evals: EvalsConfig
     chunking: ChunkParams
 

@@ -69,6 +69,18 @@ def _retrieval_detail(ctx: AppContext) -> str:
     )
 
 
+def _structured_detail(ctx: AppContext) -> str:
+    """What the relational lane has behind it, or what to run to give it something."""
+    if not get_config().agent.structured_tools:
+        return "relational tools are off in config.yaml (`agent.structured_tools`)"
+    if ctx.structured is None:
+        return "plan data not built on this machine — run `make puf` and restart"
+    overview = ctx.structured.overview(plan_year=None)
+    rows = sum(table.rows for table in overview.tables)
+    where = ", ".join(f"{source} {part}" for source, part in sorted(overview.partitions.items()))
+    return f"{len(overview.tables)} tables, {rows:,} rows · {where} · Phase 3 adds live APIs"
+
+
 @router.get("/health", response_model=HealthResponse, summary="Liveness and configured lanes")
 def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthResponse:
     corpora = _corpus_status()
@@ -92,8 +104,13 @@ def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthRespon
         ),
         LaneStatus(
             source_type="structured_api",
-            configured=False,
-            detail="Phase 3 — no Marketplace, openFDA or NPPES tools yet",
+            # Phase 1-c: the lane goes live on **vendored** plan data, ahead of Phase 3's live
+            # APIs. Reported off the store rather than off the config, for the same reason the
+            # reference lane is reported off the index and not off the document count: a lane that
+            # is configured but has no data behind it can only 503, and calling that "configured"
+            # would be a health endpoint that lies.
+            configured=ctx.structured is not None,
+            detail=_structured_detail(ctx),
         ),
         LaneStatus(
             source_type="web",

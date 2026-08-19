@@ -22,6 +22,21 @@ const KIND_COLOR: Record<TraceStep['kind'], string> = {
   synthesis: 'bg-lane-web',
 }
 
+/**
+ * What an expanded step shows.
+ *
+ * `JSON.stringify` for every step except a query: Phase 1-c's `query_structured` carries SQL, and
+ * an escaped one-line string is unreadable exactly where the trace is most worth reading — the
+ * query *is* the agent's reasoning, written down. So the SQL is printed as SQL and any other
+ * arguments follow it.
+ */
+function detail(input: Record<string, unknown>): string {
+  const { sql, ...rest } = input
+  if (typeof sql !== 'string') return JSON.stringify(input, null, 2)
+  const others = Object.entries(rest).filter(([, value]) => value != null)
+  return others.length === 0 ? sql : `${sql}\n\n${JSON.stringify(Object.fromEntries(others), null, 2)}`
+}
+
 function Step({ step }: { step: TraceStep }) {
   const [open, setOpen] = useState(false)
   const hasDetail = step.input != null
@@ -63,7 +78,7 @@ function Step({ step }: { step: TraceStep }) {
       </button>
       {open && step.input && (
         <pre className="overflow-x-auto bg-muted/50 px-3 py-2 text-[0.65rem] leading-relaxed">
-          {JSON.stringify(step.input, null, 2)}
+          {detail(step.input)}
         </pre>
       )}
     </li>

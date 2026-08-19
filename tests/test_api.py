@@ -25,6 +25,7 @@ drained to its `done` event, so they cannot differ and the property is asserted 
 import json
 from pathlib import Path
 
+import duckdb
 import pytest
 from fastapi.testclient import TestClient
 
@@ -61,23 +62,55 @@ def _no_vector_store(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_vectors(monkeypatch, None)
 
 
-def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None) -> None:
-    """Point the app's lifespan at the fixture corpus and vector store instead of loading them.
+def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None, structured=None) -> None:
+    """Point the app's lifespan at the fixture corpus, vector store and plan mirror.
 
-    The index would otherwise build all 6,722 chunks, and these tests are about HTTP wiring rather
-    than retrieval.
+    The index would otherwise build all 6,722 chunks and the mirror would need a 24 MB download,
+    and these tests are about HTTP wiring rather than retrieval. `structured` is passed explicitly
+    rather than defaulted to the real store because a test that boots against whatever happens to
+    be on the developer's disk is a test that passes for the wrong reason.
+
+    **The app takes ownership of the store this hands it.** `create_app`'s lifespan closes whatever
+    `_load_structured` returned, so pass the function-scoped `app_structured` rather than the
+    session-wide `structured_store` — handing over the shared one closes it for every test that
+    runs afterwards.
     """
     index = None if agent_kit is None else agent_kit.index
     monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: index)
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_structured", lambda: structured)
     _patch_vectors(monkeypatch, None if agent_kit is None else agent_kit.vectors)
 
 
 @pytest.fixture
-def agent_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
-    """The real answering path, with the two-chunk fixture corpus and a scripted model."""
-    _use_fixture_stores(monkeypatch, agent_kit)
+def app_structured(structured_kit, mirror: Path):
+    """A plan-data store an *app* may own, for the duration of one test.
+
+    Function-scoped where `conftest.structured_store` is session-scoped, because the lifespan
+    closes what `_load_structured` gave it — whoever opens a connection closes it, and under
+    monkeypatch this fixture is standing in for the opener. Opening costs one connection and ten
+    view registrations against the fixture mirror, which is milliseconds.
+    """
+    store = structured_kit.open(mirror)
+    yield store
+    # Normally already closed by the lifespan; `close()` is idempotent, and this covers a test
+    # that never stood an app up.
+    store.close()
+
+
+@pytest.fixture
+def agent_client(agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch):
+    """The real answering path: the two-chunk fixture corpus, the sample plan mirror, and a
+    scripted model.
+
+    Every lane the configuration asks for is present, which is what makes this the *answering*
+    fixture — `_unavailable` refuses to serve a run whose configured lanes are half there, and a
+    test that tripped that would be testing the 503 rather than the answer.
+    """
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
     with (
-        build_agent().override(model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())),
+        build_agent(structured=True).override(
+            model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())
+        ),
         TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c,
     ):
         yield c
@@ -87,6 +120,19 @@ def agent_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
 def no_corpus_client(monkeypatch: pytest.MonkeyPatch):
     """A server that booted on a fresh clone, where `make chunk` has never run."""
     _use_fixture_stores(monkeypatch)
+    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
+        yield c
+
+
+@pytest.fixture
+def no_plan_data_client(agent_kit, monkeypatch: pytest.MonkeyPatch):
+    """A server with a corpus but no plan mirror — a clone that ran `make chunk`, not `make puf`.
+
+    The configuration asks for the relational lane, so this must be a 503 naming the download and
+    **not** a quietly reference-only answer: the question that reaches this server is a
+    plan-specific one, and prose about plans in general is the wrong answer to it.
+    """
+    _use_fixture_stores(monkeypatch, agent_kit, structured=None)
     with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
         yield c
 
@@ -123,7 +169,7 @@ def test_health_reports_stub_mode(client: TestClient):
     assert set(lanes) == {"reference", "structured_api", "web"}, (
         "the three-lane vocabulary exists from Phase 0 even though two lanes are empty"
     )
-    assert lanes["structured_api"]["configured"] is False
+    assert lanes["structured_api"]["configured"] is False, "a stub server holds no plan data"
     assert lanes["web"]["configured"] is False
 
 
@@ -133,6 +179,42 @@ def test_health_drops_the_stub_flag_when_the_agent_answers(agent_client: TestCli
     assert body["stub"] is False
     lanes = {lane["source_type"]: lane for lane in body["lanes"]}
     assert lanes["reference"]["configured"] is True
+
+
+def test_health_reports_the_structured_lane_live_with_a_mirror(agent_client: TestClient):
+    """Phase 1-c turns the second badge on, and it is reported off the *store* rather than the
+    config: a lane that is switched on with no data behind it can only 503."""
+    lanes = {lane["source_type"]: lane for lane in agent_client.get("/api/health").json()["lanes"]}
+    assert lanes["structured_api"]["configured"] is True
+    assert "tables" in lanes["structured_api"]["detail"]
+    assert "2026" in lanes["structured_api"]["detail"], "the detail names the plan year on disk"
+
+
+def test_health_reports_the_structured_lane_down_without_a_mirror(no_plan_data_client: TestClient):
+    body = no_plan_data_client.get("/api/health").json()
+    lanes = {lane["source_type"]: lane for lane in body["lanes"]}
+    assert lanes["structured_api"]["configured"] is False
+    assert "make puf" in lanes["structured_api"]["detail"]
+
+
+def test_shutdown_releases_the_plan_data_connection(
+    agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch
+):
+    """The store is the one thing on `AppContext` holding an OS resource, so shutdown has to
+    release it rather than leave it to process exit.
+
+    `create_app` is called per test, and would be called per host in any process that embeds the
+    app, so one that is built and discarded without closing leaks a DuckDB connection each time.
+    """
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
+
+    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
+        assert c.get("/api/health").json()["lanes"], "the app served at least one request"
+
+    # A public call rather than a poke at `_con`: `overview` reads the catalog off the connection,
+    # so a closed one is the only way this raises.
+    with pytest.raises(duckdb.Error):
+        app_structured.overview(plan_year=None)
 
 
 def test_health_reports_the_reference_lane_down_without_chunks(no_corpus_client: TestClient):
@@ -303,15 +385,27 @@ def test_chat_is_503_when_the_corpus_was_never_chunked(no_corpus_client: TestCli
         assert "make chunk" in response.json()["detail"], path
 
 
-def test_an_agent_failure_arrives_as_an_error_frame(agent_kit, monkeypatch: pytest.MonkeyPatch):
+def test_chat_is_503_when_the_plan_data_was_never_downloaded(no_plan_data_client: TestClient):
+    """The third of the three refusals, and the newest: same shape as the missing corpus, naming
+    its own command. Degrading to a reference-only answer would be the subtler version of falling
+    back to the stub — real prose, measured against lanes nobody chose, with nothing saying so."""
+    for path in ("/api/chat", "/api/chat/stream"):
+        response = no_plan_data_client.post(path, json={"message": "deductible on plan X?"})
+        assert response.status_code == 503, path
+        assert "make puf" in response.json()["detail"], path
+
+
+def test_an_agent_failure_arrives_as_an_error_frame(
+    agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch
+):
     """A `StreamingResponse` has already sent its 200 by the time the first tool runs, so a later
     failure cannot become a status code — it would truncate the body and the browser would report a
     network error for what was really a step limit or a rate limit. `useChat.ts` already renders
     `ErrorEvent`; this is what feeds it."""
-    _use_fixture_stores(monkeypatch, agent_kit)
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
     # A script that never produces a final answer, so the run trips its tool-call ceiling.
     with (
-        build_agent().override(model=agent_kit.script(agent_kit.SEARCH)),
+        build_agent(structured=True).override(model=agent_kit.script(agent_kit.SEARCH)),
         TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as client,
     ):
         response = client.post("/api/chat/stream", json={"message": "loop forever"})
@@ -380,15 +474,21 @@ def test_eval_run_completes_and_is_readable(client: TestClient, tmp_path: Path, 
     types = [e["type"] for e in events]
     assert types[0] == "started"
     assert types[-1] == "finished", f"run did not finish: {types[-1]}"
-    assert types.count("progress") == 35, "one progress event per gold question"
+    # Read from the loader rather than hardcoded: the set grows with the phases (35 at Phase 1b,
+    # 40 once Phase 1-c added its structured questions), and a literal here would make adding a
+    # gold question look like an API regression.
+    expected = len(load_gold_set().questions)
+    assert types.count("progress") == expected, "one progress event per gold question"
     # The dashboard renders a counter from these, so they have to arrive in order and exactly once
     # each. The route pins `max_concurrency=1` for this reason; without it the runner's semaphore
     # would let completions interleave and the counter would jump around.
-    assert [e["completed"] for e in events if e["type"] == "progress"] == list(range(1, 36))
+    assert [e["completed"] for e in events if e["type"] == "progress"] == list(
+        range(1, expected + 1)
+    )
 
     run = events[-1]["run"]
     assert run["runner"] == "stub", "a metric measured against canned answers must say so"
-    assert run["n_questions"] == 35
+    assert run["n_questions"] == expected
     assert set(run["metrics"]) >= {"recall@5", "mrr", "abstention_accuracy"}
 
 

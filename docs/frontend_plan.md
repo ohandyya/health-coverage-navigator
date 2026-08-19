@@ -301,17 +301,28 @@ Requirements:
 
 - **Source badges** are color-coded by lane and consistent everywhere: `reference` (blue),
   `structured_api` (green), `web` (amber). In Phase 1a everything is blue — that's fine, the
-  vocabulary is already there for Phase 2 and 3.
+  vocabulary is already there. `structured_api` goes live at Phase 1-c and `web` at Phase 2, and
+  because `LANE` is a `Record<SourceType, …>` neither needs a code change to start rendering.
 - **Citation cards** collapse to a one-line source label and expand to the `snippet` actually
   retrieved, with a link to the full document (`/api/corpus/{doc_id}`) or external `url`.
+- **Citation cards have two body shapes**, and from Phase 1-c both are live. A *chunk* citation
+  expands to retrieved prose and drills into `/api/corpus/{doc_id}`. A *row* citation — the
+  relational lane, `doc_id` and `chunk_id` both null — expands to the cited cells as
+  `Column: value` lines in monospace, and links out to the CMS PUF landing page instead. Rendering
+  a row as a paragraph would hide the thing that makes it evidence: which columns were read.
 - **Inline markers** (`[c1]`) in the answer scroll to and highlight the matching citation. Keep
   markdown rendering restricted — headings, lists, bold, links, tables. No raw HTML.
 - **Abstention** renders as a distinct muted panel with its own icon and no citation section.
   It must be impossible to mistake for an answer at a glance.
-- **Plan-year selector** sits next to the input and is sent on every request.
+- **Plan-year selector** sits next to the input and is sent on every request. Decorative until
+  Phase 1-c, where it starts selecting which partition of the vendored plan data is queried — so
+  from then on it changes answers, and a citation's title names the year it actually read.
 - **Trace panel** is collapsible, closed by default, and remembers its state in `localStorage`.
   It is a developer surface, not a user feature — but it's *your* primary debugging tool, so it
-  should be good.
+  should be good. One special case from Phase 1-c: a `query_structured` step's input is SQL, and
+  `JSON.stringify` renders it as one escaped line. It gets its own branch — monospace, newlines
+  preserved, horizontally scrollable — because the query the agent wrote is the whole story of
+  that step.
 
 ### 5.2 Eval dashboard (`/evals`)
 
@@ -342,6 +353,11 @@ every iteration.
   path from "recall dropped" to "here's why."
 - **Run comparison** (pick two runs, diff per-question outcomes) is what makes the Phase 1b
   vector-vs-lexical decision concrete. Worth building when Phase 1b starts, not before.
+- **Run badges name every axis a comparison can turn on.** Phase 1b added the retrieval toolset;
+  Phase 1-c adds whether the relational lane was registered (`EvalRunSummary.structured`). A run
+  that does not say which it was cannot take part in the comparison it exists for. The metric
+  columns need no work — `structured_exact_match` and `routing_correct` appear on their own,
+  because the table renders whatever a run reports.
 - Runs persist as JSON under `data/eval_runs/`. This directory is generated output — add it to
   `.gitignore` unless you deliberately want run history committed.
 
@@ -373,9 +389,28 @@ comes back. No agent involved. The entire UI is proven before there's anything r
       (still flat; nesting is F3's problem)
 - [ ] Eval dashboard against real runs
 
-**Phase F2 — Routing visible (with Phase 2/3)**
-- [ ] `structured_api` and `web` badges become live
-- [ ] Routing-accuracy column in the eval dashboard
+**Phase F1c — The relational lane is visible (with Phase 1-c)**
+
+The smallest slice in this document, and deliberately so: the contract does not move, the badge
+already exists, and `CitationCard` already handles a source with a `url` and no `doc_id`. What is
+genuinely new is that a citation can now be a *row*, and a trace step can now be *SQL* — two
+rendering branches, not a surface. Backend design: [relational-tool.md](relational-tool.md).
+
+- [ ] `structured_api` badge live on real answers (data-driven; no component change expected)
+- [ ] `CitationCard` row branch: cells as `Column: value` in monospace, out-link to the PUF landing
+      page, no corpus drill-down control on a citation that has no `doc_id`
+- [ ] `TracePanel` SQL branch: readable multi-line query instead of an escaped JSON string
+- [ ] Eval dashboard: `structured` badge beside the toolset badge on agent runs
+- [ ] `make types` after the `EvalRunSummary` field lands, per the `sync-frontend` skill
+
+*Deliberately not here:* a lane-status indicator driven by `/api/health`'s `lanes`. A server
+without the vendored mirror answers a structured question with a 503 naming `make puf`, which
+`useChat.ts` already renders as an error — a second surface saying the same thing can wait until
+there is a lane whose absence is not self-explanatory.
+
+**Phase F2 — The web lane, and routing measured (with Phase 2/3)**
+- [ ] `web` badge becomes live (`structured_api` went live at F1c)
+- [ ] Routing-accuracy column in the eval dashboard widens from two lanes to three
 - [ ] Per-lane filtering of citations
 
 **Phase F3 — Multi-step (with Phase 4)**

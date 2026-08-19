@@ -64,6 +64,14 @@ function RunnerBadge({ run }: { run: EvalRunSummary }) {
           {run.toolset}
         </span>
       )}
+      {/* The Phase 1-c axis, beside it. Two runs that differ only in this are what measures what
+          the relational lane is worth — and whether it costs anything on the reference questions —
+          so a run that does not name it cannot take part in that comparison. */}
+      {run.structured != null && (
+        <span className="ml-1 rounded-full bg-lane-structured/10 px-2 py-0.5 text-xs text-lane-structured ring-1 ring-inset ring-lane-structured/30">
+          {run.structured ? '+ tables' : 'no tables'}
+        </span>
+      )}
     </>
   )
 }
@@ -142,6 +150,7 @@ function provenance(run: EvalRun): Record<string, string> {
   return {
     runner: run.runner,
     toolset: run.toolset ?? '—',
+    structured: run.structured == null ? '—' : String(run.structured),
     model: run.model ?? '—',
     config: run.config_fingerprint?.slice(0, 12) ?? '—',
     chunks: Object.values(run.chunker_snapshot_id ?? {}).join(', ') || '—',
@@ -157,11 +166,13 @@ function RunCompare({ a, b, questions }: { a: EvalRun; b: EvalRun; questions: Ev
 
   const left = provenance(a)
   const right = provenance(b)
-  // `toolset` is excluded because differing on it is the *point* of a Phase 1b comparison.
-  // Anything else that differs makes the delta below partly a measurement of something the
-  // comparison is not asking about, which the reader has to be told rather than left to notice.
+  // `toolset` and `structured` are excluded because differing on one of them is the *point* of a
+  // comparison — Phase 1b's and Phase 1-c's respectively. Anything else that differs makes the
+  // delta below partly a measurement of something the comparison is not asking about, which the
+  // reader has to be told rather than left to notice.
+  const axes = ['toolset', 'structured']
   const confounds = Object.keys(left).filter(
-    (key) => key !== 'toolset' && left[key] !== right[key],
+    (key) => !axes.includes(key) && left[key] !== right[key],
   )
 
   const buckets = useMemo(() => {
@@ -211,8 +222,8 @@ function RunCompare({ a, b, questions }: { a: EvalRun; b: EvalRun; questions: Ev
         <p className="flex items-start gap-2 rounded-lg border border-lane-web/40 bg-lane-web/5 px-3 py-2 text-xs text-lane-web">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
           <span>
-            These runs differ in <strong>{confounds.join(', ')}</strong> as well as the toolset, so
-            the deltas below are not attributable to the toolset alone.
+            These runs differ in <strong>{confounds.join(', ')}</strong> as well as the axis being
+            compared, so the deltas below are not attributable to that axis alone.
           </span>
         </p>
       )}
@@ -318,6 +329,7 @@ function RunDetail({ run, questions }: { run: EvalRun; questions: EvalQuestionsR
           {Object.values(run.chunker_snapshot_id ?? {}).join(', ') || 'unknown'}
           {run.vectors_snapshot_id && <> · {run.vectors_snapshot_id}</>}
           {run.toolset && <> · toolset {run.toolset}</>}
+          {run.structured != null && <> · {run.structured ? 'with' : 'without'} plan data</>}
           {run.model && <> · {run.model}</>}
           {run.config_fingerprint && <> · config {run.config_fingerprint.slice(0, 12)}</>}
         </span>

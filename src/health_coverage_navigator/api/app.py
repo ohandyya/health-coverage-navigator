@@ -31,6 +31,8 @@ from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import load_doc_index
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.paths import FRONTEND_DIST
+from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
 from health_coverage_navigator.vectors.store import VectorIndex, VectorsNotBuiltError
 
@@ -148,6 +150,31 @@ async def _load_vectors() -> VectorIndex | None:
         return None
 
 
+def _load_structured() -> StructuredStore | None:
+    """The relational lane's store, or `None` with an explanation on the console.
+
+    The same two-failure-mode split as `_load_vectors`, for the same reason:
+
+    * `StructuredNotBuiltError` — the Parquet mirrors have never been downloaded here. Ordinary on
+      a fresh clone; logged and degraded to `None`, and `routes/chat.py` decides whether that is
+      fatal for the configured lanes.
+    * `StructuredStaleError` — a mirror exists but disagrees with the committed `catalog.json`.
+      **Allowed to propagate and stop the boot.** A missing mirror is visibly missing; a partial
+      one answers "is this drug covered" from whichever rows happened to arrive, which is a wrong
+      answer with a citation attached.
+
+    Skipped entirely when the configured agent has no structured tools, so a reference-only
+    deployment is not blocked by data it will never read.
+    """
+    if not get_config().agent.structured_tools:
+        return None
+    try:
+        return StructuredStore.open()
+    except StructuredNotBuiltError as exc:
+        logger.warning("structured lane unavailable: %s", exc)
+        return None
+
+
 def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """Build the application.
 
@@ -185,7 +212,7 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
         #
         # /api/health still reads the committed chunks_meta.json for its counts rather than this
         # index, so the numbers are answerable either way.
-        app.state.ctx = AppContext(
+        ctx = AppContext(
             gold=load_gold_set(),
             docs=load_doc_index(),
             started_at=datetime.now(UTC),
@@ -193,9 +220,21 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             version=_version(),
             index=None if stub else _load_index(),
             vectors=None if stub else await _load_vectors(),
+            structured=None if stub else _load_structured(),
         )
-        yield
-        app.state.ctx = None
+        app.state.ctx = ctx
+        try:
+            yield
+        finally:
+            # The structured store is the only entry here that owns an OS resource rather than
+            # plain memory: a DuckDB connection with ten Parquet files registered as views. Closed
+            # on shutdown rather than left to process exit, because `create_app` is not only called
+            # by `uvicorn` once — a test or an embedding host that builds and discards apps in one
+            # process would leak a connection per app. `finally` rather than a line after the
+            # `yield`, so a failure inside the application's lifetime still releases it.
+            if ctx.structured is not None:
+                ctx.structured.close()
+            app.state.ctx = None
 
     app = FastAPI(
         title="Health Coverage Navigator",

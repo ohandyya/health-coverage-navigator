@@ -10,9 +10,11 @@ Three ways this module can answer, in the order it tries them:
 
 1. **stub** — `create_app(stub=True)`. The Phase 0 canned answers, still what the contract tests
    assert against and what an offline demo runs on.
-2. **no corpus** — `chunks.jsonl` was never built here. A 503 that names `make chunk`. Deliberately
-   not a fallback to (1): canned output must never be mistakable for a real answer, which is the
-   whole reason `HealthResponse.stub` is a boolean.
+2. **missing data** — `chunks.jsonl`, the vector store, or the plan-data mirrors were never built
+   here. A 503 that names the command (`make chunk`, `make embed`, `make puf`). Deliberately not a
+   fallback to (1), and deliberately not a quiet degradation to whatever lanes *are* available:
+   canned or narrowed output must never be mistakable for a full answer, which is the whole reason
+   `HealthResponse.stub` is a boolean.
 3. **the agent** — the real path.
 
 Streaming was built at Phase 0 rather than here, which turned out to be the right order: the SSE
@@ -64,20 +66,33 @@ NO_VECTORS = (
     "and restart the server. To answer without it, set `agent.toolset: lexical`."
 )
 
+NO_PLAN_DATA = (
+    "The relational lane is configured (`agent.structured_tools` in config.yaml) but the "
+    "structured plan data has not been built on this machine. The Parquet mirrors are git-ignored, "
+    "so a fresh clone has none — run `make puf` and restart the server. To answer without it, set "
+    "`agent.structured_tools: false`."
+)
+
 
 def _unavailable(ctx: AppContext) -> str | None:
     """Why this server cannot answer, or `None` when it can.
 
-    Both cases are 503s that name the command that fixes them, and neither falls back to the stub:
+    All three are 503s that name the command that fixes them, and none falls back to the stub:
     canned output must never be mistakable for a real answer, which is the whole reason
     `HealthResponse.stub` is a boolean. Degrading a `both` configuration to lexical-only would be
     the same mistake in a subtler form — the answer would be real but measured against a retrieval
-    setup nobody chose, and nothing in the response would say so.
+    setup nobody chose, and nothing in the response would say so. The relational lane is the
+    sharpest case of it: without its mirror the agent would meet a plan-specific question with an
+    abstention, or with prose about plans in general — a wrong answer caused by a missing download,
+    and nothing in the response to say that is why.
     """
+    config = get_config().agent
     if ctx.index is None:
         return NO_CORPUS
-    if needs_vectors(get_config().agent.toolset) and ctx.vectors is None:
+    if needs_vectors(config.toolset) and ctx.vectors is None:
         return NO_VECTORS
+    if config.structured_tools and ctx.structured is None:
+        return NO_PLAN_DATA
     return None
 
 
@@ -107,7 +122,7 @@ async def post_chat(
     if (detail := _unavailable(ctx)) is not None:
         raise HTTPException(status_code=503, detail=detail)
     assert ctx.index is not None  # narrowed by _unavailable
-    return await answer_question(request, ctx.index, vectors=ctx.vectors)
+    return await answer_question(request, ctx.index, vectors=ctx.vectors, structured=ctx.structured)
 
 
 async def _stub_events(request: ChatRequest) -> AsyncIterator[str]:
@@ -146,7 +161,9 @@ async def _agent_events(request: ChatRequest, ctx: AppContext) -> AsyncIterator[
     """
     assert ctx.index is not None  # guarded by the route
     try:
-        async for event in stream_answer(request, ctx.index, vectors=ctx.vectors):
+        async for event in stream_answer(
+            request, ctx.index, vectors=ctx.vectors, structured=ctx.structured
+        ):
             yield sse_frame(event)
     except asyncio.CancelledError:  # pragma: no cover - client hung up
         raise
