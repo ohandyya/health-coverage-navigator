@@ -79,7 +79,10 @@ ProgressFn = Callable[[EvalQuestionResult], None]
 #: put 16 of 35 questions into an ERR row, dropping recall@5 from 0.867 to 0.433. Three lands near
 #: 135k tokens/minute with headroom, for roughly a 3x speedup. Raise it only alongside a real TPM
 #: allowance, and read the resulting run for errors before trusting its score.
-DEFAULT_CONCURRENCY = 3
+#:
+#: [Aug 19] The OpenAI tier moved from 1 to 2, so the TPM allowance now supports a concurrency
+#: of 5.
+DEFAULT_CONCURRENCY = 5
 
 
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:

@@ -17,13 +17,15 @@ AI (e.g., Claude) should **NOT** read this document.
 
 #### To Dos
 
-- Open the frontend, and validate it worked
+- [Done] Open the frontend, and validate it worked
 
     - Specifcally check the use of SQL tool
 
-- Try running evals with concurrency = 5
+- [Done] Try running evals with concurrency = 5
 
     - If still getting 200k 429 rate limit error, try create a new API key.
+
+- Document `how do we design the guard to have AI write SQL`, and add to technical_highlights.md
 
 - Use walkthrough to understand what has been implenented.
 
