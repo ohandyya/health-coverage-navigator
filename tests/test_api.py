@@ -25,6 +25,7 @@ drained to its `done` event, so they cannot differ and the property is asserted 
 import json
 from pathlib import Path
 
+import duckdb
 import pytest
 from fastapi.testclient import TestClient
 
@@ -68,6 +69,11 @@ def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None, structu
     and these tests are about HTTP wiring rather than retrieval. `structured` is passed explicitly
     rather than defaulted to the real store because a test that boots against whatever happens to
     be on the developer's disk is a test that passes for the wrong reason.
+
+    **The app takes ownership of the store this hands it.** `create_app`'s lifespan closes whatever
+    `_load_structured` returned, so pass the function-scoped `app_structured` rather than the
+    session-wide `structured_store` — handing over the shared one closes it for every test that
+    runs afterwards.
     """
     index = None if agent_kit is None else agent_kit.index
     monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: index)
@@ -76,7 +82,23 @@ def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None, structu
 
 
 @pytest.fixture
-def agent_client(agent_kit, structured_store, monkeypatch: pytest.MonkeyPatch):
+def app_structured(structured_kit, mirror: Path):
+    """A plan-data store an *app* may own, for the duration of one test.
+
+    Function-scoped where `conftest.structured_store` is session-scoped, because the lifespan
+    closes what `_load_structured` gave it — whoever opens a connection closes it, and under
+    monkeypatch this fixture is standing in for the opener. Opening costs one connection and ten
+    view registrations against the fixture mirror, which is milliseconds.
+    """
+    store = structured_kit.open(mirror)
+    yield store
+    # Normally already closed by the lifespan; `close()` is idempotent, and this covers a test
+    # that never stood an app up.
+    store.close()
+
+
+@pytest.fixture
+def agent_client(agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch):
     """The real answering path: the two-chunk fixture corpus, the sample plan mirror, and a
     scripted model.
 
@@ -84,7 +106,7 @@ def agent_client(agent_kit, structured_store, monkeypatch: pytest.MonkeyPatch):
     fixture — `_unavailable` refuses to serve a run whose configured lanes are half there, and a
     test that tripped that would be testing the 503 rather than the answer.
     """
-    _use_fixture_stores(monkeypatch, agent_kit, structured=structured_store)
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
     with (
         build_agent(structured=True).override(
             model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())
@@ -173,6 +195,26 @@ def test_health_reports_the_structured_lane_down_without_a_mirror(no_plan_data_c
     lanes = {lane["source_type"]: lane for lane in body["lanes"]}
     assert lanes["structured_api"]["configured"] is False
     assert "make puf" in lanes["structured_api"]["detail"]
+
+
+def test_shutdown_releases_the_plan_data_connection(
+    agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch
+):
+    """The store is the one thing on `AppContext` holding an OS resource, so shutdown has to
+    release it rather than leave it to process exit.
+
+    `create_app` is called per test, and would be called per host in any process that embeds the
+    app, so one that is built and discarded without closing leaks a DuckDB connection each time.
+    """
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
+
+    with TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c:
+        assert c.get("/api/health").json()["lanes"], "the app served at least one request"
+
+    # A public call rather than a poke at `_con`: `overview` reads the catalog off the connection,
+    # so a closed one is the only way this raises.
+    with pytest.raises(duckdb.Error):
+        app_structured.overview(plan_year=None)
 
 
 def test_health_reports_the_reference_lane_down_without_chunks(no_corpus_client: TestClient):
@@ -354,13 +396,13 @@ def test_chat_is_503_when_the_plan_data_was_never_downloaded(no_plan_data_client
 
 
 def test_an_agent_failure_arrives_as_an_error_frame(
-    agent_kit, structured_store, monkeypatch: pytest.MonkeyPatch
+    agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch
 ):
     """A `StreamingResponse` has already sent its 200 by the time the first tool runs, so a later
     failure cannot become a status code — it would truncate the body and the browser would report a
     network error for what was really a step limit or a rate limit. `useChat.ts` already renders
     `ErrorEvent`; this is what feeds it."""
-    _use_fixture_stores(monkeypatch, agent_kit, structured=structured_store)
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
     # A script that never produces a final answer, so the run trips its tool-call ceiling.
     with (
         build_agent(structured=True).override(model=agent_kit.script(agent_kit.SEARCH)),

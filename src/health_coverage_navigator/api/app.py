@@ -212,7 +212,7 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
         #
         # /api/health still reads the committed chunks_meta.json for its counts rather than this
         # index, so the numbers are answerable either way.
-        app.state.ctx = AppContext(
+        ctx = AppContext(
             gold=load_gold_set(),
             docs=load_doc_index(),
             started_at=datetime.now(UTC),
@@ -222,8 +222,19 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             vectors=None if stub else await _load_vectors(),
             structured=None if stub else _load_structured(),
         )
-        yield
-        app.state.ctx = None
+        app.state.ctx = ctx
+        try:
+            yield
+        finally:
+            # The structured store is the only entry here that owns an OS resource rather than
+            # plain memory: a DuckDB connection with ten Parquet files registered as views. Closed
+            # on shutdown rather than left to process exit, because `create_app` is not only called
+            # by `uvicorn` once — a test or an embedding host that builds and discards apps in one
+            # process would leak a connection per app. `finally` rather than a line after the
+            # `yield`, so a failure inside the application's lifetime still releases it.
+            if ctx.structured is not None:
+                ctx.structured.close()
+            app.state.ctx = None
 
     app = FastAPI(
         title="Health Coverage Navigator",
