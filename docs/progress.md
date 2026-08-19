@@ -49,10 +49,13 @@ mid-stream.
   **new frontend surfaces keep shipping unviewed.** The eval run-comparison view was never opened in
   a browser at 1b, and neither has 1-c's row citation card or its SQL trace step. Every automated
   gate passes on all of them; no human has looked.
-- **New doc: [technical_highlights.md](technical_highlights.md)** — the mechanisms worth
-  *presenting*, which is deliberately not a job any of the four canonical docs has. Three entries so
-  far (grounding, the test-suite provider guard, missing-vs-stale). It is **not** listed in
-  CLAUDE.md's doc table; whether it should be is an open call for the author.
+- **[technical_highlights.md](technical_highlights.md) is now an index over
+  [highlights/](highlights/)** — the mechanisms worth *presenting*, which is deliberately not a job
+  any of the four canonical docs has. Four entries (grounding · the test-suite provider guard ·
+  missing-vs-stale · model-written SQL), one page each, and the README links them from above the
+  status section. **CLAUDE.md now names it**, deliberately outside the four-docs table and labelled
+  *presentation, not reference*: it is derived from the docs that own each design, so a change
+  updates the owning doc first and the highlight page second.
 - **Next up:** **Phase 2 — the web-search tool** (1-c is done) —
   [plan.md](plan.md#phase-2--add-the-web-search-tool). No longer the *first* lane routing decision —
   1-c made that one and measured it at 1.000 — but the first destination the agent cannot inventory
@@ -90,7 +93,10 @@ mid-stream.
     immediately after, so **the untried lever from the last entry is now the tried one and it
     works**. What is still missing is anything that makes it automatic: the runner has no pacing,
     and nothing stops the next person running three evals in a row. `make embed` is not implicated
-    — embeddings are a separate, far larger allowance.
+    — embeddings are a separate, far larger allowance. **Unreconciled:** `DEFAULT_CONCURRENCY` was
+    raised to 5 on the grounds that the account moved to tier 2, while the 1-c entry's standing
+    advice is to run agent evals sequentially because 5 lost 25 of 40 questions. One of the two is
+    out of date and only a run on the current tier says which.
   - **`UnexpectedModelBehavior: Exceeded maximum output retries (2)` recurred and is now
     characterised, if not explained.** Two questions in the vector-only agent run died this way —
     the grounding validator's budget, not a 429, despite sharing the ERR column. Both were re-run
@@ -237,6 +243,41 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-19 — Connection ownership, and the highlights doc split
+
+**Did:** walked the whole 1-c branch step by step (read-only), then three follow-ups: the API now
+closes the DuckDB connection on shutdown, `technical_highlights.md` gained a fourth entry on the
+relational lane, and that file was split into one page per highlight with the README pointing at it.
+A `sync-frontend` pass found nothing to do — `schema.d.ts` was already current and every route in
+`client.ts` still matches a path in the dump, which is the useful half of that check.
+
+**Decided: the lifespan owns the structured store, so the lifespan closes it.** It is the only entry
+on `AppContext` holding an OS resource rather than plain memory — `VectorIndex` has no `close()` —
+and `create_app` is called per test and would be called per host in any embedding process, so
+leaving it to process exit leaks a connection per app. Closed in a `finally` around the `yield`, so
+a failure during the app's lifetime still releases it.
+
+**The fix immediately broke a passing test, which was the actual finding.** The API tests handed the
+app the *session-scoped* store fixture, so the first app to shut down closed it for every later
+test. Whoever opens a connection closes it — the fixtures were violating that, invisibly, right up
+until something started enforcing it. `test_api.py` now has a function-scoped `app_structured` for
+anything that stands an app up, and `_use_fixture_stores` says so in its docstring.
+
+**Decided: `technical_highlights.md` is an index, not a document.** It reached ~700 lines and four
+entries, at which point the thing it is *for* — handing someone one mechanism to read — was worse
+served by one long file than by four pages. Each highlight is now `docs/highlights/<slug>.md`; the
+index carries three paragraphs and the headline number per entry. The README links both the index
+and the four pages directly, since a reader who wants the SQL guard should not have to scroll.
+
+**Decided: CLAUDE.md names the highlights, but outside the four-docs table.** Adding a fifth row
+would have implied a fifth job; the file is *derived* from the docs that own each design, so it is
+listed as **presentation, not reference**, with the rule that a change updates the owning doc first
+and the highlight page second. That closes the open call the previous entry left for the author.
+
+**Stopped at:** clean, `check-all` green (300 tests), everything but this doc sweep committed.
+
+**Commits:** `369a163`, `aef9196`, `4f84c5a`.
 
 ### 2026-08-19 — Phase 1-c: the structured lane, built and measured
 

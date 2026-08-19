@@ -26,6 +26,11 @@ Reference docs: [development.md](docs/development.md) (commands, gates, toolchai
 structured lane's design — tools, SQL guard, row citations) · per-source data guides
 (`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
+**Presentation, not reference:** [technical_highlights.md](docs/technical_highlights.md) indexes
+[docs/highlights/](docs/highlights/), one page per mechanism worth showing off, and the README links
+it. It is *derived* from the docs above — never the source of truth for a design, never a place to
+record status. A change that invalidates a highlight updates the owning doc first, then the page.
+
 ## What this project is
 
 Health Coverage Navigator: an agent answering health-insurance questions by routing each

@@ -88,7 +88,7 @@ left null.
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 299 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
+| **Gates** | 300 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
