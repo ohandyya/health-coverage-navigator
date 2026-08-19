@@ -25,8 +25,9 @@ which is directly borrowable from binary-decomposition eval thinking.
 the build. From Phase 1 onward there is a single PydanticAI `Agent` that decides which tools to
 call, how often, and when it has enough to answer or must abstain. Each phase hands that same
 agent more tools — full-text search, then vector search, then relational lookups over the
-vendored plan data, then web search, then typed APIs — and never replaces the agent underneath. What is written once in Phase 1 and then inherited: the
-output schema, the provenance plumbing, the grounding/abstention rule, and the step limits.
+vendored plan data, then web search, then typed APIs — and never replaces the agent underneath.
+What is written once in Phase 1 and then inherited: the output schema, the provenance plumbing,
+the grounding/abstention rule, and the step limits.
 
 Each phase below is independently shippable and has an **acceptance test** — the phase is done
 when you can do the thing in the milestone line.
@@ -371,12 +372,16 @@ per-question breakdown: [agent.md](agent.md) §6.
 
 #### Phase 1-c — relational tools over the vendored structured data
 
+**[relational-tool.md](relational-tool.md) is the design document for this phase** — the toolset,
+the guard on model-written SQL, the row-citation model, partition handling, module layout, and the
+eval mechanics all live there, decided and measured. This section records only what belongs to a
+schedule: why the phase sits here, and what "done" means.
+
 Grow the toolset a third time, and this time it points somewhere new. Phases 1-a and 1-b gave the
 agent two ways of searching one corpus of prose; this gives it a way to *look a fact up* — against
-the per-plan and per-drug rows already sitting in `data/processed/exchange_puf` (Plan Attributes,
-Benefits & Cost Sharing, Service Area — PY2026) and `data/processed/part_d_spuf` (the seven Part D
-files — 2026Q2). Same agent, same output schema, same grounding rule, same abstention. What is new
-is a second *kind* of source.
+the per-plan and per-drug rows already sitting in `data/processed/exchange_puf` and
+`data/processed/part_d_spuf`. Same agent, same output schema, same grounding rule, same abstention.
+What is new is a second *kind* of source.
 
 This is the lane where retrieval is not merely weaker but actively wrong. *"What is this plan's
 deductible"* has an answer that is a cell in a table; a search tool handed that question returns a
@@ -396,78 +401,45 @@ better index, it is a different tool over a different shape of data.
    cannot be *scored* until the correct destination exists. Two-lane routing is measurable here;
    Phase 2 widens the measurement rather than inventing it.
 
-**No new storage engine, again.** DuckDB queries the Parquet mirrors in place — no load step, no
-server, no second copy of the data. That is the same argument Phase 1-a made about BM25:
-**DuckDB is a query engine over files already on disk, not a database to stand up and maintain.**
-It is already a dependency (the downloaders write the mirrors with it); Phase 1-c is the first
-time it appears in `src/`. The mirrors themselves do not change: **still never chunked, still
-never embedded, still lossless `VARCHAR`.**
-
-Narrow tools the agent composes, mirroring the 1-a shape — orient, inspect, query, join:
-
-| Tool | What it does |
-|---|---|
-| `list_tables(source?)` | What structured data exists at all — tables, plan year / quarter, row counts. The structured counterpart of `list_documents`, and the honest basis for *"what plan data do you actually have?"* |
-| `describe_table(table)` | Columns **and real sample values**. Not garnish: every column in the mirror is publisher-formatted text (`'$450 '`, `'70.88%'`, `'Not Applicable'` sitting beside an empty cell — and those two mean *different* things), and Plan Attributes carries 36 max-out-of-pocket columns. An agent that writes a filter without looking at the values will compare a dollar sign against a number. |
-| `query_structured(sql, limit)` | One read-only `SELECT` over the mirrors. The general-purpose tool of this lane, as `search_corpus` is of the reference lane. |
-| `lookup_plan_formulary(...)` / `lookup_service_area(...)` | Thin typed helpers over the two joins whose *wrong* version is silently plausible: plan → `FORMULARY_ID` → covered drugs, and plan → `ServiceAreaId` → counties/ZIPs. |
-
-**Why raw SQL, and not a typed function per question.** A typed-only tool surface means deciding
-at design time which questions this data can answer — the same guess the ingestion layer already
-refused to make when it stored every column as `VARCHAR` instead of picking one of the 36 MOOP
-columns. Real query requirements come from watching the agent write queries. So the general tool
-is SQL, and the typed helpers cover only what the sources' own documented caveats make easy to get
-wrong ([exchange_puf_data.md](exchange_puf_data.md), [part_d_spuf_data.md](part_d_spuf_data.md)):
-standalone PDP rows carry a blank `STATE`, so filtering Part D by state silently drops exactly the
-plans the question is usually about; suppressed plans appear in Plan Information and in no other
-file, so an empty join there is missing data rather than a bug; the formulary is keyed by
-`FORMULARY_ID`, not by plan.
-
-The trade is that model-written SQL needs a guard, and the guard is deliberately boring: a
-read-only connection, one statement, `SELECT` only, an enforced row cap and a timeout. A query
-that violates it comes back as a tool error the agent can read and retry — not a string that gets
-sanitized and run anyway.
-
-**What the grounding rule becomes here.** Verbatim quotation from a chunk was 1-a's guardrail; the
-structured analogue is that a claim carries the actual cell value plus the row it came from —
-table, key column, plan year. An empty result set is reported as *"no row for that plan"* and
-never softened into prose that reads like a finding, and `'Not Applicable'` and an empty cell stay
-distinguishable in the answer, because in this data they are different answers.
+**No new storage engine.** DuckDB queries the Parquet mirrors in place — no load step, no server,
+no second copy of the data. The same argument Phase 1-a made about BM25: a query engine over files
+already on disk is not a database to stand up and maintain. It is already a dependency (the
+downloaders write the mirrors with it); this is the first time it appears in `src/`. The mirrors do
+not change: **still never chunked, still never embedded, still lossless `VARCHAR`.**
 
 **The contract does not reshape.** These answers are `source_type="structured_api"` — that enum
 value has meant *deterministic row-level lookup* since Phase 0, and whether the row came from a
-vendored mirror or a live endpoint is a property of the citation (`title` naming the table and
-plan year, `url` the CMS PUF landing page, `snippet` the row itself), not a fourth lane. Phase 3
-then adds live-API citations to this same lane. `doc_id` and `chunk_id` stay null: the first
-citations in this repo that are not chunks.
+vendored mirror or a live endpoint is a property of the citation, not a fourth lane. Phase 3 adds
+live-API citations to this same lane.
 
 **`plan_year` stops being decorative.** It has ridden along in the request contract since Phase 0,
-unused. Here it selects which partition is queried, and a question about a year that is not on
-disk is an abstention rather than an answer from whichever year happens to be vendored — the
+unused. Here it selects which partition is queried, and a question about a year that is not on disk
+is an abstention rather than an answer from whichever year happens to be vendored — the
 cross-cutting "pin the plan year" principle, finally enforced somewhere.
 
 **Milestone / acceptance test:** you can ask in the browser for a fact about a specific plan or
-drug — *"what's the medical deductible on plan 21989AK0030001 for 2026?"*, *"is [NDC] on formulary
-[id], on what tier, and does it need prior authorization?"* — and get the actual value out of the
-mirror, with a citation naming the table, the row key and the plan year, and the query visible in
+drug — *"what's the individual medical deductible on plan 38344AK1060002 for 2026?"*, *"is [NDC] on
+formulary [id], on what tier, and does it need prior authorization?"* — and get the actual value out
+of the mirror, with a citation naming the table, the row and the plan year, and the query visible in
 the trace; and it abstains when the plan, drug or plan year is not in the vendored data.
 
 **User-facing capability**
 - [ ] Ask per-plan / per-drug factual questions and get the value from the vendored data rather than a passage about the concept
-- [ ] See a row-shaped citation — table, row key, plan year, the cells used — visibly distinct from a chunk citation
+- [ ] See a row-shaped citation — table, plan year, the cells used — visibly distinct from a chunk citation
 - [ ] See the query the agent wrote in the trace, alongside the searches from 1-a and 1-b
 - [ ] Get an honest abstention when the plan, drug, or plan year is not in the vendored mirror — including for a year CMS publishes but this repo has not vendored
 
 **Software capability**
-- [ ] DuckDB reading `data/processed/{exchange_puf,part_d_spuf}` Parquet in place — read-only, no load step, no new storage engine, mirrors untouched
-- [ ] Structured toolset registered **alongside** the 1-a and 1-b tools: `list_tables` / `describe_table` / `query_structured` + the typed join helpers
-- [ ] SQL guard: read-only connection, single statement, `SELECT`-only, row cap, timeout — violations returned to the agent as retryable tool errors
-- [ ] Row → citation provenance (table, plan year, row key, cell values), populating the frozen contract with `source_type="structured_api"` and no chunk id
+- [ ] DuckDB reading `data/processed/{exchange_puf,part_d_spuf}` Parquet in place, sandboxed to that directory — read-only, no load step, mirrors untouched
+- [ ] Three tools registered **alongside** the 1-a and 1-b tools: `list_tables` / `describe_table` / `query_structured`
+- [ ] Guard on model-written SQL: single `SELECT`, locked connection, row cap, timeout — violations returned as retryable tool errors
+- [ ] Row → citation provenance, populating the frozen contract with `source_type="structured_api"` and no chunk id
 - [ ] Request `plan_year` bound to the partition queried; a year that is not vendored produces an abstention, never a silent fallback
 - [ ] Grounding guardrail extended to cells: exact values, empty result ≠ hedge, `'Not Applicable'` ≠ blank
-- [ ] Gold set gains structured questions with expected lane `structured_api` and **exact expected values**, generated from the Parquet rather than hand-typed
-- [ ] New eval slice: **structured-lookup correctness** (exact match, not fuzzy overlap), plus the first **routing** measurement — prose vs. rows — which Phase 2 widens to three lanes
-- [ ] UI: the `structured_api` badge goes live and citation cards learn a row shape; a slice of the existing chat page rather than a new surface — see [frontend_plan.md](frontend_plan.md)
+- [ ] `make puf` + a 503 naming it when the mirror has not been built on this machine
+- [ ] Gold set gains structured questions with expected lane `structured_api` and **exact expected values**, generated from the mirror rather than hand-typed
+- [ ] New eval slice: **structured-lookup correctness** (exact cell match), plus the first **routing** measurement — prose vs. rows — which Phase 2 widens to three lanes
+- [ ] UI: the `structured_api` badge goes live and citation cards learn a row shape; a slice of the existing chat page rather than a new surface — see [frontend_plan.md](frontend_plan.md) (Phase F1c)
 
 ### Phase 2 — Add the web-search tool
 

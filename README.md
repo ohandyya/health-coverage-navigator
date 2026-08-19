@@ -141,7 +141,7 @@ flowchart TD
 
     AG -->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
     AG -->|Phase 1b| V["vector_search()<br/>reference lane"]
-    AG -.->|Phase 1c| D["relational tools<br/>list · describe · SQL · joins<br/>structured lane"]
+    AG -.->|Phase 1c| D["relational tools<br/>list · describe · guarded SQL<br/>structured lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
     AG -.->|Phase 3| S["typed API tools<br/>structured lane"]
 
@@ -242,10 +242,10 @@ step took. That legibility is the reason the agent gets four narrow tools instea
 `retrieve()` call.
 
 Everything else the contract carries is rendered too: the **source badge** (`reference` — blue;
-green and amber arrive with Phases 2 and 3), inline `[c1]` markers that scroll to their card, and
-an **expandable citation card** with the retrieved chunk verbatim, a link to the source, and a
-drill-down into the full corpus document. The plan-year selector sits beside the input and is sent
-on every request, per the domain's most common correctness bug.
+green arrives with Phase 1-c and amber with Phase 2), inline `[c1]` markers that scroll to their
+card, and an **expandable citation card** with the retrieved chunk verbatim, a link to the source,
+and a drill-down into the full corpus document. The plan-year selector sits beside the input and is
+sent on every request, per the domain's most common correctness bug.
 
 ### Abstention — the answer that is worth the most
 

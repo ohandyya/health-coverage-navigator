@@ -22,8 +22,9 @@ Four docs, four jobs — keep material in the one that owns it:
 Reference docs: [development.md](docs/development.md) (commands, gates, toolchain) ·
 [configuration.md](docs/configuration.md) · [chunking.md](docs/chunking.md) ·
 [agent.md](docs/agent.md) (toolset, grounding guardrail, loop limits, grading) ·
-[lancedb.md](docs/lancedb.md) · per-source data guides (`*_data.md`) ·
-[data/README.md](data/README.md) (layout + per-source licensing).
+[lancedb.md](docs/lancedb.md) · [relational-tool.md](docs/relational-tool.md) (Phase 1-c: the
+structured lane's design — tools, SQL guard, row citations) · per-source data guides
+(`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
 ## What this project is
 
@@ -83,7 +84,7 @@ Full list, links, and rationale: [docs/plan.md](docs/plan.md) → *Data sources*
 
 - **Never chunk or embed a structured source.** Text corpora (HealthCare.gov, Medicare & You,
   NCDs) are chunked for the reference lane; the PUFs and Part D SPUF land as a lossless columnar
-  mirror a later typed layer reads.
+  mirror that Phase 1-c's relational tools query in place — read, never reshaped.
 - **NPPES and openFDA are used live via their APIs and never vendored.** Both publish bulk
   downloads; both are per-record lookups, so a mirror buys staleness and storage for nothing. **Do
   not add a bulk downloader for either.** Consequence: no provider-level data is ever vendored here.
@@ -133,10 +134,11 @@ rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0�
 | **0** | Corpus + eval scaffold, before any agent: ingestion, gold set, runner over a **pluggable answerer**, frozen contract, UI on a stub | retrieval quality |
 | **1a** | **The agent itself** — one PydanticAI agent, small full-text toolset it composes (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`), **no database of any kind** (stdlib BM25, no vector store, no DuckDB/SQLite FTS, no embeddings). Output schema, provenance, grounding rule, step limits written once, here | answer correctness + groundedness |
 | **1b** ✅ | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them. Toolset (`lexical`/`vector`/`both`) is a per-run flag | lexical vs. vector vs. both |
-| **2** | Web search (Tavily or Exa, chosen by measurement — not a scraped SERP) as a second lane | routing correctness |
+| **1c** | The **structured lane**: `list_tables` / `describe_table` / `query_structured` over the vendored PUF mirrors, DuckDB querying Parquet in place. Design: [relational-tool.md](docs/relational-tool.md) | structured-lookup correctness + prose-vs-rows routing |
+| **2** | Web search (Tavily or Exa, chosen by measurement — not a scraped SERP) as a third lane | routing across three lanes |
 | **3** | Typed tools for Marketplace API, openFDA, NPPES + rate limits, caching, fixtures | tri-modal routing |
 | **4** | Planning and decomposition, per-claim provenance, tracing, cycle detection + hop ceiling | multi-hop + citation accuracy |
-| **5** | Plan comparison, drug costs, network checks, appeals, "what changed" monitor, over DuckDB | regression suite |
+| **5** | Plan comparison, drug costs, network checks, appeals, "what changed" monitor — over the Phase 1-c query tools, not a new backend | regression suite |
 
 ## Working conventions
 
