@@ -25,9 +25,10 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - If still getting 200k 429 rate limit error, try create a new API key.
 
+- Use walkthrough to understand what has been implenented.
+
 - Document `how do we design the guard to have AI write SQL`, and add to technical_highlights.md
 
-- Use walkthrough to understand what has been implenented.
 
 ### Aug 16, 2026
 
