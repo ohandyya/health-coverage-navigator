@@ -11,6 +11,12 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - Today, there is no memory on the Chat panel. How do we add memory?
 
+2. QA Agent
+    
+    - After the answering agent answers it, we want to pass the infromation to a QA agent to further validate the result.
+    - The QA Agent can have its own tool.
+    - We want the UI to see that `QAing now...`
+
 ## Work Log
 
 ### Aug 18, 2026
