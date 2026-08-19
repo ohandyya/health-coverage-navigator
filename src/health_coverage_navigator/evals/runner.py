@@ -48,6 +48,8 @@ from health_coverage_navigator.evals.grading import Grader
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
 from health_coverage_navigator.paths import EVAL_RUNS_DIR
+from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
 from health_coverage_navigator.vectors.store import (
     VectorIndex,
@@ -83,13 +85,39 @@ DEFAULT_CONCURRENCY = 3
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:
     """Grade one answer.
 
-    Two different questions are being asked depending on the gold question's shape, and conflating
-    them would make the headline number meaningless: an abstention question is graded purely on
-    whether the answerer abstained, and an in-corpus question on whether it retrieved a
-    document the gold set named — *and* did not abstain, since abstaining on an answerable
-    question is a failure that a retrieval-only score would silently reward.
+    Three different questions are being asked depending on the gold question's shape, and
+    conflating them would make the headline number meaningless:
+
+    * an **abstention** question is graded purely on whether the answerer abstained;
+    * an **in-corpus** question on whether it retrieved a document the gold set named — *and* did
+      not abstain, since abstaining on an answerable question is a failure a retrieval-only score
+      would silently reward;
+    * a **structured** question on whether the answer cites the exact cell values the mirror holds.
+      Exact, not fuzzy: in this lane an approximate figure is a wrong figure, and a citation that
+      "nearly" matches is one whose evidence does not say what the answer says.
     """
     retrieved = [c.doc_id for c in response.citations if c.doc_id]
+
+    if question.is_structured:
+        cited = "\n".join(
+            c.snippet for c in response.citations if c.source_type == "structured_api"
+        )
+        matched = [value for value in question.expected_cells if value in cited]
+        passed = len(matched) == len(question.expected_cells) and not response.abstained
+        return EvalQuestionResult(
+            question_id=question.id,
+            passed=passed,
+            expected_source_type=question.expected_source_type,
+            expected_abstain=False,
+            abstained=response.abstained,
+            rank=None,
+            retrieved_doc_ids=retrieved,
+            metrics={
+                "structured_exact_match": len(matched) / len(question.expected_cells)
+                if question.expected_cells
+                else 0.0
+            },
+        )
 
     if question.expected_abstain:
         return EvalQuestionResult(
@@ -129,7 +157,14 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
     accuracy (Phase 2/3) and citation accuracy (Phase 4) can be added without touching the API,
     the storage format, or the table.
     """
-    in_corpus = [r for r in results if not r.expected_abstain]
+    # Split by lane, not merely by "does it abstain". A structured question has no expected doc
+    # ids, so leaving it among the retrieval-scored questions would drop recall@5 by construction —
+    # a headline metric moving because the *question set* changed is exactly the confusion this
+    # harness exists to prevent, and it is how a phase that added a capability could look like a
+    # regression.
+    in_corpus = [
+        r for r in results if not r.expected_abstain and r.expected_source_type != "structured_api"
+    ]
     abstentions = [r for r in results if r.expected_abstain]
 
     metrics: dict[str, float] = {}
@@ -255,6 +290,7 @@ async def run_gold_set(
     graders: Sequence[Grader] = (),
     model: str | None = None,
     toolset: str | None = None,
+    structured: bool | None = None,
     vectors_snapshot_id: str | None = None,
     max_concurrency: int = 1,
 ) -> EvalRun:
@@ -287,6 +323,7 @@ async def run_gold_set(
         # say why. `None` when no model was involved (a stub or retrieval-only run).
         config_fingerprint=get_config().fingerprint(),
         model=model,
+        structured=structured,
         # Phase 1b's comparison is between runs that differ *only* in `toolset`, so a run that does
         # not name it cannot take part in that comparison. `vectors_snapshot_id` does the same job
         # for the embeddings that `chunker_snapshot_id` does for the chunks — a recall number that
@@ -366,10 +403,11 @@ class RunPlan:
     graders: list[Grader]
     model: str | None = None
     toolset: str | None = None
+    structured: bool | None = None
     vectors_snapshot_id: str | None = None
 
 
-async def _build(runner: str, judge: bool, toolset: str | None) -> RunPlan:
+async def _build(runner: str, judge: bool, toolset: str | None, structured: bool | None) -> RunPlan:
     """Resolve the flags into an answerer, the questions to ask it, and how to grade it.
 
     The gold *set* varies by runner, which is the non-obvious part. A retrieval-only run is asked
@@ -389,6 +427,7 @@ async def _build(runner: str, judge: bool, toolset: str | None) -> RunPlan:
     from health_coverage_navigator.evals.grading import (
         groundedness_grader,
         key_fact_coverage_grader,
+        routing_grader,
     )
 
     gold = load_gold_set()
@@ -426,14 +465,37 @@ async def _build(runner: str, judge: bool, toolset: str | None) -> RunPlan:
 
     resolved = cast(Toolset, toolset or get_config().agent.toolset)
     vectors = await _open_vectors() if needs_vectors(resolved) else None
+    lanes = get_config().agent.structured_tools if structured is None else structured
+    store = _open_structured() if lanes else None
+
+    # Routing is only measurable once there is more than one lane to route between, so the grader
+    # goes on the agent runner and only when the relational lane is registered. Phase 2 widens the
+    # same metric to three lanes rather than introducing a second one.
+    if store is not None:
+        graders.append(routing_grader())
+
     return RunPlan(
-        agent_answerer(index, vectors, resolved),
-        gold,
+        agent_answerer(index, vectors, resolved, store),
+        gold if store is not None else GoldSet(questions=gold.in_corpus() + gold.abstentions()),
         graders,
         model=get_config().agent.model,
         toolset=resolved,
+        structured=store is not None,
         vectors_snapshot_id=None if vectors is None else vectors.snapshot_id,
     )
+
+
+def _open_structured() -> StructuredStore:
+    """Open the plan-data mirror, or exit with the command that builds it.
+
+    A hard exit rather than a degradation, matching `_open_vectors`: a run that quietly dropped the
+    structured questions would report a score for a configuration nobody asked for, and the number
+    would look like every other number in the table.
+    """
+    try:
+        return StructuredStore.open()
+    except StructuredNotBuiltError as exc:
+        raise SystemExit(f"{exc}") from exc
 
 
 async def _open_vectors() -> VectorIndex:
@@ -540,6 +602,17 @@ async def main() -> int:
         ),
     )
     parser.add_argument(
+        "--structured",
+        default=None,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "whether the agent may see the relational lane over the vendored plan data (agent "
+            "runner only). Phase 1-c's eval axis, recorded on the run: --no-structured is what "
+            "measures whether the extra lane costs anything on the reference questions. "
+            "Default: agent.structured_tools from config.yaml."
+        ),
+    )
+    parser.add_argument(
         "--judge",
         action="store_true",
         help="grade answer correctness with an LLM judge (agent runner only; costs a second "
@@ -565,8 +638,13 @@ async def main() -> int:
             f"--toolset applies to the agent runner; the {args.runner} runner has no tools to "
             f"choose between."
         )
+    if args.structured is not None and args.runner != "agent":
+        raise SystemExit(
+            f"--structured applies to the agent runner; the {args.runner} runner has no lanes to "
+            f"route between."
+        )
 
-    plan = await _build(args.runner, args.judge, args.toolset)
+    plan = await _build(args.runner, args.judge, args.toolset, args.structured)
 
     # Printed before the first call rather than after, so the cost is visible while there is still
     # time to interrupt it.
@@ -583,6 +661,11 @@ async def main() -> int:
         print(f"  model    {plan.model}", file=sys.stderr)
     if plan.toolset:
         print(f"  toolset  {plan.toolset}", file=sys.stderr)
+    if plan.structured is not None:
+        print(
+            f"  lanes    reference{' + structured' if plan.structured else ' only'}",
+            file=sys.stderr,
+        )
     if plan.vectors_snapshot_id:
         print(f"  vectors  {plan.vectors_snapshot_id}", file=sys.stderr)
     if args.judge:
@@ -595,6 +678,7 @@ async def main() -> int:
         graders=plan.graders,
         model=plan.model,
         toolset=plan.toolset,
+        structured=plan.structured,
         vectors_snapshot_id=plan.vectors_snapshot_id,
         on_progress=_progress_printer(total),
         max_concurrency=concurrency,

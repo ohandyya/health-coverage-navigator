@@ -13,6 +13,20 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Work Log
 
+### Aug 18, 2026
+
+#### To Dos
+
+- Open the frontend, and validate it worked
+
+    - Specifcally check the use of SQL tool
+
+- Try running evals with concurrency = 5
+
+    - If still getting 200k 429 rate limit error, try create a new API key.
+
+- Use walkthrough to understand what has been implenented.
+
 ### Aug 16, 2026
 
 #### To Dos

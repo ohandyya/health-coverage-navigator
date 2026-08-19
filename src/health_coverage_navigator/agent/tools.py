@@ -1,7 +1,7 @@
-"""The four tools, and the run-scoped state they write into.
+"""The reference lane's tools: the searching, wrapped in what only makes sense *inside a run*.
 
-`index.py` does the searching. This module does the two things that only make sense *inside an
-agent run*:
+`index.py` does the searching and `deps.py` holds the run-scoped state. This module is where the
+two meet, and it does two things:
 
 **The trace.** Every call appends a `tool_call` / `tool_result` pair to `deps.trace` with the real
 arguments and a real duration. That is a user-facing feature from the first agent phase, not a
@@ -15,96 +15,28 @@ model cannot talk its way past. It is also what lets `runtime.py` build every `C
 real chunk — title, url, doc_id, score — so the only thing the model contributes to a citation is
 *which* chunk, and that is checked.
 
-Why four tools and not one `retrieve(query)`: docs/plan.md §1a. Briefly — a single call hides the
-search strategy inside a ranking function, which is the part of the exercise worth doing, and it
-makes Phase 2's lane routing a change of kind rather than of degree. The cost is accepted: more
-surface for the agent to get wrong.
+Why several narrow tools and not one `retrieve(query)`: docs/plan.md §1a. Briefly — a single call
+hides the search strategy inside a ranking function, which is the part of the exercise worth doing,
+and it makes Phase 2's lane routing a change of kind rather than of degree. The cost is accepted:
+more surface for the agent to get wrong.
+
+`select_tools` at the bottom is the one place that decides what a run can do. The relational lane's
+tools live in `structured_tools.py` and are composed in there — the two lanes are separate modules
+so that neither's docstrings (which are prompt surface) drift into the other's.
 """
 
 import re
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
 
 from pydantic_ai import ModelRetry, RunContext
 
-from health_coverage_navigator.agent.index import MAX_HITS, MAX_PATTERN_CHARS, CorpusIndex
+from health_coverage_navigator.agent.deps import AnswerDeps
+from health_coverage_navigator.agent.index import MAX_HITS, MAX_PATTERN_CHARS
 from health_coverage_navigator.agent.models import ChunkHit, CorpusOverview
-from health_coverage_navigator.api.models import TraceStep
-from health_coverage_navigator.chunking.models import Chunk
-from health_coverage_navigator.config import RetrievalConfig, Toolset, get_config
+from health_coverage_navigator.agent.structured_tools import STRUCTURED_TOOLS
+from health_coverage_navigator.config import Toolset
 from health_coverage_navigator.corpus import CorpusName
-from health_coverage_navigator.vectors.store import VectorIndex
-
-
-@dataclass(slots=True)
-class AnswerDeps:
-    """Everything one agent run needs, and everything it records.
-
-    Mutable by design and scoped to a single run — never shared between requests. `CorpusIndex` and
-    `VectorIndex` are the two things here that *are* shared: both are read-only after construction
-    and expensive to build (~200 ms for the BM25 index, a paid embedding run for the store), so
-    they are passed in rather than rebuilt.
-    """
-
-    index: CorpusIndex
-
-    vectors: VectorIndex | None = None
-    """The embedding store, or `None` when this run has no vector tool. `None` is a real, expected
-    state — a lexical-only eval run, or an app whose store has never been built — and
-    `select_tools` is what guarantees `vector_search` is not registered when it would be."""
-
-    retrieval: RetrievalConfig = field(default_factory=lambda: get_config().retrieval)
-    """BM25 parameters, resolved once per run. Held here rather than read inside `search_corpus`
-    so a test can score against explicit values without reaching into the cached global config."""
-
-    trace: list[TraceStep] = field(default_factory=list)
-    """Appended to by `_record`, drained by the streaming loop in `runtime.py`."""
-
-    seen_chunks: dict[str, Chunk] = field(default_factory=dict)
-    """Every chunk any tool returned this run, keyed by chunk id. The citable set."""
-
-    def _record(
-        self,
-        tool: str,
-        arguments: dict[str, object],
-        summary: str,
-        duration_ms: int,
-    ) -> None:
-        """One tool call, as two trace steps.
-
-        Two rather than one because the panel shows them as separate moments: the call is what the
-        agent *decided* to do and carries the arguments, the result is what came back. Collapsing
-        them would lose the distinction between "asked a bad question" and "asked a good question
-        and the corpus is empty" — which is the distinction the trace exists to make visible.
-        """
-        base = len(self.trace)
-        self.trace.append(
-            TraceStep(
-                index=base,
-                kind="tool_call",
-                tool=tool,
-                input=arguments,
-                summary=f"{tool}({', '.join(f'{k}={v!r}' for k, v in arguments.items())})",
-            )
-        )
-        self.trace.append(
-            TraceStep(
-                index=base + 1,
-                kind="tool_result",
-                tool=tool,
-                summary=summary,
-                duration_ms=duration_ms,
-            )
-        )
-
-    def remember(self, hits: list[ChunkHit]) -> list[ChunkHit]:
-        """Mark hits as citable. Returns them unchanged, so it can wrap a return value."""
-        for hit in hits:
-            chunk = self.index.chunk(hit.chunk_id)
-            if chunk is not None:
-                self.seen_chunks[chunk.id] = chunk
-        return hits
 
 
 def _summarize(hits: list[ChunkHit]) -> str:
@@ -329,24 +261,30 @@ LEXICAL_TOOLS = (search_corpus, grep_corpus)
 VECTOR_TOOLS = (vector_search,)
 
 
-def select_tools(toolset: Toolset) -> list[Callable[..., object]]:
+def select_tools(toolset: Toolset, structured: bool = False) -> list[Callable[..., object]]:
     """Which tools the agent may see, for one run.
 
-    Phase 1b's eval axis (docs/plan.md §1b): lexical-only / vector-only / both is *one runner with
-    a flag*, not three code paths, and this function is the flag. `runtime._build_agent` caches on
-    the result, so the return has to depend on nothing but the argument.
+    Two independent axes, and they are kept independent on purpose. `toolset` is Phase 1b's:
+    lexical-only / vector-only / both, one runner with a flag rather than three code paths
+    (docs/plan.md §1b). `structured` is Phase 1-c's, and it is a **separate boolean rather than a
+    fourth `Toolset` value** because it selects a different *lane*, not a different way of
+    searching the same one — folding it in would produce six meaningless combinations and would
+    silently redefine the three names Phase 1b's measurement is recorded under.
+
+    `runtime._build_agent` caches on both, so the return has to depend on nothing but the
+    arguments.
 
     Order is the order the model sees the tools in, and it is preserved deliberately: the
-    general-purpose ranker first, the recovery moves last. Under `both`, lexical leads because it
-    is the cheaper call and the one that wins on exact vocabulary; the prompt says when to reach
-    past it.
+    general-purpose ranker first, the recovery moves last, the relational lane after the reference
+    one. Under `both`, lexical leads because it is the cheaper call and the one that wins on exact
+    vocabulary; the prompt says when to reach past it.
     """
     ranked = {
         "lexical": LEXICAL_TOOLS,
         "vector": VECTOR_TOOLS,
         "both": LEXICAL_TOOLS + VECTOR_TOOLS,
     }[toolset]
-    return [*ranked, *NAVIGATION_TOOLS]
+    return [*ranked, *NAVIGATION_TOOLS, *(STRUCTURED_TOOLS if structured else ())]
 
 
 def needs_vectors(toolset: Toolset) -> bool:
@@ -359,8 +297,8 @@ __all__ = [
     "MAX_HITS",
     "MAX_PATTERN_CHARS",
     "NAVIGATION_TOOLS",
+    "STRUCTURED_TOOLS",
     "VECTOR_TOOLS",
-    "AnswerDeps",
     "get_chunk",
     "grep_corpus",
     "list_documents",

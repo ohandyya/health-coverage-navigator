@@ -62,6 +62,8 @@ from health_coverage_navigator.api.models import (
     TokenEvent,
 )
 from health_coverage_navigator.config import get_config
+from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
 from health_coverage_navigator.vectors.store import VectorIndex
 
@@ -171,23 +173,29 @@ def _checks(
         f"abstained={response.abstained}",
     )
 
-    # `Citation.chunk_id` is optional in the contract because Phase 2's web lane will have URLs and
-    # no chunk. At Phase 1a every citation comes from the corpus, so a missing one is as much a
-    # failure as a fabricated one and is counted the same way.
+    # Two citation shapes since Phase 1-c, and this check has to know the difference. A *passage*
+    # citation must name a chunk that resolves — a missing chunk id is as much a failure as a
+    # fabricated one. A *row* citation legitimately has none: it points at a query result, whose
+    # own guardrail (the cell-by-cell comparison in `runtime._validate_row_citation`) has already
+    # run by the time an answer exists. Requiring a chunk id of it, as this check did before the
+    # relational lane existed, would report the new lane working correctly as a failure.
     #
     # Vacuously true for an abstention with no citations, which is the correct outcome there — what
     # this guards against is an abstention that invents sources anyway.
+    rows = [c for c in response.citations if c.source_type == "structured_api"]
     unresolved = [
         c.chunk_id
         for c in response.citations
-        if c.chunk_id is None or index.chunk(c.chunk_id) is None
+        if c not in rows and (c.chunk_id is None or index.chunk(c.chunk_id) is None)
     ]
+    empty_rows = [c.id for c in rows if not c.snippet.strip()]
     check(
         "citations_resolve",
-        not unresolved,
+        not unresolved and not empty_rows,
         f"{len(response.citations)} citation(s)"
-        if not unresolved
-        else f"unresolvable chunk_id(s): {unresolved}",
+        + (f", {len(rows)} from the plan data" if rows else "")
+        if not unresolved and not empty_rows
+        else f"unresolvable chunk_id(s): {unresolved}; empty row citation(s): {empty_rows}",
     )
 
     misquoted = [
@@ -282,6 +290,27 @@ def main() -> int:
     )
     parser.add_argument("--model", help="override config.yaml's agent.model for this run")
     parser.add_argument(
+        "--plan-year",
+        type=int,
+        dest="plan_year",
+        help=(
+            "pin the plan year, as the UI's selector does. Only the relational lane reads it, and "
+            "it is what decides which partition of the vendored plan data a query may touch."
+        ),
+    )
+    parser.add_argument(
+        "--structured",
+        default=None,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "override config.yaml's agent.structured_tools. Same reasoning as --toolset: under a "
+            "default run the agent reaches for the reference corpus on a definitional question and "
+            "never touches the relational lane, so the SQL path could break with nothing here "
+            "noticing. `--structured --question '...deductible on plan 38344AK1060002...'` is how "
+            "that path gets smoked."
+        ),
+    )
+    parser.add_argument(
         "--toolset",
         choices=("lexical", "vector", "both"),
         help=(
@@ -303,8 +332,24 @@ def main() -> int:
         return 1
 
     toolset = args.toolset or get_config().agent.toolset
+    structured_wanted = (
+        get_config().agent.structured_tools if args.structured is None else args.structured
+    )
+    structured = None
+    if structured_wanted:
+        try:
+            structured = StructuredStore.open()
+        except StructuredNotBuiltError as exc:
+            print(f"{exc}", file=sys.stderr)
+            return 1
+
+    lanes = "reference" + (" + plan data" if structured else "")
     print(f"Q: {question}")
-    print(f"   ({len(index)} chunks indexed, toolset={toolset}; this makes a real model call)")
+    print(
+        f"   ({len(index)} chunks indexed, toolset={toolset}, lanes={lanes}"
+        + (f", plan year {args.plan_year}" if args.plan_year else "")
+        + "; this makes a real model call)"
+    )
 
     async def drain() -> list[StreamEvent]:
         # The store is opened here rather than at import so a `--toolset lexical` smoke run still
@@ -315,11 +360,16 @@ def main() -> int:
             vectors = await VectorIndex.open(
                 embedder_module.openai_embedder(config.embedding_model, config.dimensions)
             )
-        request = ChatRequest(message=question)
+        request = ChatRequest(message=question, plan_year=args.plan_year)
         return [
             event
             async for event in stream_answer(
-                request, index, model=args.model, toolset=toolset, vectors=vectors
+                request,
+                index,
+                model=args.model,
+                toolset=toolset,
+                vectors=vectors,
+                structured=structured,
             )
         ]
 

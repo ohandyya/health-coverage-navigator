@@ -20,6 +20,7 @@ carries no citations, so grading its groundedness would drag the corpus-wide ave
 number about nothing.
 """
 
+import collections
 from collections.abc import Awaitable, Callable
 
 from health_coverage_navigator.agent.index import CorpusIndex
@@ -44,6 +45,36 @@ def _normalize(text: str) -> str:
     return " ".join(text.split()).lower()
 
 
+def routing_grader() -> Grader:
+    """Did the answer come from the right **kind** of source?
+
+    Phase 1-c's new measurement, and the one this project is actually about. Answer correctness and
+    routing correctness come apart in exactly the case that matters: asked for a plan's deductible,
+    an agent that quotes a passage defining "deductible" can produce prose that reads as correct
+    while citing something that cannot know the number. Grading only the answer would score that as
+    a near miss rather than as the wrong lane.
+
+    Scored on the **majority lane of the citations**, not on the tool trace: what the reader is
+    shown is what the answer claims to rest on, and a lookup the agent ran and then ignored is not
+    evidence. An abstention is not graded — declining is a different judgement, already measured by
+    `abstention_accuracy`, and folding it in here would let a run that abstains on everything score
+    perfectly on routing.
+
+    Phase 2 widens this to three lanes by adding questions, not by changing this function.
+    """
+
+    async def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
+        if question.expected_source_type is None or response.abstained:
+            return {}
+        lanes = collections.Counter(c.source_type for c in response.citations)
+        if not lanes:
+            return {"routing_correct": 0.0}
+        chosen, _ = lanes.most_common(1)[0]
+        return {"routing_correct": float(chosen == question.expected_source_type)}
+
+    return grade
+
+
 def groundedness_grader(index: CorpusIndex) -> Grader:
     """Is every quotation real?
 
@@ -58,27 +89,47 @@ def groundedness_grader(index: CorpusIndex) -> Grader:
     failure with a `ModelRetry` before the response is built, so a number below 1.0 here is a bug
     in that validator, not a score to improve. It is measured anyway precisely because a guardrail
     nobody checks is a guardrail that has already stopped working.
+
+    **Two citation shapes since Phase 1-c, and this grader has to know the difference.** A row
+    citation has no `chunk_id` by design, and the first version of this code counted that as an
+    unresolvable source — which reported the relational lane working correctly as a fabrication, at
+    0.889 on the first structured eval run. A metric that punishes a capability for existing is
+    worse than no metric, because it reads exactly like a real regression.
+
+    So the two numbers now cover what each shape can actually be checked against, post hoc:
+
+    - `citation_resolution` spans **both** lanes: a passage must resolve to a chunk, and a row must
+      carry the cells it claims. That is the fabrication check, and both shapes have one.
+    - `groundedness` covers **passages only**, and reports `{}` when an answer has none. The
+      equivalent check for a row — is every cell byte-identical to what the query returned — is
+      done by `runtime._validate_row_citation` against the rows recorded in that run, which no
+      grader can see afterwards. Re-deriving it here would mean parsing a rendered snippet back
+      into columns and guessing which table it came from: a weaker check than the one that already
+      ran, dressed up as an independent one.
     """
 
     async def grade(_question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
         if not response.citations:
             return {}
 
+        passages = [c for c in response.citations if c.chunk_id is not None]
+        rows = [c for c in response.citations if c.chunk_id is None and c.doc_id is None]
+
         resolved = 0
         grounded = 0
-        for citation in response.citations:
+        for citation in passages:
             chunk = index.chunk(citation.chunk_id) if citation.chunk_id else None
             if chunk is None:
                 continue
             resolved += 1
             if _normalize(citation.snippet) in _normalize(chunk.text):
                 grounded += 1
+        resolved += sum(1 for citation in rows if citation.snippet.strip())
 
-        total = len(response.citations)
-        return {
-            "citation_resolution": resolved / total,
-            "groundedness": grounded / total,
-        }
+        metrics = {"citation_resolution": resolved / len(response.citations)}
+        if passages:
+            metrics["groundedness"] = grounded / len(passages)
+        return metrics
 
     return grade
 

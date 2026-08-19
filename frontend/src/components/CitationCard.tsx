@@ -1,17 +1,52 @@
 /**
- * A citation: collapsed to a one-line label, expanding to the snippet actually retrieved and a
- * way through to the full source (docs/frontend_plan.md §5.1).
+ * A citation: collapsed to a one-line label, expanding to the evidence behind it (§5.1).
  *
- * Two branches that both have to work, which is why the stub deliberately emits one citation of
- * each shape: a source with an external `url` links out, and a corpus-only source drills into
- * `GET /api/corpus/{doc_id}`. A citation with neither is still legal and must not render a dead
- * control.
+ * **Two body shapes since Phase 1-c, and the difference is the point.** A *passage* citation
+ * carries prose and drills into `GET /api/corpus/{doc_id}`. A *row* citation — the relational
+ * lane, `chunk_id` and `doc_id` both null — carries the cells a query returned, and they are
+ * rendered as `Column: value` lines rather than as a paragraph. A row shown as prose hides which
+ * columns were read, and which columns were read is the part that makes it evidence.
+ *
+ * Link handling is unchanged and already covered both cases: a source with an external `url` links
+ * out, a corpus source drills in, and a citation with neither must not render a dead control.
  */
 import { ChevronRight, ExternalLink, FileText, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { type Citation, type CorpusDocument, getDocument } from '@/api/client'
 import { SourceBadge } from '@/components/SourceBadge'
 import { citationDomId, cn } from '@/lib/utils'
+
+/**
+ * A citation of a queried row rather than a retrieved passage.
+ *
+ * Decided by the *absence* of a chunk rather than by `source_type`, deliberately: Phase 3 puts
+ * live-API answers in the same `structured_api` lane, and whether those arrive as rows is not this
+ * component's business. What it renders is "cells or prose", and cells are what has no chunk.
+ */
+function isRow(citation: Citation): boolean {
+  return citation.chunk_id == null && citation.doc_id == null && citation.snippet.includes(': ')
+}
+
+/** The cited cells, one per line — the shape `runtime._row_citation` builds them in. */
+function RowCells({ snippet }: { snippet: string }) {
+  const rows = snippet.split('\n').map((line) => {
+    const at = line.indexOf(': ')
+    return at === -1 ? { column: '', value: line } : { column: line.slice(0, at), value: line.slice(at + 2) }
+  })
+
+  return (
+    <dl className="grid grid-cols-[minmax(0,auto)_1fr] gap-x-3 gap-y-1 font-mono text-xs">
+      {rows.map((row, index) => (
+        <Fragment key={`${row.column}-${index}`}>
+          <dt className="truncate text-muted-foreground">{row.column}</dt>
+          {/* `whitespace-pre` because the value is the published one: '$4,500 ' keeps its trailing
+              space, and a citation that renders it away stops being the evidence it claims to be. */}
+          <dd className="whitespace-pre break-all">{row.value}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  )
+}
 
 export function CitationCard({
   citation,
@@ -70,9 +105,13 @@ export function CitationCard({
 
       {open && (
         <div className="space-y-3 border-t border-border px-3 py-3 text-sm">
-          <blockquote className="border-l-2 border-lane-reference/40 pl-3 text-muted-foreground italic">
-            {citation.snippet}
-          </blockquote>
+          {isRow(citation) ? (
+            <RowCells snippet={citation.snippet} />
+          ) : (
+            <blockquote className="border-l-2 border-lane-reference/40 pl-3 text-muted-foreground italic">
+              {citation.snippet}
+            </blockquote>
+          )}
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
             {citation.url && (

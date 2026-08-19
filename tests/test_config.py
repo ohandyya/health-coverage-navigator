@@ -36,10 +36,11 @@ def valid() -> dict:
         "agent": {
             "model": "openai:gpt-5.4-mini-2026-03-17",
             "retries": 2,
-            "request_limit": 8,
-            "tool_calls_limit": 12,
+            "request_limit": 12,
+            "tool_calls_limit": 16,
             "request_retries": 5,
             "toolset": "both",
+            "structured_tools": True,
         },
         "retrieval": {"top_k": 5, "bm25_k1": 1.2, "bm25_b": 0.75},
         "vectors": {
@@ -47,6 +48,12 @@ def valid() -> dict:
             "dimensions": 1536,
             "top_k": 5,
             "batch_size": 128,
+        },
+        "structured": {
+            "max_rows": 200,
+            "query_timeout_s": 5.0,
+            "memory_limit": "512MB",
+            "threads": 2,
         },
         "evals": {"judge_model": "openai:gpt-5.4-mini-2026-03-17"},
         "chunking": {

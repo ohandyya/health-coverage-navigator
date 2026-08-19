@@ -352,6 +352,12 @@ class EvalRunSummary(BaseModel):
     whole comparison is between runs that differ *only* in this, so a run that does not name it
     cannot take part in that comparison."""
 
+    structured: bool | None = None
+    """Whether the agent could see the relational lane over the vendored plan data (Phase 1-c).
+    `None` for every runner with no agent in it. Recorded for the same reason as `toolset`: a
+    comparison between two runs that differ only in this is only possible if a run says which it
+    was."""
+
     config_fingerprint: str | None = None
     """`Config.fingerprint()` — a sha256 over every value in `config.yaml`. The answer to "what
     was this score measured under" for everything the repo *can* pin."""

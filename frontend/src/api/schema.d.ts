@@ -368,6 +368,8 @@ export interface components {
             results: components["schemas"]["EvalQuestionResult"][];
             /** Runner */
             runner: string;
+            /** Structured */
+            structured?: boolean | null;
             /** Toolset */
             toolset?: string | null;
             /** Vectors Snapshot Id */
@@ -461,6 +463,8 @@ export interface components {
             n_questions: number;
             /** Runner */
             runner: string;
+            /** Structured */
+            structured?: boolean | null;
             /** Toolset */
             toolset?: string | null;
             /** Vectors Snapshot Id */
@@ -471,7 +475,7 @@ export interface components {
             /** Answer Key Facts */
             answer_key_facts?: string[];
             /** Becomes Answerable At Phase */
-            becomes_answerable_at_phase?: number | null;
+            becomes_answerable_at_phase?: string | null;
             /** Corpus */
             corpus?: ("healthcare_gov" | "medicare_ncd" | "medicare_pubs") | null;
             /** Difficulty */
@@ -483,12 +487,16 @@ export interface components {
             expected_abstain: boolean;
             /** Expected Answer */
             expected_answer?: string | null;
+            /** Expected Cells */
+            expected_cells?: string[];
             /** Expected Doc Ids */
             expected_doc_ids?: string[];
             /** Expected Snippet */
             expected_snippet?: string | null;
             /** Expected Source Type */
             expected_source_type?: ("reference" | "structured_api" | "web") | null;
+            /** Expected Table */
+            expected_table?: string | null;
             /** Id */
             id: string;
             /**

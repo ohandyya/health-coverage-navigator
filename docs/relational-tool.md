@@ -9,8 +9,8 @@ and it is the authority for everything below. Read [`exchange_puf_data.md`](exch
 and [`part_d_spuf_data.md`](part_d_spuf_data.md) first — they own what the data *is*, and this
 document does not restate them.
 
-Nothing here is built yet. Where a number appears it was measured against the real mirrors on
-2026-08-18 (duckdb 1.5.5, M-series laptop), not estimated.
+Where a number appears it was measured against the real mirrors on 2026-08-18 (duckdb 1.5.5,
+M-series laptop), not estimated. Build status belongs to [progress.md](progress.md), not here.
 
 ---
 
@@ -469,10 +469,20 @@ Abstention rules are untouched.
 
 Two smaller changes fall out:
 
-- **`becomes_answerable_at_phase: int` becomes a string label** (`"1c"`, `"2"`, `"3"`). `abs-02`
-  (*"is metformin covered under the Humana Gold Plus HMO formulary"*) is currently labelled phase 3
-  and is in fact a Phase 1-c question — the Part D mirror answers it. It should keep abstaining
-  until this phase lands, then flip to a structured question with a real expected value.
+- **`becomes_answerable_at_phase: int` becomes a string label** (`"1c"`, `"2"`, `"3"`), because
+  the phases are not integers.
+
+  > **Correction, found in implementation.** An earlier draft of this section said `abs-02`
+  > (*"is metformin covered under the Humana Gold Plus HMO formulary"*) was really a Phase 1-c
+  > question. It is not. **The Part D formulary carries `NDC` and `RXCUI` and no drug names at
+  > all**, so a question naming a drug needs a name → NDC lookup, which is openFDA or RxNorm and
+  > therefore Phase 3. `abs-02` keeps abstaining and keeps its `"3"` label. The gold set instead
+  > gained `str-03`, which is the same question asked in the vocabulary the table actually has
+  > (*"is NDC 00002143380 on formulary 00026408…"*), and that one the mirror answers.
+  >
+  > The general lesson is worth keeping: **this lane answers questions phrased in the data's own
+  > identifiers.** Translating a human's vocabulary into those identifiers — a drug name, a plan
+  > name, a ZIP code — is Phase 3's job, and it is the honest boundary between the two.
 - **`expected_cells` must be generated from the mirror, never hand-typed.** A trailing space in
   `'$4,500 '` is not something to retype by hand. A `make gold-structured` helper emits candidate
   YAML from a query; a test then re-checks every `expected_cells` value against the mirror when one

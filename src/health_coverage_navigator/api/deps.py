@@ -13,6 +13,7 @@ from fastapi import Request
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.evals.models import GoldSet
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
 
 
@@ -42,6 +43,11 @@ class AppContext:
     call, so `None` is a *more* ordinary state than a missing chunk file. Whether it is a failure
     to answer depends on `agent.toolset` — a `lexical` configuration does not need it, and
     `routes/chat.py` is where that question is asked."""
+
+    structured: StructuredStore | None = None
+    """The relational lane's DuckDB handle over the vendored plan mirrors, or `None` when they have
+    never been downloaded here. Same shape as `vectors`, including the part that matters: whether
+    `None` is fatal depends on `agent.structured_tools`, and only `routes/chat.py` decides."""
 
 
 def get_context(request: Request) -> AppContext:

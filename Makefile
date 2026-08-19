@@ -1,5 +1,5 @@
 .PHONY: help lint format format-check fix check typecheck typecheck-watch test check-all \
-        chunk chunk-check embed embed-check scan scan-staged scan-unstaged scan-selftest \
+        chunk chunk-check embed embed-check puf scan scan-staged scan-unstaged scan-selftest \
         ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
         eval eval-retrieval eval-retrieval-vector eval-lexical eval-vector eval-judge \
         eval-stub smoke smoke-abstain
@@ -181,6 +181,14 @@ embed: ## Embed the chunked corpus into data/lancedb (~$0.04, ~2 min)
 # input that could change one.
 embed-check: ## Verify the vector store matches the committed manifest — embeds nothing
 	uv run python -m health_coverage_navigator.vectors --check
+
+# The structured lane's data (Phase 1-c). Outside check-all because it downloads: ~24 MB over the
+# wire for ~4.6 MB of Parquet. The mirrors are git-ignored — a fresh clone has none, and the app
+# reports a 503 naming this target rather than answering plan questions from nothing. Both scripts
+# are idempotent and conditional-GET aware, so a re-run with current data transfers almost nothing.
+puf: ## Download + mirror the structured plan data (Exchange PUFs + Part D SPUF, ~24 MB)
+	uv run python scripts/download_exchange_puf.py
+	uv run python scripts/download_part_d_spuf.py
 
 # Deliberately not part of check-all: check-all is the fast inner-loop command, and a scan
 # of the whole 14 MB corpus is a pre-publish gate you invoke on purpose.

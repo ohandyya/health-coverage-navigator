@@ -17,13 +17,20 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-16.*
+*Updated 2026-08-19.*
 
-- **Phase:** **1b is complete, measured and shippable.** One PydanticAI agent answers coverage
-  questions from the reference corpus with a **five-tool** toolset — stdlib BM25 *and* LanceDB
-  embeddings, with which tools it sees a per-run flag — abstains when the question is out of corpus,
-  and streams its answer and its tool trace to the browser. The Phase 0 stub is still reachable
-  behind `create_app(stub=True)` as a baseline. Design: [agent.md](agent.md).
+- **Phase:** **1-c is complete and measured; the agent has two lanes.** Alongside the reference
+  corpus it now queries the vendored CMS plan data — `list_tables` / `describe_table` /
+  `query_structured`, DuckDB over the Parquet mirrors — and cites **rows**, byte-for-byte, with the
+  SQL it wrote visible in the trace. Routing measured **1.000** and the reference questions did not
+  move (0.800 against 0.767, inside the noise band). Design: [relational-tool.md](relational-tool.md);
+  numbers and caveats: [agent.md](agent.md) §6. **Phase 2 (web search) is next, and it now widens an
+  existing routing metric rather than introducing one.**
+- **Phase 1b, still true and unchanged by 1-c:** the reference lane is searched by a five-tool
+  toolset — stdlib BM25 *and* LanceDB embeddings, with which tools the agent sees a per-run flag —
+  it abstains when the question is out of corpus, and it streams its answer and its tool trace to
+  the browser. The Phase 0 stub is still reachable behind `create_app(stub=True)` as a baseline.
+  Design: [agent.md](agent.md).
 - **The headline result: vector beats lexical, and "both" beats either alone.** Deterministic
   retrieval-only, 30 in-corpus questions: BM25 **0.567**/0.416 against vector **0.733**/0.561.
   Through the agent, 35 questions: lexical 0.667/0.650, vector 0.733/0.717, **both 0.800/0.733**.
@@ -38,20 +45,22 @@ mid-stream.
   rank 1. But `ncd-05` and `pub-10` go the other way, and **six of thirty defeat both methods**.
   That complementarity is the empirical case for `both`; the six mutual misses say the remaining
   gap is not one more index.
-- **Still on a branch.** All of 1b lives on `phase-1b-vector-search`, not `main`. Two things are
-  worth doing before it merges: open the eval dashboard's new run-comparison view in a browser (it
-  has never been looked at — see the log), and un-mix `docs/human_worklog.md` from commit `b4770e0`.
+- **1b has since merged to `main`** (`c67f952`, PR #17). One thing it left undone and 1-c repeats:
+  **new frontend surfaces keep shipping unviewed.** The eval run-comparison view was never opened in
+  a browser at 1b, and neither has 1-c's row citation card or its SQL trace step. Every automated
+  gate passes on all of them; no human has looked.
 - **New doc: [technical_highlights.md](technical_highlights.md)** — the mechanisms worth
   *presenting*, which is deliberately not a job any of the four canonical docs has. Three entries so
   far (grounding, the test-suite provider guard, missing-vs-stale). It is **not** listed in
   CLAUDE.md's doc table; whether it should be is an open call for the author.
-- **Next up:** **Phase 2 — the web-search tool** —
-  [plan.md](plan.md#phase-2--add-the-web-search-tool). The first real *lane* routing decision, and
-  a harder question than 1b's: the wrong answer is a confident abstention, or a web answer to
-  something the corpus already settles. Tavily vs. Exa is to be chosen by measuring both on the
-  gold set's out-of-corpus slice. Note what 1b leaves in place for it: `select_tools` already makes
-  "which tools may the agent see" a per-run flag, and `system_prompt(toolset)` already composes —
-  so a web toolset is a new entry in two dicts rather than a new mechanism.
+- **Next up:** **Phase 2 — the web-search tool** (1-c is done) —
+  [plan.md](plan.md#phase-2--add-the-web-search-tool). No longer the *first* lane routing decision —
+  1-c made that one and measured it at 1.000 — but the first destination the agent cannot inventory
+  before deciding to go there: the wrong answer is a confident abstention, or a web answer to
+  something the corpus already settles. Tavily vs. Exa is to be chosen by measuring both on the gold
+  set's out-of-corpus slice. What 1b and 1-c leave in place for it: `select_tools` already makes
+  "what may the agent see" a per-run choice on two axes, `system_prompt` already composes against
+  both, and `routing_grader` already exists — so Phase 2 widens a metric rather than inventing one.
 - **Phase 1b design decisions, each with a reason that outlives the code:** **`text-embedding-3-small` at 1536d** (~$0.04 a build; `-3-large` was rejected not on cost
   but because 30 in-corpus questions cannot resolve the difference between two good embedding
   models). **No hybrid search** — LanceDB carries BM25 in the same table and it is deliberately
@@ -228,6 +237,98 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-19 — Phase 1-c: the structured lane, built and measured
+
+**Did:** built the relational lane end to end, to the design in
+[relational-tool.md](relational-tool.md). Three tools (`list_tables` / `describe_table` /
+`query_structured`) over the vendored Exchange PUF and Part D SPUF mirrors, DuckDB querying Parquet
+in place — no load step, 53 ms to open and verify all ten tables, 3-16 ms a lookup. Row citations
+carry `source_type="structured_api"` with null `doc_id`/`chunk_id`, the first citations in this repo
+that are not chunks. `make puf`, a 503 naming it, a real `structured_api` lane in `/api/health`,
+the `structured` axis on eval runs, four structured gold questions, a routing grader, and the
+frontend's two rendering branches (cells not prose; SQL not escaped JSON). 299 tests, `check-all`
+green, no contract change beyond added fields.
+
+**Measured (the point of the phase):** two agent runs differing only in the lane. Reference
+questions 0.800/0.733 with it against 0.767/0.711 without — one question on a set of thirty,
+against a known 0.200 spread, so **no measurable cost**. Routing **1.000**: no plan question was
+ever answered from prose, which is the failure this project exists to prevent. Structured exact
+match 0.875, abstention 0.833 against 1.000. Detail and caveats: [agent.md](agent.md) §6.
+
+**Decided: the citable unit is a recorded result row, not a chunk.** Every row a query returns is
+recorded under a query-scoped id (`exchange_puf/2026/plan_attributes#q1.3`), and a citation names
+the row plus the cells it used. Query-scoped rather than data-keyed because an aggregate has no
+primary key, and the honest claim *is* query-scoped: this query, against this partition, returned
+this row. Cells are compared **byte-exactly** — stricter than the chunk path's
+whitespace-normalised check, because `'$4,500 '` keeps a trailing space that a model "helpfully"
+tidying it would erase from the evidence while the prose stayed right.
+
+**Decided: guarded SQL, not a typed function per question.** The alternative means deciding at
+design time which questions this data can answer — the same guess the ingestion layer refused when
+it stored every column as `VARCHAR` rather than picking one of the 36 MOOP columns. The guard is
+two independent layers, both verified rather than read about: `duckdb.extract_statements` must
+yield exactly one `SELECT`, and the connection is sandboxed with `allowed_directories` +
+`enable_external_access=false` + `lock_configuration=true`, **in that order and after the views
+exist**. Views are lazy, so locking first breaks them; and `allowed_directories` does nothing while
+external access is still on — `read_csv('/etc/passwd')` returned the file until it was disabled.
+`tests/test_structured.py::test_the_sandbox_is_shut` is the file that keeps that true.
+
+**Decided: two eval axes, not a four-valued toolset.** `toolset` picks how the reference lane is
+searched; `structured` picks whether a second lane exists. Folding them together makes six
+combinations, three meaningless, and redefines the three names Phase 1b's measurement is recorded
+under.
+
+**Rejected: falling back to the committed sample slices when the mirror is missing.** An
+Alaska-only answer served as a national one is the "canned output must not look real" failure with
+a health question attached. A 503 naming `make puf` instead — the same refusal-to-degrade as a
+missing vector store.
+
+**Rejected: typed views over the mirror, and the two typed join helpers** (`lookup_plan_formulary`,
+`lookup_service_area`). Both deferred until traces earn them, and written out in
+relational-tool.md §14a so they are implementable later rather than merely postponed.
+
+**Dead end, corrected in the design doc:** the plan said `abs-02` (*"is metformin covered under the
+Humana Gold Plus HMO formulary"*) was really a Phase 1-c question. **It is not.** The Part D
+formulary carries `NDC` and `RXCUI` and *no drug names*, so a question naming a drug needs a
+name → NDC lookup — openFDA or RxNorm, i.e. Phase 3. The gold set gained `str-03`, the same question
+in the vocabulary the table actually has. The general shape is worth keeping: **this lane answers
+questions phrased in the data's own identifiers**, and translating a human's vocabulary into them is
+Phase 3's job.
+
+**Dead end: the agent-cache hazard this file already records, taken again.** Adding `structured` to
+`_build_agent`'s `lru_cache` key made every agent test build a *structured* agent while the run
+under test built a reference-only one, so `override` applied to an object nobody used and the run
+tried to reach OpenAI. `ALLOW_MODEL_REQUESTS = False` turned a would-be bill into a red test.
+`AgentKit._agent` now derives the key exactly as `stream_answer` does. **Third defaulted argument,
+third occurrence** — the next one should probably be a helper rather than a convention.
+
+**Dead end: the test fixture was quietly better-behaved than the data.** `build_mirror` read the
+sample CSVs without the downloaders' `nullstr` sentinel, so DuckDB turned every empty field into
+NULL and the fixture lost the `''`-vs-`'Not Applicable'` distinction the whole lane is about. Found
+by the trailing-space test, not by inspection.
+
+**Two bugs the first eval run found, both fixed before the reported numbers:** `request_limit: 8`
+lost `str-01` to `UsageLimitExceeded` (this lane spends 5-7 calls where the corpus spends two;
+now 12/16), and `groundedness_grader` scored row citations as fabricated sources — 0.889 where the
+guardrail guarantees 1.000 — because a row has no `chunk_id` to resolve.
+
+**Stopped at:** clean, `make check-all` green, nothing committed. Known limits and open calls:
+
+- **Evals for this lane must run sequentially.** Three sweeps were lost to rate limits: at
+  `--concurrency 3` ten questions errored, at `--concurrency 5` twenty-five and thirty-three did.
+  A structured question costs ~40k tokens against a ~200k/min account ceiling. A run with errored
+  questions is broken, not weak — `recall@5 0.033` on one of them is a set that was never answered.
+- **`abs-02` should probably be re-authored.** With the lane on, "abstain" and "answer for the one
+  plan you can identify" are both defensible, which is not what a gold label is for. It is a coin
+  flip today and is the whole of the 0.833-vs-1.000 abstention difference.
+- **Four structured gold questions is thin**, and they are unambiguous by construction, so the
+  1.000 routing number is the one to distrust first as the set grows.
+- **The frontend's two new branches have not been opened in a browser** — same gap the run-comparison
+  view had at Phase 1b. `tsc`, `oxlint` and Vitest pass; nobody has looked at a row citation.
+- **`make eval` on a fresh clone now needs `make puf`**, because the gold set has structured
+  questions. The runner exits naming the command rather than silently dropping them.
+
 
 ### 2026-08-16 (later) — a walkthrough of Phase 1b, and the doc it produced
 

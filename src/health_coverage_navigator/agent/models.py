@@ -19,7 +19,7 @@ as if it were part of the source document would invite it into a quotation.
 
 import re
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from health_coverage_navigator.chunking.models import Chunk
 from health_coverage_navigator.corpus import CorpusName
@@ -97,18 +97,73 @@ class CorpusOverview(BaseModel):
 
 
 class AgentCitation(BaseModel):
-    """One source the answer leans on."""
+    """One source the answer leans on: a retrieved passage, or a queried row.
+
+    **One class with two shapes, not a union.** The two lanes' evidence is genuinely different — a
+    passage is quoted, a row is read — but they share one id space (`c1`, `c2`, ... across both),
+    and the model has to be able to mix them in a single list. A discriminated union would express
+    that more precisely at the cost of an `anyOf` in the output schema, which is exactly the kind
+    of structure a provider's strict-JSON mode handles unevenly. `_check_shape` recovers the
+    precision, and its error message is what the model reads on a retry.
+    """
 
     id: str = Field(pattern=CITATION_ID_RE.pattern)
     """`c1`, `c2`, ... The answer text refers to this as `[c1]`."""
 
-    chunk_id: str
-    """The `chunk_id` of a hit a tool returned **in this conversation**. Anything else is rejected
-    and you will be asked to try again."""
+    chunk_id: str | None = None
+    """For a **passage**: the `chunk_id` of a hit a tool returned **in this conversation**.
+    Anything else is rejected and you will be asked to try again."""
 
-    snippet: str = Field(min_length=1)
+    snippet: str | None = None
     """The words from that chunk's `text` that support the claim, copied exactly. Not a paraphrase
     and not a summary — this is shown to the reader as what the source says."""
+
+    row_id: str | None = None
+    """For a **row**: the `row_id` of a row a query returned **in this conversation**."""
+
+    cells: dict[str, str] | None = None
+    """The columns of that row you relied on, and their values copied **exactly** as the query
+    returned them — including a trailing space, a comma, or a `$`. The stored value is the
+    evidence; your prose may tidy it, the citation may not."""
+
+    @model_validator(mode="after")
+    def _check_shape(self) -> "AgentCitation":
+        """Exactly one of the two shapes, complete.
+
+        A half-filled citation is the realistic model error here — a `row_id` with a `snippet`, or
+        a `chunk_id` with no quotation — and catching it as a validation error means the model is
+        told which half is missing rather than having the answer rejected two layers later by the
+        grounding validator with a less specific complaint.
+        """
+        passage = self.chunk_id is not None or self.snippet is not None
+        row = self.row_id is not None or self.cells is not None
+        if passage and row:
+            raise ValueError(
+                f"citation {self.id} mixes a passage and a row. One citation is either a "
+                f"chunk_id + snippet or a row_id + cells; use two citations."
+            )
+        if passage:
+            if not self.chunk_id or not self.snippet:
+                raise ValueError(
+                    f"citation {self.id} of a passage needs both chunk_id and a snippet copied "
+                    f"from that passage."
+                )
+        elif row:
+            if not self.row_id or not self.cells:
+                raise ValueError(
+                    f"citation {self.id} of a row needs both row_id and the cells you used, "
+                    f"copied exactly as the query returned them."
+                )
+        else:
+            raise ValueError(
+                f"citation {self.id} points at nothing. Give either chunk_id + snippet for a "
+                f"retrieved passage, or row_id + cells for a queried row."
+            )
+        return self
+
+    @property
+    def is_row(self) -> bool:
+        return self.row_id is not None
 
 
 class AgentAnswer(BaseModel):

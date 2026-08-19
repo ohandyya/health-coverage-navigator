@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import duckdb
 import pytest
 from pydantic_ai import UnexpectedModelBehavior, capture_run_messages
 from pydantic_ai.messages import ModelMessage, ModelResponse, RetryPromptPart, ToolCallPart
@@ -40,7 +41,10 @@ from health_coverage_navigator.agent.models import AgentAnswer
 from health_coverage_navigator.agent.runtime import answer_question, build_agent, stream_answer
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, StreamEvent
 from health_coverage_navigator.chunking.models import Chunk
-from health_coverage_navigator.config import Toolset
+from health_coverage_navigator.config import StructuredConfig, Toolset
+from health_coverage_navigator.paths import PROCESSED_DIR
+from health_coverage_navigator.structured.catalog import STRUCTURED_SOURCES
+from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.embedder import Embedder
 from health_coverage_navigator.vectors.store import VectorIndex, build_store
 
@@ -247,15 +251,18 @@ class AgentKit:
         *turns: Any,
         message: str = "what is a deductible?",
         toolset: Toolset | None = None,
+        structured: StructuredStore | None = None,
+        plan_year: int | None = None,
     ) -> ChatResponse:
         """One full agent run against the scripted turns."""
-        with build_agent(toolset=toolset).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured).override(model=scripted_model(*turns)):
             return asyncio.run(
                 answer_question(
-                    ChatRequest(message=message),
+                    ChatRequest(message=message, plan_year=plan_year),
                     self.index,
                     toolset=toolset,
                     vectors=self.vectors,
+                    structured=structured,
                 )
             )
 
@@ -264,22 +271,46 @@ class AgentKit:
         *turns: Any,
         message: str = "what is a deductible?",
         toolset: Toolset | None = None,
+        structured: StructuredStore | None = None,
+        plan_year: int | None = None,
     ) -> list[StreamEvent]:
         """Every SSE event one run emits, in order."""
 
         async def drain() -> list[StreamEvent]:
-            request = ChatRequest(message=message)
+            request = ChatRequest(message=message, plan_year=plan_year)
             return [
                 event
                 async for event in stream_answer(
-                    request, self.index, toolset=toolset, vectors=self.vectors
+                    request,
+                    self.index,
+                    toolset=toolset,
+                    vectors=self.vectors,
+                    structured=structured,
                 )
             ]
 
-        with build_agent(toolset=toolset).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured).override(model=scripted_model(*turns)):
             return asyncio.run(drain())
 
-    def expect_rejection(self, *turns: Any) -> str:
+    @staticmethod
+    def _agent(toolset: Toolset | None, structured: StructuredStore | None):
+        """The agent `stream_answer` will use for these arguments — not a similar one.
+
+        `build_agent` caches per (model, toolset, structured), and `override` applies to the
+        instance it is called on. So a kit that built a *structured* agent (because `config.yaml`
+        says so) while the run builds a reference-only one silently loses the override and goes to
+        the real provider. That is not hypothetical: it is what every agent test did the moment
+        Phase 1-c added the second axis, and `ALLOW_MODEL_REQUESTS = False` is what turned a
+        would-be billing incident into a test failure.
+        """
+        return build_agent(toolset=toolset, structured=structured is not None)
+
+    def expect_rejection(
+        self,
+        *turns: Any,
+        structured: StructuredStore | None = None,
+        plan_year: int | None = None,
+    ) -> str:
         """Run a script that never satisfies the validator, and return its last complaint.
 
         Exhausting the retry budget raises `UnexpectedModelBehavior`, which is the right outcome —
@@ -289,10 +320,16 @@ class AgentKit:
         """
         with (
             capture_run_messages() as messages,
-            build_agent().override(model=scripted_model(*turns)),
+            self._agent(None, structured).override(model=scripted_model(*turns)),
             pytest.raises(UnexpectedModelBehavior),
         ):
-            asyncio.run(answer_question(ChatRequest(message="q"), self.index))
+            asyncio.run(
+                answer_question(
+                    ChatRequest(message="q", plan_year=plan_year),
+                    self.index,
+                    structured=structured,
+                )
+            )
 
         retries = [
             part.content
@@ -408,3 +445,114 @@ def agent_kit(tmp_path_factory: pytest.TempPathFactory) -> AgentKit:
         index=CorpusIndex(chunks),
         vectors=asyncio.run(build_fake_store(chunks, root)),
     )
+
+
+# --------------------------------------------------------------------------------------------
+# The relational lane (Phase 1-c)
+# --------------------------------------------------------------------------------------------
+
+#: Matches the committed `config.yaml`. Held here rather than read from it so a test's ceilings
+#: cannot move because someone tuned production, which is the same reason `AnswerDeps.retrieval` is
+#: injectable.
+STRUCTURED_CONFIG = StructuredConfig(
+    max_rows=200, query_timeout_s=5.0, memory_limit="512MB", threads=2
+)
+
+#: How each sample file names itself: `<stem>_<slice>.csv`. Exchange slices by state and year,
+#: Part D by quarter (docs/exchange_puf_data.md, docs/part_d_spuf_data.md).
+_SAMPLE_SUFFIX = {"exchange_puf": "_AK_2026", "part_d_spuf": "_2026Q2"}
+_PARTITION = {"exchange_puf": "2026", "part_d_spuf": "2026Q2"}
+_FILENAME = {
+    "exchange_puf": ("csv_filename", "{stem}_PUF.csv"),
+    "part_d_spuf": ("txt_filename", "{stem}.txt"),
+}
+
+
+#: The downloaders' CSV options, restated so the fixture is byte-identical to the real mirror.
+#: **`nullstr` is the load-bearing one.** DuckDB reads an empty field as NULL by default, which
+#: would collapse this corpus's two distinct "no value" spellings — an empty field and the literal
+#: `'Not Applicable'` — and quietly make the fixture *less* awkward than the data. Pointing it at a
+#: string no CMS file can contain is how both downloaders disable it, and a test fixture that
+#: skipped this would pass while the real mirror failed. (It did: the first draft of this helper
+#: omitted it, and `test_a_tidied_cell_value_is_rejected` is what found it.)
+_CSV_READ_OPTS = "all_varchar=true, header=true, sample_size=-1, nullstr=['\x01__NEVER_NULL__\x01']"
+
+
+def build_mirror(root: Path, *, partitions: dict[str, list[str]] | None = None) -> Path:
+    """Build a fixture mirror + manifest from the **committed sample slices**.
+
+    Real CMS bytes rather than hand-written rows, and read with the same `all_varchar=true` the
+    downloaders use — so the fixture preserves `'$4,500 '` with its trailing space and keeps `''`
+    distinct from NULL, which are exactly the shapes a synthetic fixture would smooth away and the
+    guardrail exists to protect.
+
+    It also means the whole relational suite runs on a fresh clone, where the real (git-ignored)
+    mirror does not exist.
+    """
+    con = duckdb.connect()
+    try:
+        for source in STRUCTURED_SOURCES:
+            sample_dir = PROCESSED_DIR / source / "sample"
+            entries: list[dict[str, object]] = []
+            wanted = (partitions or {}).get(source, [_PARTITION[source]])
+            for csv_path in sorted(sample_dir.glob("*.csv")):
+                stem = csv_path.stem.removesuffix(_SAMPLE_SUFFIX[source])
+                for partition in wanted:
+                    out = root / "processed" / source / partition / f"{stem}.parquet"
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    con.execute(
+                        f"COPY (SELECT * FROM read_csv('{csv_path}', {_CSV_READ_OPTS})) "
+                        f"TO '{out}' (FORMAT parquet)"
+                    )
+                    row = con.execute(f"SELECT COUNT(*) FROM read_parquet('{out}')").fetchone()
+                    key, pattern = _FILENAME[source]
+                    filename = (
+                        pattern.format(stem="_".join(w.capitalize() for w in stem.split("_")))
+                        if source == "exchange_puf"
+                        else pattern.format(stem=stem)
+                    )
+                    entries.append(
+                        {
+                            ("year" if source == "exchange_puf" else "quarter"): partition,
+                            key: filename,
+                            "row_count": row[0] if row else 0,
+                        }
+                    )
+            catalog = root / "raw" / source / "catalog.json"
+            catalog.parent.mkdir(parents=True, exist_ok=True)
+            catalog.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+    finally:
+        con.close()
+    return root
+
+
+@dataclass(frozen=True, slots=True)
+class StructuredKit:
+    """The relational lane's `AgentKit`: everything a test needs, reachable in one parameter."""
+
+    CONFIG = STRUCTURED_CONFIG
+    build = staticmethod(build_mirror)
+
+    @staticmethod
+    def open(root: Path, **overrides: Any) -> StructuredStore:
+        return StructuredStore.open(
+            processed_dir=root / "processed",
+            raw_dir=root / "raw",
+            **{"config": STRUCTURED_CONFIG, **overrides},
+        )
+
+
+@pytest.fixture(scope="session")
+def structured_kit() -> StructuredKit:
+    return StructuredKit()
+
+
+@pytest.fixture(scope="session")
+def mirror(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """One fixture mirror for the whole session — building it costs a few Parquet writes."""
+    return build_mirror(tmp_path_factory.mktemp("mirror"))
+
+
+@pytest.fixture(scope="session")
+def structured_store(mirror: Path) -> StructuredStore:
+    return StructuredKit.open(mirror)

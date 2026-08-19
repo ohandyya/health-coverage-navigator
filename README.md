@@ -36,39 +36,43 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 
 ---
 
-## Status — Phase 1b of 5 complete
+## Status — Phase 1c of 5 complete
 
-> **Where this actually is:** the agent is live on **one lane of three**. Ask a health-coverage
+> **Where this actually is:** the agent is live on **two lanes of three**. Ask a health-coverage
 > question in the browser and a PydanticAI agent searches the indexed reference corpus — by keyword
-> *and* by meaning, choosing between the two itself — answers with citations back to specific
-> chunks, and says *"not in my reference material"* when the question falls outside it. There is no web search and there are no
-> live API tools yet — those are Phases 2 and 3, and the routing problem this project is about is
-> not solved until they land.
+> *and* by meaning, choosing between the two itself — or, for a question about a **specific plan or
+> drug**, writes SQL against the vendored CMS plan data and cites the **row** it read, cell by cell.
+> It says *"not in my reference material"* when the question falls outside both. There is no web
+> search (Phase 2) and no live API tools (Phase 3), so the tri-modal routing this project is about
+> is not finished — but routing between the two lanes that exist is built, and measured at 1.000.
 
 The build order is deliberate. The eval harness was built before the agent so the agent had
 something to be measured against on the day it arrived, and the API contract was frozen before
 there was anything real behind it so later phases add *values* to existing fields instead of
-reshaping the response. Phase 1a cost the contract two optional fields and the chat UI nothing; Phase 1b cost it two
-more and the chat UI nothing again.
+reshaping the response. Phase 1a cost the contract two optional fields and the chat UI nothing;
+Phase 1b cost it two more and the chat UI nothing again; **Phase 1c added a whole second lane and
+cost the contract nothing at all** — a row citation is the existing `Citation` with `chunk_id`
+left null.
 
 ### What works today
 
 | | |
 |---|---|
-| **The agent** | One PydanticAI agent, five tools it composes itself — `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Which retrieval tools it sees is a per-run flag, so lexical-only, vector-only and both are one code path measured three ways |
-| **Grounding** | Enforced in code, not asked for in the prompt: a citation of a chunk no tool returned, or a quotation not verbatim in its chunk, is rejected and retried. Citations are rebuilt from the real chunk, so an invented title cannot reach the browser |
+| **The agent** | One PydanticAI agent, eight tools it composes itself. Reference lane: `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Relational lane: `list_tables` / `describe_table` / `query_structured`. Both *what it may search* and *whether the second lane exists* are per-run flags, so each comparison is one code path measured two ways |
+| **The relational lane** | DuckDB queries the vendored CMS plan mirrors **in place** — no load step, 53 ms to open and verify 10 tables, 3–16 ms a lookup. Model-written SQL is guarded twice: one `SELECT` only (statement-type checked before execution), on a connection sandboxed to `data/processed/` with external access off and configuration locked. Escape attempts are a test, not a claim |
+| **Grounding** | Enforced in code, not asked for in the prompt. A passage citation must name a chunk a tool returned and quote it verbatim; a **row** citation must name a row a query returned and reproduce its cells **byte for byte** — `'$4,500 '` keeps its trailing space, because tidying the evidence is editing it. Citations are rebuilt from the real chunk or row, so an invented title cannot reach the browser |
 | **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
 | **Streaming** | The answer streams token by token *and* the tool trace fills in live, over SSE |
 | **Ingestion** | 5 bulk sources fetched, normalized, and committed — idempotent and re-runnable |
 | **Corpus** | 2,056 documents across 3 text corpora → **6,722 chunks** with verified provenance |
-| **Structured mirrors** | Exchange PUFs (3 tables, PY2026) + Medicare Part D SPUF (7 files, 2026Q2) as lossless columnar mirrors — *deliberately not chunked* |
-| **Eval harness** | 35 gold questions (30 in-corpus + 5 abstention), three runners (`agent` / `bm25` / `stub`) through one scorer, retrieval + groundedness + answer-correctness metrics, runs persisted as JSON and triggerable from the browser |
+| **Structured mirrors** | Exchange PUFs (3 tables, PY2026) + Medicare Part D SPUF (7 files, 2026Q2) as lossless columnar mirrors — *deliberately not chunked*, and since Phase 1c queried where they lie: 2.96M rows the agent can read but nothing reshapes |
+| **Eval harness** | 40 gold questions (30 in-corpus + 4 structured + 6 abstention) in three shapes, four runners (`agent` / `bm25` / `vector` / `stub`) through one scorer, retrieval + groundedness + **routing** + **exact-cell** metrics, runs persisted as JSON and triggerable from the browser |
 | **API** | FastAPI with a frozen contract: `POST /api/chat`, SSE streaming, eval endpoints, citation drill-down |
 | **Frontend** | React 19 + Vite 8 + TS + Tailwind 4 + shadcn — chat page with source badges, expandable citation cards, collapsible agent-trace panel, abstention state, and an eval dashboard |
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 202 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
+| **Gates** | 299 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never calls a model**: no API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
@@ -76,16 +80,29 @@ All on the same gold set and the same chunk snapshots. The two retrieval-only ru
 stop — no model in the loop — so the gap between them and the agent rows is what the agent's query
 reformulation is worth, and the gap between *them* is what the embeddings are worth.
 
-| runner | recall@5 | MRR | abstention acc. | groundedness | answer correctness |
-|---|---|---|---|---|---|
-| `stub` — canned answers (Phase 0 baseline) | 0.033 | 0.033 | 0.400 | — | — |
-| `bm25` — lexical retrieval only, no model | 0.567 | 0.416 | — | 1.000 | — |
-| `vector` — semantic retrieval only, no model | 0.733 | 0.561 | — | 1.000 | — |
-| `agent` — lexical tools only | 0.667 | 0.650 | 1.000 | 1.000 | — |
-| `agent` — vector tool only | 0.733 | 0.717 | 1.000 | 1.000 | — |
-| **`agent` — both (shipped)** | **0.800** | **0.733** | **1.000** | **1.000** | 0.739 † |
+| runner | recall@5 | MRR | abstention acc. | routing | exact cell | groundedness |
+|---|---|---|---|---|---|---|
+| `stub` — canned answers (Phase 0 baseline) | 0.033 | 0.033 | 0.400 | — | — | — |
+| `bm25` — lexical retrieval only, no model | 0.567 | 0.416 | — | — | — | 1.000 |
+| `vector` — semantic retrieval only, no model | 0.733 | 0.561 | — | — | — | 1.000 |
+| `agent` — lexical tools only | 0.667 | 0.650 | 1.000 | — | — | 1.000 |
+| `agent` — vector tool only | 0.733 | 0.717 | 1.000 | — | — | 1.000 |
+| `agent` — both, reference lane only | 0.767 | 0.711 | 1.000 | — | — | 1.000 |
+| **`agent` — both + the relational lane (shipped)** | **0.800** | **0.733** | 0.833 | **1.000** | **0.875** | **1.000** |
 
-† Answer correctness was last measured under Phase 1a's judge model and is a historical sample.
+The last two rows are Phase 1c's comparison: two runs differing **only** in whether the agent could
+see the plan data. Recall does not move — 0.800 against 0.767 is one question out of thirty against
+a known 0.200 spread — which is the result that mattered, because the risk of adding a lane is that
+the agent starts reaching for it on questions the corpus already answers. **Routing is 1.000**: no
+plan-specific question was answered from prose, and no reference question from a table.
+
+The abstention difference is a single question, and an interesting one. Asked *"is metformin covered
+under the Humana Gold Plus HMO plan's formulary?"*, the reference-only build declines because it has
+nothing; the relational build sometimes declines **better** — citing rows to show that the 2026 data
+holds several Humana Gold Plus plans on different formularies, and asking for the contract ID — and
+sometimes answers for the plan it picked. Both are defensible, which means the gold label is now the
+thing that is wrong. Answer correctness (LLM judge, opt-in) was last measured at 0.739 under Phase
+1a's judge model and is a historical sample.
 
 **Phase 1b's decision was taken on the two retrieval-only rows, not on the agent rows**, and that
 is the methodological point rather than a shortcut. Those two have no model in them, so they
@@ -98,11 +115,19 @@ to earn its place: it only wins if it beats each alone."*
 **The agent rows are single runs, and the spread is wide.** Seven runs at effectively one configuration put
 recall@5 anywhere between **0.600 and 0.867** — model nondeterminism alone, on a 30-question
 in-corpus set where one question is worth 0.033. So treat any difference under about 0.100 as noise
-— **including 0.800 vs 0.733 above.** The two retrieval-only rows have no such caveat: no model is
-in the loop, so they return the same number every time, which is exactly why the lexical-vs-vector
-call was made there. Abstention accuracy reads 1.000 in every
-run that completed without errored questions; the runs that dipped were runs that lost questions to
-provider rate limits, which is a broken run rather than a weaker guardrail.
+— **including 0.800 vs 0.733, and 0.800 vs 0.767, above.** The two retrieval-only rows have no such
+caveat: no model is in the loop, so they return the same number every time, which is exactly why the
+lexical-vs-vector call was made there. Abstention accuracy reads 1.000 in every run that completed
+without errored questions; the runs that dipped were runs that lost questions to provider rate
+limits, which is a broken run rather than a weaker guardrail.
+
+**Rate limits are the main obstacle to measuring this thing, and Phase 1c made it worse.** A
+structured question costs ~40k tokens — `list_tables`, then `describe_table`, then SQL, with the
+whole conversation resent each turn — against a 200k/minute account ceiling. Three sweeps were
+thrown away before the pair above completed: at three questions in flight ten errored, at five,
+twenty-five and thirty-three did, one of them reporting `recall@5 0.033` for a set that was never
+answered. **Run the agent evals sequentially**, and read a run with errored questions as broken
+rather than weak. The errors are in the run record for exactly that reason.
 
 Groundedness and citation resolution are deterministic and should always read 1.000 — the output
 validator rejects anything else before an answer is built. They are measured anyway, because a
@@ -114,15 +139,23 @@ current `config.yaml` reproduces.
 
 ### What does not work yet
 
-- **Only one lane of three.** Nothing queries the structured plan data yet — the Exchange PUF and
-  Part D SPUF mirrors are committed and sitting on disk, but the tools that read them are Phase 1-c,
-  and the live APIs (Marketplace, openFDA, NPPES) are Phase 3. No web search either (Phase 2). Ask
-  about a specific plan, premium, provider or formulary and it will correctly tell you it cannot
-  answer. **The tri-modal routing this project is about is not built yet.**
-- **Retrieval is still the bottleneck, though less of one.** recall@5 0.800 means the agent never
+- **Two lanes of three.** No web search (Phase 2), and no live APIs — Marketplace, openFDA, NPPES
+  (Phase 3). Ask about a **provider or a network** and it will correctly decline; nothing here holds
+  provider data by design.
+- **The relational lane answers in the data's own vocabulary.** The Part D formulary carries NDC and
+  RxCUI and *no drug names*, so *"is metformin on this plan's formulary"* still needs a name → NDC
+  lookup, which is openFDA (Phase 3). Ask with an NDC and it answers today. That boundary — the
+  tables know identifiers, translating a human's words into them is the next lane's job — is the
+  honest shape of what is built.
+- **Retrieval is still the bottleneck of the reference lane.** recall@5 0.800 means the agent never
   saw the right document for about 2 of 10 in-corpus questions. Six of the thirty defeat *both*
   retrieval methods, so the remaining gap is not one more index — it is chunking, the gold set's
   phrasing, or query reformulation.
+- **Four structured gold questions is thin.** They are also unambiguous by construction, so a
+  routing score of 1.000 is the first number to distrust as that set grows.
+- **No plan comparison.** The relational lane answers about *one* plan at a time; comparing plans,
+  breaking a cost down, and checking a pharmacy network are Phase 5, and the row cap is sized for
+  lookups accordingly.
 - **No hybrid ranking.** LanceDB carries BM25 in the same table and it is deliberately unused:
   "both" means both *tools*, with the agent reconciling them, which is the thing being measured.
 - **No planning or decomposition.** The agent calls tools in a loop but does not break a compound
@@ -141,13 +174,13 @@ flowchart TD
 
     AG -->|Phase 1a| R["full-text tools<br/>list · grep · BM25 search · expand<br/>reference lane"]
     AG -->|Phase 1b| V["vector_search()<br/>reference lane"]
-    AG -.->|Phase 1c| D["relational tools<br/>list · describe · guarded SQL<br/>structured lane"]
+    AG -->|Phase 1c| D["relational tools<br/>list · describe · guarded SQL<br/>structured lane"]
     AG -.->|Phase 2| W["web_search()<br/>web lane"]
     AG -.->|Phase 3| S["typed API tools<br/>structured lane"]
 
     R --> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
     V --> C1
-    D -.-> C4["Exchange PUFs · Part D SPUF<br/>vendored Parquet mirrors"]
+    D --> C4["Exchange PUFs · Part D SPUF<br/>vendored Parquet mirrors"]
     W -.-> C2["Live web"]
     S -.-> C3["Marketplace API · openFDA · NPPES"]
 
@@ -158,18 +191,16 @@ flowchart TD
     S --> SY
     SY --> RESP["ChatResponse<br/>answer · citations · claims · trace · abstained"]
 
-    style D stroke-dasharray: 5 5
     style W stroke-dasharray: 5 5
     style S stroke-dasharray: 5 5
     style C2 stroke-dasharray: 5 5
     style C3 stroke-dasharray: 5 5
-    style C4 stroke-dasharray: 5 5
 ```
 
-*Dashed = not built yet. The agent and its reference lane are live; the other three tool sets are
-not, so **routing between lanes — the problem this project is about — has nothing to route between
-yet.** Each phase label is a set of tools added to the same agent; the box marked `Agent` is never
-rebuilt after Phase 1a. Note that 1a and 1b both point at the reference lane — they are two ways of
+*Dashed = not built yet. The agent, its reference lane and its relational lane are live; the web
+and live-API tool sets are not — so **routing is real but not yet tri-modal**: the agent chooses
+between prose and rows today, and measures 1.000 at it. Each phase label is a set of tools added to
+the same agent; the box marked `Agent` is never rebuilt after Phase 1a. Note that 1a and 1b both point at the reference lane — they are two ways of
 searching one corpus, and 1b's vector tool joins the lexical ones rather than replacing them. 1c
 and 3 both feed the structured lane the same way: 1c reads rows out of the vendored mirrors, 3 adds
 rows fetched live, and they share one `source_type`. "Decompose" is Phase 4; today the agent routes
@@ -184,13 +215,14 @@ flowchart LR
     end
     subgraph api["uvicorn :8000 (127.0.0.1)"]
         FA["FastAPI"]
-        AGT["agent/<br/>4 tools · BM25 · grounding validator"]
+        AGT["agent/<br/>8 tools · BM25 · vectors · guarded SQL<br/>grounding validator"]
         EV["evals/runner.py<br/>pluggable answerer"]
     end
     subgraph disk["data/"]
         CORP["corpus.jsonl<br/>2,056 docs"]
         CHUNK["chunks.jsonl<br/>6,722 chunks"]
-        GOLD["questions.yaml<br/>35 gold questions"]
+        MIR["processed/*.parquet<br/>10 tables · 2.96M rows"]
+        GOLD["questions.yaml<br/>40 gold questions"]
         RUNS["eval_runs/"]
     end
 
@@ -200,6 +232,7 @@ flowchart LR
     EV --> GOLD
     EV --> RUNS
     FA -->|"GET /api/corpus/:doc_id"| CORP
+    AGT -->|DuckDB, read-only| MIR
     CORP -.->|make chunk| CHUNK
 
     FA -.->|"openapi.json → schema.d.ts"| UI
@@ -217,9 +250,7 @@ flowchart LR
     PROC --> APP["app-ready<br/>corpus.jsonl<br/>(3 text corpora)"]
     PROC --> MIR["lossless mirror<br/>every column VARCHAR<br/>(2 structured sources)"]
     APP --> CH["chunks.jsonl<br/>+ committed manifest"]
-    MIR --> L5["relational query tools<br/>(Phase 1-c)"]
-
-    style L5 stroke-dasharray: 5 5
+    MIR --> L5["relational query tools<br/>(Phase 1-c, live)"]
 ```
 
 `processed/` deliberately means two different things, and the difference is load-bearing: a
@@ -282,24 +313,27 @@ targets load nvm automatically if it is installed).
 uv sync                 # Python deps into .venv
 make ui-install         # frontend deps (needs node >= 22.12)
 make chunk              # build chunks.jsonl — git-ignored, ~1s, required by the agent
+make puf                # download the plan-data mirrors — git-ignored, ~24 MB, required too
 cp .env.example .env    # then add your OPENAI_API_KEY
 make dev                # both servers → open http://127.0.0.1:5173
 ```
 
-The corpus is committed, so there is nothing to download — but `chunks.jsonl` is not, so
-`make chunk` is required. Skip it and the app boots, reports the reference lane unconfigured, and
-returns a 503 naming the fix rather than quietly answering worse.
+The text corpus is committed, so there is nothing to download for it — but `chunks.jsonl` is not,
+and neither are the Parquet plan mirrors. Skip either and the app still boots, reports that lane
+unconfigured on `/api/health`, and returns a 503 naming the command that fixes it rather than
+quietly answering worse. (To run without the plan data at all, set `agent.structured_tools: false`.)
 
-Try *"what exactly is a deductible?"*, *"does Medicare cover acupuncture for chronic low back
-pain?"*, and something out of corpus like *"which dermatologists near 30076 take Aetna?"* to see it
-abstain.
+Try *"what exactly is a deductible?"* for the reference lane, *"what is the individual medical
+deductible on marketplace plan 38344AK1060002 for 2026?"* for the relational one — it answers with
+six rows, one per cost-sharing variant, because that plan has six — and something out of reach like
+*"which dermatologists near 30076 take Aetna?"* to see it abstain.
 
 Everything else:
 
 ```bash
 make eval-retrieval     # score BM25 retrieval alone — free, instant, no API key
-make eval               # run the gold set through the agent (35 model calls)
-make eval-judge         # + grade answer correctness with an LLM judge (70 model calls)
+make eval               # run the gold set through the agent (40 model calls; run it sequentially)
+make eval-judge         # + grade answer correctness with an LLM judge (80 model calls)
 make check-all          # ruff · pyright · pytest · tsc · oxlint · vitest — never calls a model
 make types              # regenerate frontend/src/api/schema.d.ts from OpenAPI
 make scan               # secrets / PII / licensing scan — run before publishing
@@ -447,14 +481,15 @@ health_coverage_navigator/
 ├── config.yaml                   # ⭐ every non-secret tunable — committed, never env-overridable
 ├── .env.example                  # secrets template; the real .env is git-ignored
 ├── src/health_coverage_navigator/
-│   ├── agent/                    # ⭐ the agent: bm25 · index · tools · prompt · runtime
+│   ├── agent/                    # ⭐ the agent: bm25 · index · tools · structured_tools · prompt · runtime
+│   ├── structured/               # ⭐ the relational lane: catalog · store (DuckDB + the SQL guard)
 │   ├── api/
 │   │   ├── models.py             # ⭐ the frozen HTTP contract
 │   │   ├── app.py                # app factory, static mount, SPA fallback
 │   │   ├── routes/               # health · chat · evals · corpus
 │   │   └── stub.py               # Phase 0 canned answers, kept as an eval baseline
 │   ├── chunking/                 # splitter · per-source strategies · pipeline
-│   ├── evals/                    # gold set · runner · answerers · graders · judge
+│   ├── evals/                    # gold set · runner · answerers · graders · judge · structured_gold
 │   └── config.py, settings.py, corpus.py, paths.py
 ├── frontend/src/
 │   ├── api/{client,stream,schema.d.ts}   # schema.d.ts is GENERATED
@@ -462,7 +497,7 @@ health_coverage_navigator/
 │   ├── routes/{ChatPage,EvalsPage}.tsx
 │   └── components/               # SourceBadge · CitationCard · TracePanel · …
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
-├── evals/gold/questions.yaml     # 35 hand-authored, corpus-verified questions
+├── evals/gold/questions.yaml     # 40 hand-authored questions in three shapes
 ├── data/{raw,processed}/         # committed — see the licensing rules
 └── docs/                         # plan · frontend_plan · progress · glossary
                                   #   + agent · chunking · development · configuration
@@ -499,7 +534,7 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | **0** | Corpus + eval scaffold | Contract frozen, UI on a stub | ✅ **Complete** |
 | **1a** | The agent + a full-text toolset (no database) | Stub → real agent, streaming | ✅ **Complete** |
 | **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ✅ **Done** |
-| **1c** | Relational tools over the vendored PUF mirrors — DuckDB querying Parquet in place | `structured_api` badge, row-shaped citations | ⬜ |
+| **1c** | Relational tools over the vendored PUF mirrors — DuckDB querying Parquet in place | `structured_api` badge, row-shaped citations | ✅ **Done** |
 | **2** | Web-search tool (Tavily / Exa) + routing eval | `web` badge, routing accuracy | ⬜ |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |

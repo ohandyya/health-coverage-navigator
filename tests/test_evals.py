@@ -25,7 +25,11 @@ from health_coverage_navigator.evals.answerers import (
     stub_answerer,
     vector_answerer,
 )
-from health_coverage_navigator.evals.grading import groundedness_grader, key_fact_coverage_grader
+from health_coverage_navigator.evals.grading import (
+    groundedness_grader,
+    key_fact_coverage_grader,
+    routing_grader,
+)
 from health_coverage_navigator.evals.judge import (
     FactVerdict,
     JudgeVerdict,
@@ -33,7 +37,7 @@ from health_coverage_navigator.evals.judge import (
     judge_grader,
 )
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
-from health_coverage_navigator.evals.runner import aggregate, run_gold_set
+from health_coverage_navigator.evals.runner import aggregate, run_gold_set, score_question
 
 
 def _question(**overrides) -> GoldQuestion:
@@ -529,3 +533,165 @@ async def test_concurrency_one_still_reports_progress_in_gold_order():
 
     assert reported == [f"q{i}" for i in range(6)]
     assert completion == reported
+
+
+# ---------------------------------------------------------------- the relational lane --------
+#
+# Phase 1-c adds a third question shape and a second thing to measure. Both are graded through the
+# same runner and the same scorer, which is what keeps a structured number comparable to a
+# reference one — and what makes the split in `aggregate()` load-bearing rather than cosmetic.
+
+
+def _structured_question(**overrides) -> GoldQuestion:
+    payload = {
+        "id": "str-1",
+        "question": "What is the deductible on plan X for 2026?",
+        "difficulty": "medium",
+        "expected_source_type": "structured_api",
+        "plan_year": 2026,
+        "expected_table": "exchange_puf.plan_attributes",
+        "expected_cells": ["$4,500 "],
+        "answer_key_facts": ["the deductible is $4,500"],
+    }
+    payload.update(overrides)
+    return GoldQuestion.model_validate(payload)
+
+
+def await_grade(grader, question, response) -> dict[str, float]:
+    """Run one grader from a synchronous test. `asyncio.run` at a test boundary is the sanctioned
+    use — the graders are async because the LLM judge must be."""
+    return asyncio.run(grader(question, response))
+
+
+def _row_citation(snippet: str, id: str = "c1") -> Citation:
+    return Citation(
+        id=id, source_type="structured_api", title="Plan Attributes 2026", snippet=snippet
+    )
+
+
+#: One row citation carrying the value the gold question expects, verbatim.
+_CITED_CELL = "TEHBDedInnTier1Individual: $4,500 "
+
+
+def test_a_structured_question_passes_only_on_the_exact_cell() -> None:
+    """Exact match, not overlap: in this lane an approximate figure is a wrong figure, and the
+    trailing space is part of what the source published."""
+    question = _structured_question()
+    exact = score_question(question, _response([_row_citation(_CITED_CELL)]))
+    assert exact.passed and exact.metrics["structured_exact_match"] == 1.0
+
+    tidied = score_question(question, _response([_row_citation(_CITED_CELL.rstrip())]))
+    assert not tidied.passed and tidied.metrics["structured_exact_match"] == 0.0
+
+
+def test_a_structured_question_fails_when_the_agent_abstains() -> None:
+    """Abstaining on an answerable plan question is the failure this phase most plausibly adds —
+    the tables are right there, and a model that does not think to look reads as cautious."""
+    response = _response([_row_citation(_CITED_CELL)]).model_copy(update={"abstained": True})
+    assert not score_question(_structured_question(), response).passed
+
+
+def test_structured_questions_stay_out_of_the_recall_denominator() -> None:
+    """The split that keeps a capability from reading as a regression.
+
+    A structured question has no expected doc ids, so leaving it among the retrieval-scored
+    questions would drop recall@5 by construction — a headline metric moving because the question
+    *set* changed rather than because the agent did.
+    """
+    reference = score_question(
+        _question(),
+        _response(
+            [
+                Citation(
+                    id="c1",
+                    source_type="reference",
+                    title="t",
+                    doc_id="glossary_deductible",
+                    snippet="s",
+                )
+            ]
+        ),
+    )
+    structured = score_question(_structured_question(), _response([_row_citation(_CITED_CELL)]))
+
+    metrics = aggregate([reference, structured])
+    assert metrics["recall@5"] == 1.0, "the one retrieval question was retrieved"
+    assert metrics["structured_exact_match"] == 1.0
+
+
+async def test_routing_is_graded_on_the_lane_the_citations_came_from() -> None:
+    """Answer correctness and routing correctness come apart exactly here: a fluent passage about
+    deductibles in general is the *wrong lane* for "what is this plan's deductible", and only this
+    metric says so."""
+    grade = routing_grader()
+    question = _structured_question()
+
+    right = await grade(question, _response([_row_citation("x: 1")]))
+    assert right == {"routing_correct": 1.0}
+
+    wrong = await grade(
+        question,
+        _response([Citation(id="c1", source_type="reference", title="t", snippet="a passage")]),
+    )
+    assert wrong == {"routing_correct": 0.0}
+
+
+async def test_routing_does_not_grade_an_abstention() -> None:
+    """Declining is a different judgement, already measured by `abstention_accuracy`. Grading it
+    here would let a run that abstains on everything score perfectly on routing."""
+    grade = routing_grader()
+    response = _response([], answer="Not in my data.").model_copy(update={"abstained": True})
+    assert await grade(_structured_question(), response) == {}
+
+    abstention = GoldQuestion(id="abs-1", question="who takes my insurance?", expected_abstain=True)
+    assert await grade(abstention, response) == {}, "an abstention question has no lane to grade"
+
+
+def test_a_row_citation_is_not_counted_as_a_fabricated_source(agent_kit) -> None:
+    """The bug the first structured eval run found, as a test.
+
+    `groundedness_grader` resolved every citation through the corpus index, so a row citation —
+    which has no chunk id by design — scored as unresolvable. That reported the relational lane
+    working correctly as a fabrication (0.889 where the guardrail guarantees 1.000), and a metric
+    that punishes a capability for existing reads exactly like a real regression.
+    """
+    grade = groundedness_grader(agent_kit.index)
+    chunk = agent_kit.index.chunk(agent_kit.DEDUCTIBLE_ID)
+    assert chunk is not None
+
+    mixed = _response(
+        [
+            Citation(
+                id="c1",
+                source_type="reference",
+                title="t",
+                chunk_id=chunk.id,
+                snippet="before your insurance plan starts to pay",
+            ),
+            _row_citation(_CITED_CELL, id="c2"),
+        ],
+        answer="Prose. [c1] And a row. [c2]",
+    )
+    assert await_grade(grade, _question(), mixed) == {
+        "citation_resolution": 1.0,
+        "groundedness": 1.0,
+    }
+
+
+def test_an_answer_made_only_of_rows_reports_no_groundedness(agent_kit) -> None:
+    """`{}` means "this question does not have that metric", which is not the same as zero.
+
+    A row's byte-exact check happens in the output validator against the rows that run recorded,
+    and no grader can see those afterwards. Reporting a number here anyway would be inventing an
+    independent check that is really the same one, weaker.
+    """
+    rows_only = _response([_row_citation(_CITED_CELL)])
+    metrics = await_grade(groundedness_grader(agent_kit.index), _structured_question(), rows_only)
+    assert metrics == {"citation_resolution": 1.0}
+
+
+def test_an_empty_row_citation_still_counts_as_unresolved(agent_kit) -> None:
+    """Rows are exempt from the *verbatim* check, not from having to carry evidence."""
+    empty = _response([_row_citation("   ")])
+    metrics = await_grade(groundedness_grader(agent_kit.index), _structured_question(), empty)
+    assert metrics == {"citation_resolution": 0.0}

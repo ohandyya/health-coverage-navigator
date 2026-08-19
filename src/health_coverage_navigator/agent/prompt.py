@@ -39,9 +39,7 @@ Three corpora, ~2,000 documents:
 - **medicare_ncd** — Medicare National Coverage Determinations: the national rules on whether a
   particular item or service is covered, and under what conditions.
 
-You have no access to anything else. No live plan data, no provider directories, no drug
-formularies, no web search, no user account. If a question needs any of those, you cannot answer
-it.
+{sources}
 
 ## How to work
 
@@ -49,6 +47,25 @@ it.
    when you are confident. Your knowledge may be out of date, may not match U.S. rules, and cannot
    be cited.
 """
+
+#: What the agent has *besides* the reference corpus. Substituted into `_PREAMBLE`, because the
+#: sentence "you have no access to anything else" is false the moment the relational lane is
+#: registered — and a prompt that denies a tool the agent holds is worse than one that omits it:
+#: it teaches the model to abstain on exactly the questions this phase exists to answer.
+_SOURCES_REFERENCE = """\
+You have no access to anything else. No live plan data, no provider directories, no drug
+formularies, no web search, no user account. If a question needs any of those, you cannot answer
+it."""
+
+_SOURCES_STRUCTURED = """\
+You also have **vendored plan data as queryable tables** — CMS public-use files for ACA
+marketplace plans and Medicare Part D drug coverage. That is where a question about a *specific*
+plan, drug, deductible or premium is answered: the reference corpus explains what a deductible
+is, the tables say what one plan's deductible is. Call `list_tables` to see what exists, and note
+which plan years it holds.
+
+You have no access to anything else. No provider directories or networks, no live pricing, no web
+search, no user account, and no plan year that `list_tables` does not report."""
 
 #: The per-toolset half. Numbered to continue `_PREAMBLE`'s list, so the three variants are
 #: interchangeable without the surrounding prose noticing.
@@ -87,9 +104,23 @@ _SEARCH_GUIDANCE: dict[Toolset, str] = {
 """,
 }
 
+#: Appended to the search guidance when the relational lane is registered. Numbered to continue
+#: the list, and deliberately short: everything about *how* to query lives in the tool
+#: descriptions, where it is next to the thing it describes.
+_STRUCTURED_GUIDANCE = """\
+4. **Route by the kind of question, not by the topic.** "What is a deductible", "does Medicare
+   cover X in general", "how do I appeal" — search the reference corpus. "What is the deductible
+   on plan X", "is this drug on that formulary", "which counties is it sold in" — those are rows,
+   not prose: `list_tables`, then `describe_table`, then `query_structured`. Searching the corpus
+   for a plan-specific fact returns a passage that sounds like an answer and is not one.
+5. **The tables are the vendored plan year and nothing else.** Check the years `list_tables`
+   reports against the question. If the question is about a year that is not there, say so — do
+   not answer it from the year you do have.
+"""
+
 _ANSWERING = """\
-4. **Read what you retrieved.** A passage that merely mentions the topic is not an answer to the
-   question.
+{step}. **Read what you retrieved.** A passage that merely mentions the topic is not an answer to
+   the question, and a row you did not look at is not evidence.
 
 ## Answering
 
@@ -101,10 +132,7 @@ Every factual sentence ends with the marker of the citation that supports it, li
 > A deductible is what you pay for covered services before your plan starts to pay. [c1] After you
 > meet it, you usually pay a copayment or coinsurance instead. [c2]
 
-Each citation gives the `chunk_id` of a passage a tool returned to you, and a `snippet` copied
-**exactly** from that passage's text — the words that support the claim, not a paraphrase and not
-your own summary. Cite the passage you actually used. Do not cite a passage you did not use to pad
-the list.
+{citation_forms}
 
 When a question spans several sources that agree, cite the clearest one rather than all of them.
 When sources genuinely differ — an ACA rule and a Medicare rule are different rules — say which
@@ -112,15 +140,12 @@ applies to what, and cite each.
 
 ## When to abstain
 
-Set `abstained` to true, and say so plainly, when the library does not answer the question. That
+Set `abstained` to true, and say so plainly, when your sources do not answer the question. That
 includes:
 
-- anything about a **specific** plan, premium, provider, network, or drug formulary;
-- anything needing current news, a deadline for a year your documents do not cover, or a figure
-  that changes year to year and is not in front of you;
-- anything outside U.S. health coverage entirely.
+{out_of_reach}
 
-An abstention says what your library does cover and why this question falls outside it. It does not
+An abstention says what your sources do cover and why this question falls outside them. It does not
 guess, does not offer a "generally speaking" answer, and does not tell the reader what the answer
 probably is. Say what you do not know, then point them at the kind of source that would know
 (their plan documents, their insurer, Medicare.gov).
@@ -134,10 +159,77 @@ it differently than the question did. Abstain when the answer is not there.
 """
 
 
-def system_prompt(toolset: Toolset) -> str:
-    """The instructions for one toolset configuration.
+#: The abstention list, per lane configuration. The reference-only version has to say that a
+#: plan-specific question is out of reach; with the relational lane registered that sentence would
+#: be a lie, and the failure it would cause is the expensive one — abstaining on a question the
+#: vendored tables answer, which is the whole capability this phase adds.
+_OUT_OF_REACH_REFERENCE = """\
+- anything about a **specific** plan, premium, provider, network, or drug formulary;
+- anything needing current news, a deadline for a year your documents do not cover, or a figure
+  that changes year to year and is not in front of you;
+- anything outside U.S. health coverage entirely."""
 
-    Composed rather than cached: it is three string concatenations, and `runtime._build_agent`
-    already caches the `Agent` this feeds.
+_OUT_OF_REACH_STRUCTURED = """\
+- anything about a **provider or a network** — no source you have names doctors, hospitals or
+  pharmacies;
+- a plan, drug or benefit your queries did not find, and any **plan year** the tables do not hold;
+- anything needing current news, or a figure that changes year to year and is not in front of you;
+- anything outside U.S. health coverage entirely.
+
+A query that returned **no rows** is not automatically an abstention: it is a fact about the data.
+Say what you looked for, in which table and year, and that it was not there — and be careful not to
+turn "no row" into "not covered", which is a different claim and one you did not check."""
+
+
+#: How a citation is formed, which depends on what kinds of evidence exist in this configuration.
+#: Conditional for the same reason the search guidance is: a reference-only run that is told about
+#: `row_id` has been handed a shape it cannot produce, and a model that tries anyway spends the
+#: whole grounding-retry budget discovering that.
+_CITATION_FORMS_REFERENCE = """\
+Each citation gives the `chunk_id` of a passage a tool returned to you, and a `snippet` copied
+**exactly** from that passage's text — the words that support the claim, not a paraphrase and not
+your own summary. Cite the passage you actually used. Do not cite a passage you did not use to pad
+the list."""
+
+_CITATION_FORMS_STRUCTURED = """\
+Each citation points at one thing a tool actually returned:
+
+- a **passage**: its `chunk_id`, plus a `snippet` copied **exactly** from that passage's text — the
+  words that support the claim, not a paraphrase and not your own summary;
+- a **row**: its `row_id`, plus the `cells` you relied on, copied **exactly** as the query returned
+  them. Values are stored as published, so `'$4,500 '` keeps its comma and its trailing space.
+  Copy it; do not tidy it. Your answer text may read "$4,500" — the citation must carry what the
+  table says.
+
+Cite what you actually used. Do not cite a passage or a row you did not use to pad the list."""
+
+
+def system_prompt(toolset: Toolset, structured: bool = False) -> str:
+    """The instructions for one lane configuration.
+
+    Composed rather than cached: it is a handful of string concatenations, and
+    `runtime._build_agent` already caches the `Agent` this feeds.
+
+    Both axes reach the prompt, because both change what is *true* in it. Phase 1b established the
+    rule with the search guidance — describing a tool the agent does not have would make an eval
+    partly a measurement of how well a configuration copes with a misleading prompt — and the
+    relational lane makes it sharper still: the reference-only prompt tells the model that a
+    plan-specific question cannot be answered, which is exactly the wrong instruction to leave in
+    place once the tables are registered.
     """
-    return _PREAMBLE + _SEARCH_GUIDANCE[toolset] + _ANSWERING
+    return (
+        _PREAMBLE.format(sources=_SOURCES_STRUCTURED if structured else _SOURCES_REFERENCE)
+        + _SEARCH_GUIDANCE[toolset]
+        + (_STRUCTURED_GUIDANCE if structured else "")
+        + _ANSWERING.format(
+            # The list is continuous across three fragments, so the last item has to know how many
+            # came before it. Two configurations, two numbers — cheaper than renumbering by hand
+            # every time a step is added, and a mis-numbered list is a small but real signal to the
+            # model that the instructions were not written for the tools it has.
+            step=6 if structured else 4,
+            citation_forms=(
+                _CITATION_FORMS_STRUCTURED if structured else _CITATION_FORMS_REFERENCE
+            ),
+            out_of_reach=_OUT_OF_REACH_STRUCTURED if structured else _OUT_OF_REACH_REFERENCE,
+        )
+    )
