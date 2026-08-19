@@ -17,6 +17,12 @@ AI (e.g., Claude) should **NOT** read this document.
     - The QA Agent can have its own tool.
     - We want the UI to see that `QAing now...`
 
+
+3. Use AI to see if we miss any technical highlights.
+    - Ask AI to list out potential highlights that are missing
+    - User confirm which one to add
+    - Then AI add
+
 ## Work Log
 
 ### Aug 18, 2026

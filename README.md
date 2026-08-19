@@ -36,6 +36,22 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 
 ---
 
+## Technical highlights
+
+**If you are here to read the engineering, start with
+[docs/technical_highlights.md](docs/technical_highlights.md).** Four mechanisms written up in full —
+each stating the problem, the approach, the obvious alternative that was rejected, and the evidence
+that it works:
+
+| | |
+|---|---|
+| [Hallucinated citations are made structurally impossible, not discouraged](docs/highlights/grounded-citations.md) | The citable set is recorded by the tools; an output validator refuses anything outside it. Not a prompt instruction — a code path the model cannot talk its way past |
+| [A test suite that *cannot* spend money — and the guard that had to be repaired](docs/highlights/offline-test-suite.md) | A safety flag borrowed from a library covers that library's surface area, not your intent. How the hole opened, how it was found, and what closes it |
+| ["Missing" and "wrong" are different failures, and get opposite treatment](docs/highlights/missing-vs-stale.md) | Degrade when the system is visibly reduced; refuse when it would be invisibly wrong. One rule, three call sites, three different policies |
+| [Letting a model write SQL — safely, successfully, and with every number citable](docs/highlights/model-written-sql.md) | Two independent guards on model-written SQL, the mechanisms that make the model's queries *succeed*, and a byte-exact citation for a table cell |
+
+---
+
 ## Status — Phase 1c of 5 complete
 
 > **Where this actually is:** the agent is live on **two lanes of three**. Ask a health-coverage
@@ -347,7 +363,9 @@ make help               # everything
 
 ## Engineering decisions worth defending
 
-Each of these is written up in full in `docs/`, including the alternatives that were rejected.
+Each of these is written up in full in `docs/`, including the alternatives that were rejected. The
+four with the most to say for themselves have their own pages under
+[docs/highlights/](docs/highlights/) — see [Technical highlights](#technical-highlights) above.
 
 **1. The eval harness was built before the agent, and the answerer is a parameter.**
 At Phase 0 that parameter was the chat stub, so metrics were *genuinely computed against canned
@@ -357,6 +375,7 @@ dashboard were untouched — and it also added a third answerer that retrieves a
 A harness written after the agent tends to be written to make the agent look good.
 
 **1b. The grounding guardrail is code, not a sentence in the prompt.**
+([full write-up](docs/highlights/grounded-citations.md))
 Every chunk a tool returns is recorded; an output validator rejects a citation of anything else, a
 quotation not verbatim in its chunk, or a marker pointing at nothing — and tells the model why so
 it can retry. Citations are then rebuilt from the real chunk, so the model contributes only *which*
@@ -412,6 +431,7 @@ the central directory: every member is verified before being written, so a mis-o
 loudly instead of landing as plausible garbage.
 
 **7. Structured sources land as a lossless mirror, not a model.**
+([what Phase 1-c then did with it](docs/highlights/model-written-sql.md))
 Every column of the Exchange PUFs is stored as `VARCHAR`, byte-for-byte. Every "numeric" column
 there is publisher-formatted text (`'$450 '`, `'70.88%'`, `'Not Applicable'` sitting beside an
 empty field — and those two mean *different* things), and Plan Attributes carries **36
@@ -501,6 +521,7 @@ health_coverage_navigator/
 ├── data/{raw,processed}/         # committed — see the licensing rules
 └── docs/                         # plan · frontend_plan · progress · glossary
                                   #   + agent · chunking · development · configuration
+                                  #   + technical_highlights.md → highlights/*.md  ⭐
                                   #   + per-source data guides
 ```
 
