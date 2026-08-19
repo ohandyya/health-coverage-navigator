@@ -172,10 +172,10 @@ pulling the freshest official explanation of a concept at query time.
 **General web search tool** — this is where the agent goes when the question isn't answerable
 from the corpus or a structured endpoint: "any recent news on drug X," "did this insurer have a
 market-conduct action," "what changed for the 2026 plan year that isn't in my index yet."
-An **agent-oriented search API — Tavily or Exa** — rather than a scrape-and-parse SERP: both
-return clean extracted content with source URLs, which is what the provenance requirement needs
-and what a raw search-results page does not give. Wired up in
-[Phase 2](#phase-2--add-the-web-search-tool); the choice between them is made there.
+An **agent-oriented search API — Tavily** — rather than a scrape-and-parse SERP: it returns clean
+extracted content with source URLs, which is what the provenance requirement needs and what a raw
+search-results page does not give. Wired up in [Phase 2](#phase-2--add-the-web-search-tool);
+designed in [web_search_tool.md](web_search_tool.md).
 
 > ### ⚠️ Licensing note (matters because this repo is public)
 > CMS **NCDs** and the **HealthCare.gov content** are freely reusable. But the Medicare Coverage
@@ -443,6 +443,11 @@ the trace; and it abstains when the plan, drug or plan year is not in the vendor
 
 ### Phase 2 — Add the web-search tool
 
+**[web_search_tool.md](web_search_tool.md) is the design document for this phase** — the tool, the
+Tavily client and its failure modes, the per-run budgets, the web-citation provenance model, result
+hygiene, configuration, module layout, and the eval mechanics all live there. This section records
+only what belongs to a schedule: why the phase sits here, and what "done" means.
+
 Grow the same agent with a third *lane*. Phase 1-c already made it choose between prose and rows,
 but both of those sit on disk where it can look before deciding. The web is the first destination
 whose contents it cannot inventory in advance — "is this in anything I hold at all, or do I need
@@ -450,14 +455,22 @@ the open web?" — and the wrong answer is a confident abstention, or a web answ
 corpus already settles. The routing eval slice introduced in Phase 1-c widens from two lanes to
 three: the measurement exists; what grows is the number of ways to be wrong.
 
-Use an **agent-oriented search API — Tavily or Exa** — not a scraped SERP. Both return extracted
-page content with source URLs in one call, which is exactly what the per-claim provenance
-requirement needs; scraping would mean owning an extraction pipeline that has nothing to do with
-this project. Tavily and Exa differ in emphasis (Tavily leans Q&A-shaped answers with snippets,
-Exa leans semantic/neural search over pages), so pick by measuring both on the out-of-corpus
-slice of the gold set rather than by reputation. Either way the key is a secret in `.env` and the
-tool is wrapped so a rate-limit or an outage degrades to an honest "couldn't check the web"
-rather than a fabricated answer.
+Use an **agent-oriented search API**, not a scraped SERP: it returns extracted page content with
+source URLs in one call, which is exactly what the per-claim provenance requirement needs, whereas
+scraping would mean owning an extraction pipeline that has nothing to do with this project.
+
+**Tavily, decided rather than measured.** This section previously called for picking between Tavily
+and Exa by measuring both on the out-of-corpus slice of the gold set. That comparison is
+deliberately not being run, and the reasoning is in
+[web_search_tool.md](web_search_tool.md) §1: this phase grades **routing and groundedness, not
+answer correctness** — because a gold answer about "recent news" rots within a week — so a
+provider A/B would compare two search backends on whether the agent *chose* the web lane, which is a
+property of the prompt and the tool description rather than of the backend. It would measure almost
+nothing, on four or five questions, against a gold set whose known run-to-run spread is wider than
+any effect it could show.
+
+Either way the key is a secret in `.env` and the tool is wrapped so a rate-limit or an outage
+degrades to an honest "couldn't check the web" rather than a fabricated answer.
 
 **Milestone / acceptance test:** you can ask something not in the corpus and get a real
 web-sourced answer — and the agent chose the right lane on its own.

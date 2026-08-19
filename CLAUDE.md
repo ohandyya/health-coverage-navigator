@@ -23,7 +23,9 @@ Reference docs: [development.md](docs/development.md) (commands, gates, toolchai
 [configuration.md](docs/configuration.md) · [chunking.md](docs/chunking.md) ·
 [agent.md](docs/agent.md) (toolset, grounding guardrail, loop limits, grading) ·
 [lancedb.md](docs/lancedb.md) · [relational-tool.md](docs/relational-tool.md) (Phase 1-c: the
-structured lane's design — tools, SQL guard, row citations) · per-source data guides
+structured lane's design — tools, SQL guard, row citations) ·
+[web_search_tool.md](docs/web_search_tool.md) (Phase 2: the web lane's design — Tavily client,
+budgets, web citations, three-lane routing evals) · per-source data guides
 (`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
 **Presentation, not reference:** [technical_highlights.md](docs/technical_highlights.md) indexes

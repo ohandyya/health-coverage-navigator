@@ -25,6 +25,11 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Work Log
 
+### Aug 19, 2026
+
+#### To Dos
+- Update `docs/agent.md` after we implement the web-search tools.
+
 ### Aug 18, 2026
 
 #### To Dos
