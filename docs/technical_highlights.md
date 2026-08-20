@@ -42,7 +42,12 @@ refuses the live factory, a deterministic fake at the seam we own, and a product
 because `from x import y` freezes a reference where `import x` keeps a seam, and that difference
 decided whether the guard bound at all.
 
-**300 tests, no API key, no network, about twelve seconds.**
+**Phase 2 re-opened the same hole, exactly as the write-up predicted it would** — a Tavily search
+leaves through `httpx` and consults neither existing guard. It cost a paragraph rather than a
+debugging session, because the shape had already been paid for and written down. Three guards now,
+one per dependency that can open a socket.
+
+**373 tests, no API key, no network, about twelve seconds.**
 
 ---
 

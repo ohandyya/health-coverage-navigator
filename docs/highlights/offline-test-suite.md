@@ -40,6 +40,20 @@ reaches a provider *through PydanticAI*". Those were the same sentence right up 
 and nothing announced the divergence. Any new dependency that can open a socket re-opens this
 question.
 
+### The lesson was load-bearing: Phase 2 re-opened it, exactly as predicted
+
+The sentence above ended "any new dependency that can open a socket re-opens this question", and
+**Phase 2 added one**: a Tavily search, which leaves through `httpx` and consults neither
+`ALLOW_MODEL_REQUESTS` nor the embedder guard. Same hole, third surface. Because the pattern was
+already written down it was closed *while the lane was being built* rather than discovered
+afterwards — a third autouse fixture refusing the live client factory, patched at our factory for
+the same reason as B below.
+
+That is the argument for writing this kind of thing down at all. The Phase 1b hole cost a debugging
+session; the Phase 2 one cost a paragraph, because someone had already paid to learn the shape of
+it. There are now three guards, and the honest way to state the invariant is: **one guard per
+dependency that can open a socket, and adding such a dependency means adding one.**
+
 ## The approach: a negative guard plus a positive substitute
 
 **A. The guard — refuse the live factory, suite-wide.**
@@ -122,9 +136,15 @@ like our mock, which is a test that can never fail for a real reason.
 
 ## Evidence
 
-- **300 tests run with no API key, no network, and no billing**, in about twelve seconds.
-- The hole was real and is now closed in both directions: the guard fails loudly on the live
+- **373 tests run with no API key, no network, and no billing**, in about twelve seconds.
+- The hole was real and is now closed in all three directions: each guard fails loudly on its live
   factory, and every consumer resolves through the module so the guard actually binds.
+- **The web lane took the pattern one step further.** Its guard blocks the live *client factory*,
+  but the tests still drive a **real `AsyncTavilyClient`** — over an `httpx.MockTransport`. That was
+  the deciding argument for using the vendor SDK rather than hand-rolling the HTTP call: the SDK
+  accepts an injected client, so the tests exercise its own status-code-to-exception mapping instead
+  of our idea of it. Same principle as the real LanceDB below — fake what leaves the machine, keep
+  what you are testing.
 - A companion gap surfaced from the same instinct and was fixed alongside it: under the shipped
   configuration the agent reaches for keyword search first and succeeds, so **every default
   `make smoke` run exercised only the lexical path** — `vector_search` could have broken live with

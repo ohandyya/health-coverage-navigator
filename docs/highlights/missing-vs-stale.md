@@ -85,7 +85,9 @@ message naming `make embed` is the cheap version of that discovery.
 ## The same two errors, a different policy per context
 
 This is the part worth presenting, because it shows the rule is *derived* rather than copied around.
-Three call sites, three policies, each following from what wrongness would cost **there**:
+Three call sites, three policies, each following from what wrongness would cost **there** (the
+fourth resource, Phase 2's search client, is the section below — it has only half of this table's
+problem, and the half it lacks is instructive):
 
 | Context | Missing | Stale | Why |
 |---|---|---|---|
@@ -104,6 +106,25 @@ retrieval setup nobody chose, with nothing in the response saying so.
 
 **`make embed-check`** is the offline half: it compares the snapshot id and row count without
 re-embedding, so drift is caught in the same breath as `make chunk-check` rather than at boot.
+
+### The web lane has only one of the two errors, and the absence is the point
+
+Phase 2 added a fourth resource to this rule — the Tavily client — and it exercises exactly **half**
+of it, which is a useful check that the rule is about *consequences* rather than about resources.
+
+A search API has no local artifact, so there is nothing that can go **stale**: every call is fresh by
+construction, and the "refuse to boot" branch has nothing to guard. What remains is *missing*, and
+it differs from the other three in one visible way: no build step fixes it. `chunks.jsonl`,
+the vector store and the Parquet mirrors are all cured by a `make` target; a missing
+`TAVILY_API_KEY` is cured by editing `.env`. So the 503 names the file rather than a command —
+degrade at startup, refuse at request time, and say the right thing about *why*.
+
+There is a second half of the same rule inside the lane, one layer down. A Tavily **outage
+mid-request** is neither missing nor stale; it is a resource that was there at boot and is not there
+now. It cannot refuse to boot and it must not fail the whole answer, so it degrades — but into a
+result carrying `unavailable`, never an empty list. That distinction is the rule's core applied to a
+third state: an empty result means *the web does not appear to cover this*, and an outage means
+*nothing was asked*. Collapsing them would let a rate limit be served to a reader as a finding.
 
 ## Evidence
 
