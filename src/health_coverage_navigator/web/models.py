@@ -18,7 +18,23 @@ rows is a finding rather than a failure (docs/relational-tool.md §6). Collapsin
 an outage be reported to a reader as "the web does not cover this".
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+#: Tavily search topics this repo exposes. `finance` is a real Tavily value and is deliberately
+#: **not** here: it routes to a market-data index with nothing to say about health coverage, and
+#: every value offered to a model is a value it can choose wrongly.
+#:
+#: A `Literal` rather than a plain `str` because it is the type the tool signature and the client
+#: agree on — `agent/web_tools.py` derives its runtime check from this via `get_args`, so the check
+#: and the type cannot drift.
+WebTopic = Literal["general", "news"]
+
+#: Tavily's publication-recency filter. Tavily also accepts single-letter forms (`d`/`w`/`m`/`y`),
+#: omitted for the same reason as `finance`: two spellings of one concept is one more thing for a
+#: model to get wrong.
+TimeRange = Literal["day", "week", "month", "year"]
 
 
 class WebResult(BaseModel):

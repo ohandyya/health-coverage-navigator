@@ -23,13 +23,14 @@ one sentence short, the only recovery is a narrower query. Build it when traces 
 """
 
 import time
+from typing import cast, get_args
 
 from pydantic_ai import ModelRetry, RunContext
 
 from health_coverage_navigator.agent.deps import AnswerDeps
 from health_coverage_navigator.config import get_config
 from health_coverage_navigator.web.client import BUDGET_SPENT
-from health_coverage_navigator.web.models import WebSearchResults
+from health_coverage_navigator.web.models import TimeRange, WebSearchResults, WebTopic
 
 #: What the tool says when the lane is configured but the client is not there. Unreachable in the
 #: app — `routes/chat.py` returns a 503 before the agent runs — but reachable in a test or a script
@@ -40,12 +41,11 @@ NO_CLIENT = (
     "data if they cover the question, and otherwise say that you could not check the web."
 )
 
-#: Tavily's `topic` values that this tool exposes. `finance` is omitted deliberately: it routes to a
-#: market-data index that has nothing to say about health coverage, and every value offered to a
-#: model is a value it can choose wrongly.
-TOPICS = ("general", "news")
-
-TIME_RANGES = ("day", "week", "month", "year")
+#: Derived from the types rather than restated, so the runtime check and the signature cannot drift
+#: — a check that has quietly stopped matching the type it guards is worse than no check. What each
+#: vocabulary deliberately omits, and why, is documented on the `Literal`s in `web/models.py`.
+TOPICS = get_args(WebTopic)
+TIME_RANGES = get_args(TimeRange)
 
 
 async def web_search(
@@ -100,6 +100,11 @@ async def web_search(
     if client is None:  # pragma: no cover - `select_tools` makes this unreachable in the app
         raise ModelRetry(NO_CLIENT)
 
+    # The tool signature takes plain `str` on purpose: this is the boundary a *model* writes to, and
+    # a value outside the vocabulary has to come back as a `ModelRetry` naming the alternatives
+    # rather than as a schema rejection the model cannot read. The casts below are what that
+    # validation buys — they are safe exactly because the checks above passed, and they are the only
+    # honest way to tell the type checker that a runtime check narrowed something.
     if topic not in TOPICS:
         raise ModelRetry(f"topic must be one of {list(TOPICS)}; got {topic!r}.")
     if time_range is not None and time_range not in TIME_RANGES:
@@ -117,8 +122,8 @@ async def web_search(
     else:
         results = await client.search(
             query,
-            topic=topic,
-            time_range=time_range,
+            topic=cast(WebTopic, topic),
+            time_range=cast(TimeRange, time_range) if time_range else None,
             max_results=max_results,
             sequence=deps.next_web_search(),
         )

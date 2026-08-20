@@ -39,14 +39,39 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
-from typing import Any
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
 from health_coverage_navigator.config import WebConfig, get_config
-from health_coverage_navigator.web.models import WebResult, WebSearchResults
+from health_coverage_navigator.web.models import (
+    TimeRange,
+    WebResult,
+    WebSearchResults,
+    WebTopic,
+)
+
+if TYPE_CHECKING:
+    # **Type-only: the annotations below are real, and nothing imports `tavily` to read them.**
+    #
+    # The saving is modest and worth stating honestly rather than overselling — ~35-70 ms marginal,
+    # measured with `httpx` already loaded, since this module imports that regardless; `requests`
+    # and `tiktoken` are most of it, and the SDK needs `tiktoken` only for `get_search_context`,
+    # which this repo never calls. Against a ~220 ms import of this module (pydantic, yaml, httpx)
+    # that is real but not dramatic.
+    #
+    # The better reason is consistency: `tavily_client()` below already imports at **call** time,
+    # for the same reason `vectors/embedder.openai_embedder` does — it is the one function that
+    # spends money, and `tests/conftest.py` replaces it wholesale. Keeping the type-only import here
+    # means the sole runtime reference to `tavily` in this module stays inside that one function.
+    #
+    # `tavily-python` ships no `py.typed`, so pyright infers from its source rather than from stubs
+    # (`useLibraryCodeForTypes`, on by default). Verified that this catches a misspelled SDK method
+    # and an out-of-vocabulary literal; it does **not** catch a bogus keyword argument, because the
+    # SDK's `search()` ends in `**kwargs` by design.
+    from tavily import AsyncTavilyClient
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +203,7 @@ class _RetryAfterTransport(httpx.AsyncBaseTransport):
         await self._wrapped.aclose()
 
 
-def tavily_client(config: WebConfig, api_key: str) -> Any:
+def tavily_client(config: WebConfig, api_key: str) -> "AsyncTavilyClient":
     """An `AsyncTavilyClient` with the retry transport and the timeout attached.
 
     **Call this through the module** (`client.tavily_client(...)`), not through a
@@ -229,7 +254,7 @@ def domain_of(url: str) -> str:
 class WebSearchClient:
     """Tavily's `/search`, with hygiene and degradation. Holds no per-run state."""
 
-    _client: Any
+    _client: "AsyncTavilyClient"
     _config: WebConfig
 
     @classmethod
@@ -237,7 +262,7 @@ class WebSearchClient:
         cls,
         *,
         config: WebConfig | None = None,
-        client: Any = None,
+        client: "AsyncTavilyClient | None" = None,
     ) -> "WebSearchClient":
         """Build the client, refusing to pretend the lane exists without a key.
 
@@ -261,16 +286,19 @@ class WebSearchClient:
         return cls(tavily_client(resolved, key.get_secret_value()), resolved)
 
     async def close(self) -> None:
-        close = getattr(self._client, "close", None)
-        if close is not None:
-            await close()
+        """Release the underlying connection pool.
+
+        A direct call rather than the `getattr(..., "close", None)` dance the untyped version
+        needed: naming the type is what makes it checkable that this method exists.
+        """
+        await self._client.close()
 
     async def search(
         self,
         query: str,
         *,
-        topic: str = "general",
-        time_range: str | None = None,
+        topic: WebTopic = "general",
+        time_range: TimeRange | None = None,
         max_results: int | None = None,
         sequence: int = 1,
     ) -> WebSearchResults:
@@ -291,12 +319,19 @@ class WebSearchClient:
                 query,
                 search_depth=config.search_depth,
                 topic=topic,
-                time_range=time_range,
+                # Two `pyright: ignore`s below, and they are the SDK's bug rather than ours: it
+                # declares `time_range: Literal[...] = None` and `exclude_domains: Sequence[str] =
+                # None` — a `None` default on a non-optional annotation. Passing `None` is the
+                # documented way to omit either (`_search` strips `None` values before serialising),
+                # so the runtime is correct and only the annotation is wrong. Narrow ignores rather
+                # than widening our own signature, which would push the vendor's mistake into this
+                # repo's types.
+                time_range=time_range,  # pyright: ignore[reportArgumentType]
                 # Over-fetch, because hygiene removes results *after* Tavily ranks them. Asking for
                 # exactly `cap` and then dropping three duplicates leaves the model with two.
                 max_results=min(cap * 2, 20),
                 chunks_per_source=config.chunks_per_source,
-                exclude_domains=list(config.exclude_domains) or None,
+                exclude_domains=list(config.exclude_domains) or None,  # pyright: ignore[reportArgumentType]
                 include_answer=False,
                 include_raw_content=False,
                 include_images=False,
