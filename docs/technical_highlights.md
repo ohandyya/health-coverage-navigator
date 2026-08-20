@@ -7,7 +7,8 @@ was rejected, and what evidence exists that it works.
 
 This is a *presentation* index. The reference docs the pages point at carry the full reasoning —
 [agent.md](agent.md), [chunking.md](chunking.md), [lancedb.md](lancedb.md),
-[relational-tool.md](relational-tool.md) — and [progress.md](progress.md) carries the history.
+[relational-tool.md](relational-tool.md), [web_search_tool.md](web_search_tool.md) — and
+[progress.md](progress.md) carries the history.
 
 ---
 
@@ -21,7 +22,12 @@ which is a preference rather than a guarantee.
 Instead, the citable set is **recorded by the tools as a side effect of retrieval**, and an output
 validator rejects any answer citing outside it or misquoting inside it, handing the model the reason
 and letting it retry. There is no wording the model can choose that gets around this. Citations are
-then rebuilt from the real `Chunk`, so an invented title has no path to the browser.
+then rebuilt from the real evidence, so an invented title has no path to the browser.
+
+**The web lane is where this stops being tidy and starts being necessary.** An invented `chunk_id`
+is visibly internal machinery; an invented *URL* is well-formed, plausible, and checkable by nobody
+— so a web citation names an id only a search can assign, never the URL it points at. The page also
+records what three lanes' worth of extension actually cost, including the one that was not free.
 
 `groundedness` and `citation_resolution` read **1.000 on every agent run ever recorded** — and the
 reason they are measured anyway is that a number below 1.0 would be a bug in the validator, not a

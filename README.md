@@ -45,7 +45,7 @@ that it works:
 
 | | |
 |---|---|
-| [Hallucinated citations are made structurally impossible, not discouraged](docs/highlights/grounded-citations.md) | The citable set is recorded by the tools; an output validator refuses anything outside it. Not a prompt instruction — a code path the model cannot talk its way past |
+| [Hallucinated citations are made structurally impossible, not discouraged](docs/highlights/grounded-citations.md) | The citable set is recorded by the tools; an output validator refuses anything outside it. Not a prompt instruction — a code path the model cannot talk its way past. Most necessary in the web lane, where an invented URL is plausible and checkable by nobody |
 | [A test suite that *cannot* spend money — and the guard that had to be repaired](docs/highlights/offline-test-suite.md) | A safety flag borrowed from a library covers that library's surface area, not your intent. How the hole opened, how it was found, what closes it — and the phase that re-opened it exactly as the write-up predicted |
 | ["Missing" and "wrong" are different failures, and get opposite treatment](docs/highlights/missing-vs-stale.md) | Degrade when the system is visibly reduced; refuse when it would be invisibly wrong. One rule, four resources, a different policy at each call site |
 | [Letting a model write SQL — safely, successfully, and with every number citable](docs/highlights/model-written-sql.md) | Two independent guards on model-written SQL, the mechanisms that make the model's queries *succeed*, and a byte-exact citation for a table cell |
