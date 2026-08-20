@@ -28,7 +28,17 @@ AI (e.g., Claude) should **NOT** read this document.
 ### Aug 19, 2026
 
 #### To Dos
-- Update `docs/agent.md` after we implement the web-search tools.
+
+- Annotation change
+
+    - In `src/health_coverage_navigator/web/client.py`, `tavily_client(..)` returns Any, and `WebSearchClient._client` is of of type Any. Change them to `AsyncTavilyClient`.
+
+    - This means `AsyncTavilyClient` should be imported at the top of the module
+
+- What are the "citations" for web? Is it the full text? Is it the URL? Verify this from the UI
+
+- Make sure the metrics in README.md is updated
+
 
 ### Aug 18, 2026
 
