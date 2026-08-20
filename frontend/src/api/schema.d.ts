@@ -329,6 +329,8 @@ export interface components {
             rank?: number | null;
             /** Retrieved Doc Ids */
             retrieved_doc_ids?: string[];
+            /** Tools Used */
+            tools_used?: string[];
         };
         /** EvalQuestionsResponse */
         EvalQuestionsResponse: {
@@ -374,6 +376,8 @@ export interface components {
             toolset?: string | null;
             /** Vectors Snapshot Id */
             vectors_snapshot_id?: string | null;
+            /** Web */
+            web?: boolean | null;
         };
         /**
          * EvalRunEventEnvelope
@@ -469,6 +473,8 @@ export interface components {
             toolset?: string | null;
             /** Vectors Snapshot Id */
             vectors_snapshot_id?: string | null;
+            /** Web */
+            web?: boolean | null;
         };
         /** GoldQuestion */
         GoldQuestion: {
@@ -591,6 +597,11 @@ export interface components {
         TokenEvent: {
             /** Delta */
             delta: string;
+            /**
+             * Reset
+             * @default false
+             */
+            reset: boolean;
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}

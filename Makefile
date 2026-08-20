@@ -2,6 +2,7 @@
         chunk chunk-check embed embed-check puf scan scan-staged scan-unstaged scan-selftest \
         ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
         eval eval-retrieval eval-retrieval-vector eval-lexical eval-vector eval-judge \
+        eval-web eval-no-web smoke-web \
         eval-stub smoke smoke-abstain
 
 .DEFAULT_GOAL := help
@@ -121,6 +122,12 @@ smoke: ## Ask the live agent one real question and check the streaming path (1 m
 smoke-abstain: ## Same, but out-of-corpus — the agent must decline, not invent sources
 	uv run python scripts/smoke.py --abstain
 
+# The web lane's liveness check, and the only command in this repo that reaches Tavily. Same
+# three-rung logic as `smoke`: a failing test means this repo is wrong, a failing smoke check might
+# mean the vendor changed something, and one command meaning either teaches you to shrug at red.
+smoke-web: ## Ask a current-events question live — the agent must reach the web and cite a real URL
+	uv run python scripts/smoke.py --web
+
 # All three write to data/eval_runs/, so deliberately not in check-all for the same reason as
 # `chunk`. `eval` and `eval-judge` also cost money — 35 model calls each, doubled with the judge —
 # which is the second reason a fast inner-loop gate must not run them.
@@ -154,6 +161,18 @@ eval-vector: ## Agent restricted to vector_search (35 model calls)
 
 # Answer correctness, graded per key fact by a second model. Opt-in and deliberately unreachable
 # from the UI: a button that spends money on every click is the wrong affordance.
+# Phase 2's axis. `eval-web` is what `make eval` already does when config.yaml has web_tools on;
+# it exists as a named target so the pair reads as a pair. `eval-no-web` is the one that earns its
+# keep: it answers "does the third lane cost anything on the questions that were already
+# answerable", which is the same question `--no-structured` asked one lane earlier. Run them
+# back-to-back and compare, and read both against progress.md's standing caveat that a single agent
+# run at fixed config has a 0.200 spread.
+eval-web: ## Agent with the web lane on (needs TAVILY_API_KEY; ~39 model calls + Tavily credits)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --web
+
+eval-no-web: ## Agent with the web lane off — the control for eval-web (~35 model calls)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --no-web
+
 eval-judge: ## Run the gold set through the agent AND grade answers with the LLM judge
 	uv run python -m health_coverage_navigator.evals.runner --runner agent --judge
 

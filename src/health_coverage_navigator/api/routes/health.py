@@ -69,6 +69,24 @@ def _retrieval_detail(ctx: AppContext) -> str:
     )
 
 
+def _web_detail(ctx: AppContext) -> str:
+    """What the web lane has behind it, or what to do to give it something.
+
+    The one lane whose missing prerequisite is a **credential rather than a build step**, so the
+    remedy names `.env` instead of a `make` target — worth saying explicitly, because every other
+    "not configured" message in this app has trained the reader to look for a command to run.
+    """
+    if not get_config().agent.web_tools:
+        return "web search is off in config.yaml (`agent.web_tools`)"
+    if ctx.web is None:
+        return "TAVILY_API_KEY is not set on this machine — add it to `.env` and restart"
+    web = get_config().web
+    return (
+        f"Tavily search · up to {web.max_results} results, "
+        f"{web.max_searches_per_run} searches per question · Phase 3 adds typed API lookups"
+    )
+
+
 def _structured_detail(ctx: AppContext) -> str:
     """What the relational lane has behind it, or what to run to give it something."""
     if not get_config().agent.structured_tools:
@@ -114,8 +132,12 @@ def get_health(ctx: Annotated[AppContext, Depends(get_context)]) -> HealthRespon
         ),
         LaneStatus(
             source_type="web",
-            configured=False,
-            detail="Phase 2 — no web-search tool yet",
+            # Phase 2: the lane goes live. Reported off the client rather than off the config, for
+            # the same reason the other two are reported off their handles — a lane that is
+            # configured with no credential behind it can only 503, and calling that "configured"
+            # would be a health endpoint that lies.
+            configured=ctx.web is not None,
+            detail=_web_detail(ctx),
         ),
     ]
 

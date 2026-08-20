@@ -64,6 +64,8 @@ from health_coverage_navigator.structured.catalog import source_label, source_ur
 from health_coverage_navigator.structured.models import Row
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
+from health_coverage_navigator.web.client import WebSearchClient
+from health_coverage_navigator.web.models import WebResult
 
 
 def _normalize(text: str) -> str:
@@ -128,43 +130,50 @@ def build_agent(
     model: str | None = None,
     toolset: Toolset | None = None,
     structured: bool | None = None,
+    web: bool | None = None,
 ) -> Agent[AnswerDeps, AgentAnswer]:
     """The one agent. Every later phase registers more tools here rather than building another.
 
-    Resolves **both** defaults *before* the cache lookup, which is load-bearing rather than tidy:
+    Resolves **every** default *before* the cache lookup, which is load-bearing rather than tidy:
     `lru_cache` keys on the call's arguments, so `build_agent()` and `build_agent(None)` are
     different keys and would hand back two different `Agent` objects. Tests substitute a model with
     `agent.override(...)` on the instance they hold, so a second instance means the override
     silently does not apply and the run goes to the real provider — which is exactly how this was
-    found. Phase 1b added a second argument with a default, i.e. a second chance to make the same
-    mistake, which is why the resolution happens here and not in the cached function.
+    found. Phase 1b added a second defaulted argument and took the bug again; Phase 1-c added a
+    third and took it a second time. **Phase 2 adds a fourth.** Every one of them is resolved here,
+    and `tests/conftest.py`'s `AgentKit._agent` derives the key the same way `stream_answer` does.
     """
     config = get_config().agent
     return _build_agent(
         model or config.model,
         toolset or config.toolset,
         config.structured_tools if structured is None else structured,
+        config.web_tools if web is None else web,
     )
 
 
-#: Three toolsets x two lane configurations x a handful of models. Sized so a `make eval` sweep
-#: across configurations does not evict the agent it is about to reuse.
-@lru_cache(maxsize=24)
-def _build_agent(model: str, toolset: Toolset, structured: bool) -> Agent[AnswerDeps, AgentAnswer]:
+#: Three toolsets x two lane booleans x two lane booleans x a handful of models. Sized so a
+#: `make eval` sweep across configurations does not evict the agent it is about to reuse.
+@lru_cache(maxsize=48)
+def _build_agent(
+    model: str, toolset: Toolset, structured: bool, web: bool
+) -> Agent[AnswerDeps, AgentAnswer]:
     """Cached because construction resolves the credential and builds every tool schema.
 
-    Both axes are part of the key rather than read inside, because both change the registered tools
+    Every axis is part of the key rather than read inside, because each changes the registered tools
     *and* the instructions — two agents that differ in what they can do must not share one cached
-    object. Phase 1-c's addition makes that sharper than Phase 1b's did: a structured agent is told
-    that plan-specific questions are answerable, and a reference-only one is told they are not.
+    object. Phase 1-c made that sharper than Phase 1b did (a structured agent is told plan-specific
+    questions are answerable, a reference-only one is told they are not) and Phase 2 sharper still:
+    a web-enabled agent is told current-events questions are answerable, and every other
+    configuration is told to abstain on them.
     """
     config = get_config().agent
     agent = Agent(
         _resolve_model(model),  # type: ignore[arg-type]
         deps_type=AnswerDeps,
         output_type=AgentAnswer,
-        instructions=system_prompt(toolset, structured),
-        tools=select_tools(toolset, structured),
+        instructions=system_prompt(toolset, structured, web),
+        tools=select_tools(toolset, structured, web),
         # Retries are the grounding guardrail's budget: a rejected answer is re-attempted with the
         # validator's complaint attached. Two is enough for the realistic failures (a mistyped
         # chunk id, a paraphrased quotation) and short of enough to burn a run on a model that has
@@ -204,6 +213,9 @@ def _validate_grounding(ctx: RunContext[AnswerDeps], answer: AgentAnswer) -> Age
     for citation in answer.citations:
         if citation.is_row:
             _validate_row_citation(ctx, citation)
+            continue
+        if citation.is_web:
+            _validate_web_citation(ctx, citation)
             continue
 
         chunk = ctx.deps.seen_chunks.get(citation.chunk_id or "")
@@ -270,6 +282,42 @@ def _validate_row_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation)
             )
 
 
+def _validate_web_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation) -> None:
+    """The web lane's half of the grounding guardrail.
+
+    Same rule as the other two lanes — cite only what a tool returned, and quote it exactly — but
+    **this is the lane where the rule does the most work**. A chunk id means nothing outside this
+    repo and a row id is obviously internal, so a model inventing either produces something
+    self-evidently wrong. A *URL* is different: a model can write
+    `https://www.cms.gov/newsroom/press-releases/...` that is plausible, well-formed, and never
+    retrieved, and neither a reader nor a grader could tell by looking. Requiring a `result_id` that
+    only a search could have assigned is what turns "do not invent sources" from an instruction into
+    something the model cannot do.
+
+    The quotation check is **whitespace-normalized**, matching the chunk path rather than the row
+    path. Extracted web text wraps and re-wraps arbitrarily, so a byte-exact comparison would reject
+    genuinely verbatim quotations and send the model into a retry loop it cannot win. A table cell
+    has no wrapping to survive and its whitespace is data, which is why `_validate_row_citation` is
+    stricter. The two rules disagree on purpose; each is right about its own evidence.
+    """
+    result = ctx.deps.seen_results.get(citation.result_id or "")
+    if result is None:
+        known = sorted(ctx.deps.seen_results)[:10]
+        raise ModelRetry(
+            f"Citation {citation.id} names result_id {citation.result_id!r}, which no web search "
+            f"returned in this conversation. You may only cite results you retrieved — never a URL "
+            f"you did not get back from web_search. Results you have seen: "
+            f"{known or 'none — search first'}."
+        )
+    if _normalize(citation.snippet or "") not in _normalize(result.content):
+        raise ModelRetry(
+            f"Citation {citation.id}'s snippet is not present in the content of result "
+            f"{citation.result_id!r} ({result.url}). Copy the supporting words exactly from that "
+            f"result's text rather than paraphrasing, summarising, or writing what you expect the "
+            f"page to say."
+        )
+
+
 # ---------------------------------------------------------------- mapping out ----------------
 
 
@@ -307,18 +355,51 @@ def _row_citation(citation: AgentCitation, row: Row) -> Citation:
     )
 
 
+def _web_citation(citation: AgentCitation, result: WebResult) -> Citation:
+    """One web-lane citation, built from the result rather than from the model.
+
+    Same rule as the other two lanes: the model contributes *which* result and *which words*, both
+    already validated, and every displayed field is derived here. A title the model would like the
+    reader to see cannot become the title the reader sees — which matters most in this lane, since
+    the title is the only place a reader learns who published the claim.
+
+    **The domain is in the title on purpose.** The citation card shows a title and hides the URL
+    behind a link, so without this a reader cannot tell a CMS page from a forum post without
+    clicking. For a health question, who is saying something is part of the claim — and surfacing
+    the source is precisely the alternative this design chose over filtering the web to an
+    allowlist (docs/web_search_tool.md §7).
+
+    `doc_id` and `chunk_id` stay `None`: there is no corpus document behind a web result, and the
+    `url` is the drill-down.
+    """
+    dated = f", {result.published_date}" if result.published_date else ""
+    return Citation(
+        id=citation.id,
+        source_type="web",
+        title=f"{result.title} — {result.domain}{dated}",
+        url=result.url,
+        doc_id=None,
+        chunk_id=None,
+        snippet=citation.snippet or "",
+        score=None,
+    )
+
+
 def _citations(answer: AgentAnswer, deps: AnswerDeps) -> list[Citation]:
     """Build the wire citations from the real evidence — never from the model.
 
-    The model supplies an identifier and a quotation (a `chunk_id` + `snippet`, or a `row_id` +
-    `cells`), all already validated. Everything else — title, url, doc_id, source_type — is read
-    off the `Chunk` or the `Row`, so a title the model would like the reader to see cannot become
-    the title the reader sees.
+    The model supplies an identifier and a quotation (a `chunk_id` + `snippet`, a `row_id` +
+    `cells`, or a `result_id` + `snippet`), all already validated. Everything else — title, url,
+    doc_id, source_type — is read off the `Chunk`, the `Row` or the `WebResult`, so a title the
+    model would like the reader to see cannot become the title the reader sees.
     """
     citations: list[Citation] = []
     for citation in answer.citations:
         if citation.is_row:
             citations.append(_row_citation(citation, deps.seen_rows[citation.row_id or ""]))
+            continue
+        if citation.is_web:
+            citations.append(_web_citation(citation, deps.seen_results[citation.result_id or ""]))
             continue
         chunk = deps.seen_chunks[citation.chunk_id or ""]
         citations.append(
@@ -412,6 +493,7 @@ async def stream_answer(
     toolset: Toolset | None = None,
     vectors: VectorIndex | None = None,
     structured: StructuredStore | None = None,
+    web: WebSearchClient | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Answer one question, as the SSE event sequence the frontend already renders.
 
@@ -433,7 +515,11 @@ async def stream_answer(
     # chooses which partition of the vendored plan data the structured tools may read — so a
     # question about a year that is not on disk abstains instead of answering from another year.
     deps = AnswerDeps(
-        index=index, vectors=vectors, structured=structured, plan_year=request.plan_year
+        index=index,
+        vectors=vectors,
+        structured=structured,
+        web=web,
+        plan_year=request.plan_year,
     )
     conversation_id = request.conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
@@ -455,7 +541,7 @@ async def stream_answer(
     # No store, no structured tools — whatever the configuration says. `routes/chat.py` turns a
     # configured-but-missing store into a 503 before this point; a caller that builds deps by hand
     # (a test, a script) gets a reference-only agent rather than tools that would raise on use.
-    agent = build_agent(model, toolset, structured=structured is not None)
+    agent = build_agent(model, toolset, structured=structured is not None, web=web is not None)
     buffers: dict[int, str] = {}
     streamed = ""
     drained = 0
@@ -487,11 +573,26 @@ async def stream_answer(
                 else:
                     continue
                 answer_so_far = _partial_answer(buffers[event.index])
-                if answer_so_far is not None and answer_so_far.startswith(streamed):
+                if answer_so_far is None:
+                    continue
+                if answer_so_far.startswith(streamed):
                     addition = answer_so_far[len(streamed) :]
                     if addition:
                         streamed = answer_so_far
                         yield TokenEvent(delta=addition)
+                elif not streamed.startswith(answer_so_far):
+                    # **A retry is writing a different answer.** The grounding validator rejected
+                    # the previous draft and the model is producing another one, which no longer
+                    # extends what the reader has been shown. Appending would render the rejected
+                    # draft followed by the real answer — and the rejected draft is by construction
+                    # the ungrounded one, which is the single worst thing this UI can display.
+                    #
+                    # The `startswith` guard on this branch matters: early fragments of the retry
+                    # ("A ded") are usually still a prefix of what was streamed, and resetting on
+                    # those would flicker the answer away and back on every keystroke. This fires
+                    # only once the two genuinely diverge.
+                    streamed = answer_so_far
+                    yield TokenEvent(delta=answer_so_far, reset=True)
             elif isinstance(event, AgentRunResultEvent):
                 result = event.result
 
@@ -531,12 +632,14 @@ async def stream_answer(
     # but the UI shows the accumulated tokens until then, so a silent gap here reads as a truncated
     # answer.
     if answer.answer != streamed:
-        remainder = (
-            answer.answer[len(streamed) :] if answer.answer.startswith(streamed) else answer.answer
+        extends = answer.answer.startswith(streamed)
+        # `reset` when the final answer is not an extension of what was streamed — the same
+        # abandoned-draft case the delta loop handles above, arriving here when the provider sent
+        # the output in one piece rather than in fragments.
+        yield TokenEvent(
+            delta=answer.answer[len(streamed) :] if extends else answer.answer,
+            reset=not extends,
         )
-        if not answer.answer.startswith(streamed):
-            streamed = ""
-        yield TokenEvent(delta=remainder)
 
     for citation in citations:
         yield CitationEvent(citation=citation)
@@ -567,6 +670,7 @@ async def answer_question(
     toolset: Toolset | None = None,
     vectors: VectorIndex | None = None,
     structured: StructuredStore | None = None,
+    web: WebSearchClient | None = None,
 ) -> ChatResponse:
     """The same answer, without the stream.
 
@@ -574,7 +678,13 @@ async def answer_question(
     agree is precisely the kind of thing that silently stops agreeing; there is only one here.
     """
     async for event in stream_answer(
-        request, index, model=model, toolset=toolset, vectors=vectors, structured=structured
+        request,
+        index,
+        model=model,
+        toolset=toolset,
+        vectors=vectors,
+        structured=structured,
+        web=web,
     ):
         if isinstance(event, DoneEvent):
             return event.response

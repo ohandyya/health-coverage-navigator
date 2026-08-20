@@ -62,6 +62,14 @@ class GoldQuestion(BaseModel):
         """
         return self.expected_source_type == "structured_api"
 
+    @property
+    def is_web(self) -> bool:
+        """Whether this question is answered from the open web (Phase 2).
+
+        Keyed off the lane for the same reason `is_structured` is.
+        """
+        return self.expected_source_type == "web"
+
     @model_validator(mode="after")
     def _check_shape(self) -> "GoldQuestion":
         if self.expected_abstain:
@@ -75,6 +83,30 @@ class GoldQuestion(BaseModel):
                 raise ValueError(f"{self.id}: abstention must have difficulty=null")
             if self.expected_snippet:
                 raise ValueError(f"{self.id}: abstention must have no expected_snippet")
+        elif self.is_web:
+            # A **third shape**, and the thinnest of the three on purpose. A web question carries an
+            # expected *lane* and no expected answer, because a gold answer for "was there a recall
+            # this week" is wrong within a week of being written — and a gold set that rots silently
+            # is worse than one that admits its scope. It is graded on routing and groundedness,
+            # which are stable properties of the system rather than of the world
+            # (docs/web_search_tool.md §12).
+            if self.expected_doc_ids or self.expected_snippet or self.corpus:
+                raise ValueError(
+                    f"{self.id}: a web question is answered from a live page, so it must not carry "
+                    f"corpus, expected_doc_ids or expected_snippet"
+                )
+            if self.expected_answer or self.answer_key_facts:
+                raise ValueError(
+                    f"{self.id}: a web question must not carry an expected_answer or "
+                    f"answer_key_facts — the web moves, and a pinned answer would rot silently "
+                    f"while still being scored. Phase 2 grades routing, not answer correctness."
+                )
+            if self.expected_table or self.expected_cells:
+                raise ValueError(
+                    f"{self.id}: expected_table/expected_cells belong to a structured_api question"
+                )
+            if self.difficulty is None:
+                raise ValueError(f"{self.id}: non-abstention needs a difficulty")
         elif self.is_structured:
             # A third shape, and it shares almost nothing with the reference one: a row has no
             # document, no chunk and no snippet, so requiring those here would force a structured
@@ -138,11 +170,17 @@ class GoldSet(BaseModel):
     def in_corpus(self) -> list[GoldQuestion]:
         """Questions answered from the reference corpus.
 
-        Structured questions are **not** in here, and that is the point: a retrieval-only runner is
-        asked this set, and asking it for a table lookup would score a guaranteed miss as if it
-        were a finding — the same argument that keeps abstentions out of it.
+        **Defined by what it *is*, not by what it is not.** This used to exclude abstentions and
+        structured questions by name, which meant every new lane had to remember to add itself to
+        an exclusion list — and forgetting would silently drop recall@5, making a phase that added
+        a capability look like a regression. Selecting on the lane directly cannot be broken that
+        way: a retrieval-only runner is asked this set, and asking it for a table lookup or a live
+        web page would score a guaranteed miss as if it were a finding.
         """
-        return [q for q in self.questions if not q.expected_abstain and not q.is_structured]
+        return [q for q in self.questions if q.expected_source_type == "reference"]
 
     def structured(self) -> list[GoldQuestion]:
         return [q for q in self.questions if q.is_structured]
+
+    def web(self) -> list[GoldQuestion]:
+        return [q for q in self.questions if q.is_web]

@@ -5,11 +5,16 @@ real request raise instead of going out, so `make check-all` cannot spend money,
 `OPENAI_API_KEY`, and cannot fail because a provider is having a bad afternoon. Tests that need a
 model use `FunctionModel` through `agent.override(model=...)`, which the flag does not affect.
 
-**That flag is not enough on its own since Phase 1b.** It guards PydanticAI's model requests, and
-an embedding call goes out through the OpenAI SDK directly — `openai_embedder` would happily reach
-the network with the developer's own key while every test appeared to pass. `_no_live_embeddings`
-below closes that, so the invariant is "no test reaches a *provider*", not just "no test reaches a
-model".
+**That flag is not enough on its own, and each phase that adds a provider has to say so again.** It
+guards PydanticAI's model requests only. Phase 1b added an embedding call that goes out through the
+OpenAI SDK directly, and Phase 2 added a Tavily search that goes out through `httpx` — either would
+have happily reached the network on the developer's own key while every test appeared to pass, which
+is the worst direction for a guard to fail in. `_no_live_embeddings` and `_no_live_web_search` below
+close those, so the invariant is "no test reaches a *provider*", not just "no test reaches a model".
+
+Both are patched **at the factory** rather than at the SDK, so a test that trips one gets an error
+naming the seam it should have used instead of an authentication failure from somewhere inside a
+vendor library.
 
 Everything else here exists because `tests/` is not a package, so `test_agent_stream.py` cannot
 import a helper from `test_agent.py`. Fixtures are pytest's answer to that, and the shared piece —
@@ -31,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import httpx
 import pytest
 from pydantic_ai import UnexpectedModelBehavior, capture_run_messages
 from pydantic_ai.messages import ModelMessage, ModelResponse, RetryPromptPart, ToolCallPart
@@ -47,6 +53,7 @@ from health_coverage_navigator.structured.catalog import STRUCTURED_SOURCES
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.embedder import Embedder
 from health_coverage_navigator.vectors.store import VectorIndex, build_store
+from health_coverage_navigator.web.client import WebSearchClient
 
 
 @pytest.fixture(autouse=True)
@@ -77,6 +84,32 @@ def _no_live_embeddings(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr(embedder_module, "openai_embedder", refuse)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_web_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The web half of the no-provider invariant (Phase 2).
+
+    `tavily_client` is the one function in `web/` that builds a network-backed client, and it reads
+    the credential at call time — so on a machine with `TAVILY_API_KEY` set, a test that reached it
+    would spend real API credits and pass. Replaced here for the same reason and in the same way as
+    `openai_embedder`: at the factory, through the module, so the failure names the seam.
+
+    Note what this does **not** block, deliberately: `tests/test_web_client.py` builds an
+    `AsyncTavilyClient` over an `httpx.MockTransport` and passes it to `WebSearchClient.open(...)`
+    directly. That path never calls this factory, never resolves a key, and never opens a socket —
+    which is exactly the seam the SDK was chosen for (docs/web_search_tool.md §4).
+    """
+    import health_coverage_navigator.web.client as web_client_module
+
+    def refuse(*_args: Any, **_kwargs: Any):
+        raise AssertionError(
+            "a test tried to build the live Tavily client. Pass a client backed by "
+            "httpx.MockTransport to WebSearchClient.open(client=...); the suite must not reach a "
+            "provider."
+        )
+
+    monkeypatch.setattr(web_client_module, "tavily_client", refuse)
 
 
 # ---------------------------------------------------------------- the agent kit -------------
@@ -127,6 +160,44 @@ def fake_embed(texts: Sequence[str]) -> list[list[float]]:
         norm = math.sqrt(sum(x * x for x in raw)) or 1.0
         out.append([x / norm for x in raw])
     return out
+
+
+#: The one web result the scripted web tests quote from. Synthetic, over a reserved example domain,
+#: for the licensing reason `tests/test_web_client.py` states: a real Tavily response body carries
+#: third-party page text, and this repo is public.
+WEB_TEXT = (
+    "The 2026 Marketplace Open Enrollment Period runs from November 1, 2025 through "
+    "January 15, 2026 in most states."
+)
+WEB_URL = "https://example.org/open-enrollment-2026"
+WEB_RESULT_ID = "web#s1.1"
+
+
+def web_client(*results: dict, unavailable_status: int | None = None) -> WebSearchClient:
+    """A `WebSearchClient` over a real `AsyncTavilyClient` over an `httpx.MockTransport`.
+
+    Deliberately the *real* client rather than a stand-in object. A hand-written fake would let an
+    agent test pass while `web/client.py` did something else entirely — and the hygiene, the id
+    assignment and the degradation shape are all things the agent tests depend on. This is the seam
+    the SDK was chosen for (docs/web_search_tool.md §4), and `_no_live_web_search` deliberately does
+    not block it: nothing here resolves a key or opens a socket.
+    """
+    from tavily import AsyncTavilyClient
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if unavailable_status is not None:
+            return httpx.Response(unavailable_status, json={})
+        return httpx.Response(200, json={"query": "q", "results": list(results)})
+
+    http = httpx.AsyncClient(
+        base_url="https://api.tavily.com", transport=httpx.MockTransport(handler)
+    )
+    return WebSearchClient.open(client=AsyncTavilyClient(api_key="k", client=http))
+
+
+def web_result(url: str = WEB_URL, content: str = WEB_TEXT, **extra) -> dict:
+    """One Tavily-shaped result payload, as the mocked transport would send it."""
+    return {"url": url, "title": "Open Enrollment", "content": content, "score": 0.9, **extra}
 
 
 def make_chunk(doc_id: str, title: str, text: str) -> Chunk:
@@ -241,6 +312,12 @@ class AgentKit:
 
     SEARCH = SEARCH
     VECTOR_SEARCH = VECTOR_SEARCH
+    WEB_SEARCH = ("web_search", {"query": "2026 open enrollment deadline"})
+    WEB_TEXT = WEB_TEXT
+    WEB_URL = WEB_URL
+    WEB_RESULT_ID = WEB_RESULT_ID
+    web_client = staticmethod(web_client)
+    web_result = staticmethod(web_result)
     DEDUCTIBLE_ID = DEDUCTIBLE_ID
     PREMIUM_ID = PREMIUM_ID
     DEDUCTIBLE_TEXT = DEDUCTIBLE_TEXT
@@ -252,10 +329,11 @@ class AgentKit:
         message: str = "what is a deductible?",
         toolset: Toolset | None = None,
         structured: StructuredStore | None = None,
+        web: WebSearchClient | None = None,
         plan_year: int | None = None,
     ) -> ChatResponse:
         """One full agent run against the scripted turns."""
-        with self._agent(toolset, structured).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured, web).override(model=scripted_model(*turns)):
             return asyncio.run(
                 answer_question(
                     ChatRequest(message=message, plan_year=plan_year),
@@ -263,6 +341,7 @@ class AgentKit:
                     toolset=toolset,
                     vectors=self.vectors,
                     structured=structured,
+                    web=web,
                 )
             )
 
@@ -272,6 +351,7 @@ class AgentKit:
         message: str = "what is a deductible?",
         toolset: Toolset | None = None,
         structured: StructuredStore | None = None,
+        web: WebSearchClient | None = None,
         plan_year: int | None = None,
     ) -> list[StreamEvent]:
         """Every SSE event one run emits, in order."""
@@ -286,29 +366,38 @@ class AgentKit:
                     toolset=toolset,
                     vectors=self.vectors,
                     structured=structured,
+                    web=web,
                 )
             ]
 
-        with self._agent(toolset, structured).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured, web).override(model=scripted_model(*turns)):
             return asyncio.run(drain())
 
     @staticmethod
-    def _agent(toolset: Toolset | None, structured: StructuredStore | None):
+    def _agent(
+        toolset: Toolset | None,
+        structured: StructuredStore | None,
+        web: WebSearchClient | None = None,
+    ):
         """The agent `stream_answer` will use for these arguments — not a similar one.
 
-        `build_agent` caches per (model, toolset, structured), and `override` applies to the
+        `build_agent` caches per (model, toolset, structured, web), and `override` applies to the
         instance it is called on. So a kit that built a *structured* agent (because `config.yaml`
         says so) while the run builds a reference-only one silently loses the override and goes to
         the real provider. That is not hypothetical: it is what every agent test did the moment
         Phase 1-c added the second axis, and `ALLOW_MODEL_REQUESTS = False` is what turned a
         would-be billing incident into a test failure.
+
+        **Phase 2 adds a fourth axis, i.e. a fourth chance at the same bug.** This derivation must
+        stay identical to `stream_answer`'s — both spell it `<handle> is not None`.
         """
-        return build_agent(toolset=toolset, structured=structured is not None)
+        return build_agent(toolset=toolset, structured=structured is not None, web=web is not None)
 
     def expect_rejection(
         self,
         *turns: Any,
         structured: StructuredStore | None = None,
+        web: WebSearchClient | None = None,
         plan_year: int | None = None,
     ) -> str:
         """Run a script that never satisfies the validator, and return its last complaint.
@@ -320,7 +409,7 @@ class AgentKit:
         """
         with (
             capture_run_messages() as messages,
-            self._agent(None, structured).override(model=scripted_model(*turns)),
+            self._agent(None, structured, web).override(model=scripted_model(*turns)),
             pytest.raises(UnexpectedModelBehavior),
         ):
             asyncio.run(
@@ -328,6 +417,7 @@ class AgentKit:
                     ChatRequest(message="q", plan_year=plan_year),
                     self.index,
                     structured=structured,
+                    web=web,
                 )
             )
 

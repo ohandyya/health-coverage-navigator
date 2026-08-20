@@ -35,6 +35,8 @@ from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
 from health_coverage_navigator.vectors.store import VectorIndex, VectorsNotBuiltError
+from health_coverage_navigator.web import client as web_client_module
+from health_coverage_navigator.web.client import WebSearchClient, WebSearchNotConfiguredError
 
 DESCRIPTION = """
 Answers U.S. health-coverage questions by routing each sub-question to the right source type:
@@ -175,6 +177,29 @@ def _load_structured() -> StructuredStore | None:
         return None
 
 
+def _load_web() -> WebSearchClient | None:
+    """The web lane's Tavily client, or `None` with an explanation on the console.
+
+    The same shape as `_load_vectors` and `_load_structured`, with **only one failure mode instead
+    of two** — and the absence of the second is the interesting part. Those lanes distinguish
+    *missing* from *stale*, because a store built against different chunks answers plausibly from
+    the wrong passages and must stop the boot. A search API has no local artifact to go stale: every
+    call is fresh by construction. So the only question here is whether a credential exists, and a
+    missing one is ordinary — degraded to `None`, with `routes/chat.py` deciding whether that is
+    fatal for the configured lanes.
+
+    Skipped entirely when the configured agent has no web tools, so a reference-only deployment does
+    not warn about a key it will never use.
+    """
+    if not get_config().agent.web_tools:
+        return None
+    try:
+        return web_client_module.WebSearchClient.open()
+    except WebSearchNotConfiguredError as exc:
+        logger.warning("web lane unavailable: %s", exc)
+        return None
+
+
 def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """Build the application.
 
@@ -221,6 +246,7 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             index=None if stub else _load_index(),
             vectors=None if stub else await _load_vectors(),
             structured=None if stub else _load_structured(),
+            web=None if stub else _load_web(),
         )
         app.state.ctx = ctx
         try:
@@ -234,6 +260,10 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             # `yield`, so a failure inside the application's lifetime still releases it.
             if ctx.structured is not None:
                 ctx.structured.close()
+            # The web client owns an `httpx.AsyncClient` and therefore a connection pool — the same
+            # reason the DuckDB connection is closed here rather than left to process exit.
+            if ctx.web is not None:
+                await ctx.web.close()
             app.state.ctx = None
 
     app = FastAPI(

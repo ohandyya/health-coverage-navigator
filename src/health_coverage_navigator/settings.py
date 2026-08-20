@@ -21,7 +21,7 @@ this module the file is inert.
 
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from health_coverage_navigator.paths import REPO_ROOT
@@ -59,6 +59,31 @@ class Secrets(BaseSettings):
         min_length=1,
         description="OpenAI API key. Server-side only — never expose via a VITE_* var.",
     )
+
+    #: **Optional, unlike `openai_api_key`** — and the asymmetry is deliberate. There is no agent
+    #: without a model, so a missing OpenAI key is a startup error. There *is* an agent without web
+    #: search: a clone that only wants the reference and relational lanes must still boot, exactly
+    #: as one with no vector store or no Parquet mirrors does. Whether `None` is fatal is decided by
+    #: `agent.web_tools` in `config.yaml`, and only `api/routes/chat.py` asks that question.
+    #:
+    #: `_blank_is_none` below is the same trap `min_length=1` catches above, arriving through a
+    #: different door. `.env.example` ships `TAVILY_API_KEY=` **blank**, so a `cp .env.example .env`
+    #: with no edit yields `""` — a valid `str` that would read as "configured", boot cleanly, and
+    #: fail with a 401 on the first web question. `min_length=1` cannot be used here because the
+    #: field is genuinely optional; mapping `""` to `None` collapses "no key" and "empty key" into
+    #: one well-handled state instead of two, one of which is a live credential error.
+    tavily_api_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Tavily API key (Phase 2 web lane). Server-side only — never expose via a VITE_* var."
+        ),
+    )
+
+    @field_validator("tavily_api_key", mode="before")
+    @classmethod
+    def _blank_is_none(cls, value: object) -> object:
+        """An unset key and a whitespace-only key are the same thing: no key."""
+        return None if isinstance(value, str) and not value.strip() else value
 
 
 @lru_cache(maxsize=1)

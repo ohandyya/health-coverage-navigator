@@ -9,9 +9,12 @@ Read [agent.md](agent.md) first if you have not — this phase adds a third lane
 document describes, and it inherits the output schema, the provenance plumbing, the grounding
 guardrail and the step limits unchanged. Nothing in the agent loop is rewritten.
 
-**Status: designed, not built.** Every measurement quoted below is from a published contract or
-from reading a dependency's source, and each is labelled as such. No number in this document came
-from a run of this repo's code, because there is no code yet.
+**Status: built and measured (2026-08-20).** The lane ships and the numbers are in:
+**routing 1.000 across three lanes**, `web_reach_rate` 1.000, and the third lane costs the first two
+nothing measurable (recall@5 0.667 with it against 0.633 without, inside the noise band).
+`make check-all` is green (373 tests, pyright clean) and `make smoke-web` passes 12/12 against live
+Tavily. Full table, and the one regression — `abs-03` — in [agent.md](agent.md) §6. §17 below
+records what building it changed about this design.
 
 ---
 
@@ -816,3 +819,58 @@ provenance model, the hygiene rules, the configuration, the module layout, and t
 
 One line of `plan.md` needs editing rather than merely being inherited — the Tavily-vs-Exa
 measurement (§1) — and that edit is step 9 of §14.
+
+---
+
+## 17. What building it changed
+
+Kept honest against the plan above, because a design document that is quietly wrong about the code
+is worse than none. Four things moved.
+
+### The trap question was designed, then dropped
+
+§12 called for *"at least one **trap**: a question the corpus answers well but whose phrasing
+invites a web search"*. It was written (`web-04`, *"what's the latest thinking on how deductibles
+work?"*, labelled `reference`) and then removed before it ever ran. Two objections, the second
+decisive:
+
+1. It would have been the **31st reference question**, moving the recall@5 denominator — so Phase
+   1-c's 0.800 would have stopped being comparable to Phase 2's. That is precisely the
+   question-set-drift confusion §12 spends a paragraph warning about, arriving through the door the
+   warning was not watching.
+2. **It bought nothing.** `routing_correct` is scored on every non-abstaining question, so all
+   thirty reference questions are *already* traps for over-reaching to the web — in bulk, and
+   without touching any denominator.
+
+The gold set carries the empty `web-04` slot and the reasoning, so nobody re-adds it. Final slice:
+four web questions, five abstentions (`abs-04` converted as predicted), 43 questions total.
+
+### The prompt's numbered list had to be centralised
+
+§11 said the lane-dependent fragments should be composed rather than hand-written per combination.
+Implementing that exposed a smaller problem the design had not noticed: the *step numbers* were
+literals inside each fragment, so `_ANSWERING` needed telling how many steps preceded it
+(`step=6 if structured else 4`) — one hand-maintained integer per lane combination, which the third
+axis would have taken to eight. Steps are now bodies in a tuple and `_number()` renders the list.
+A mis-numbered list is a small but real signal to the model that the instructions were not written
+for the tools it has.
+
+### `GoldSet.in_corpus()` was an exclusion list too
+
+§12 identified `aggregate()`'s `!= "structured_api"` as an exclusion list that had to be inverted.
+The same bug had a second instance the design missed: `GoldSet.in_corpus()` was
+`not expected_abstain and not is_structured`, with the identical failure mode. Both are now
+`== "reference"`, which no future lane can silently break.
+
+### A pre-existing streaming bug surfaced, and was fixed here
+
+Not this phase's work and not caused by it — recorded because it was found by this phase's smoke
+target and fixed in this phase's diff. When the grounding validator rejects an answer and the retry
+words the replacement differently, the reader saw the rejected draft followed by the accepted one.
+`TokenEvent` gained an additive `reset: bool`. Full account: [agent.md](agent.md) §7.
+
+It is worth noting *why* it survived from Phase 1a to here. It needs a retry **and** a materially
+reworded second attempt; every offline test scripted retries whose second attempt was byte-identical
+or a clean extension, so the whole suite was green. That is the case for keeping a rung that spends
+one real call — `make smoke-web` found it on its first run, along with a second instance of the
+"metric punishes a capability for existing" mistake that Phase 1-c had already made once.

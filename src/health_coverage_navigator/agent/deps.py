@@ -17,6 +17,8 @@ from health_coverage_navigator.config import RetrievalConfig, get_config
 from health_coverage_navigator.structured.models import Row
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
+from health_coverage_navigator.web.client import WebSearchClient
+from health_coverage_navigator.web.models import WebResult
 
 
 @dataclass(slots=True)
@@ -64,6 +66,24 @@ class AnswerDeps:
     queries: int = 0
     """How many structured queries this run has made. Numbers the row ids (`#q2.1`), so a citation
     says which call produced the row."""
+
+    web: WebSearchClient | None = None
+    """The web lane's Tavily client, or `None` when this run has no web tool. `None` is a real,
+    expected state for the same reason `vectors` and `structured` are — no key on this machine, or
+    a run that deliberately excluded the lane — and `select_tools` is what guarantees `web_search`
+    is not registered when the client would be missing."""
+
+    seen_results: dict[str, WebResult] = field(default_factory=dict)
+    """Every web result any tool returned this run, keyed by result id. The citable set for the web
+    lane — `seen_chunks`'s and `seen_rows`'s counterpart.
+
+    This is the reason a web citation can be trusted at all. A URL is guessable and a model can
+    write a plausible one it never retrieved; a `result_id` exists only because a search assigned
+    it, so the validator checking membership here is checking something the model cannot fake."""
+
+    web_searches: int = 0
+    """How many web searches this run has made. Numbers the result ids (`web#s2.1`) *and* enforces
+    `web.max_searches_per_run` — the web is the first lane where an unchecked loop spends money."""
 
     def _record(
         self,
@@ -120,3 +140,19 @@ class AnswerDeps:
         """The sequence number for the next structured query."""
         self.queries += 1
         return self.queries
+
+    def remember_results(self, results: list[WebResult]) -> list[WebResult]:
+        """Mark web results as citable. Returns them unchanged, so it can wrap a return value.
+
+        Results are recorded whole, like rows and unlike chunks: a chunk can be re-read from the
+        corpus by id, but a web result exists nowhere after the run except here, so the validator
+        has to hold the text it will check a quotation against.
+        """
+        for result in results:
+            self.seen_results[result.result_id] = result
+        return results
+
+    def next_web_search(self) -> int:
+        """The sequence number for the next web search."""
+        self.web_searches += 1
+        return self.web_searches

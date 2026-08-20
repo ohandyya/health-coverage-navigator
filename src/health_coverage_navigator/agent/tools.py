@@ -21,8 +21,9 @@ and it makes Phase 2's lane routing a change of kind rather than of degree. The 
 more surface for the agent to get wrong.
 
 `select_tools` at the bottom is the one place that decides what a run can do. The relational lane's
-tools live in `structured_tools.py` and are composed in there — the two lanes are separate modules
-so that neither's docstrings (which are prompt surface) drift into the other's.
+tools live in `structured_tools.py` and the web lane's in `web_tools.py`, each composed in here —
+three lanes, three modules, so that no lane's docstrings (which are prompt surface) drift into
+another's.
 """
 
 import re
@@ -35,6 +36,7 @@ from health_coverage_navigator.agent.deps import AnswerDeps
 from health_coverage_navigator.agent.index import MAX_HITS, MAX_PATTERN_CHARS
 from health_coverage_navigator.agent.models import ChunkHit, CorpusOverview
 from health_coverage_navigator.agent.structured_tools import STRUCTURED_TOOLS
+from health_coverage_navigator.agent.web_tools import WEB_TOOLS
 from health_coverage_navigator.config import Toolset
 from health_coverage_navigator.corpus import CorpusName
 
@@ -261,30 +263,40 @@ LEXICAL_TOOLS = (search_corpus, grep_corpus)
 VECTOR_TOOLS = (vector_search,)
 
 
-def select_tools(toolset: Toolset, structured: bool = False) -> list[Callable[..., object]]:
+def select_tools(
+    toolset: Toolset, structured: bool = False, web: bool = False
+) -> list[Callable[..., object]]:
     """Which tools the agent may see, for one run.
 
-    Two independent axes, and they are kept independent on purpose. `toolset` is Phase 1b's:
+    Three independent axes, and they are kept independent on purpose. `toolset` is Phase 1b's:
     lexical-only / vector-only / both, one runner with a flag rather than three code paths
-    (docs/plan.md §1b). `structured` is Phase 1-c's, and it is a **separate boolean rather than a
-    fourth `Toolset` value** because it selects a different *lane*, not a different way of
-    searching the same one — folding it in would produce six meaningless combinations and would
-    silently redefine the three names Phase 1b's measurement is recorded under.
+    (docs/plan.md §1b). `structured` is Phase 1-c's and `web` is Phase 2's, and both are
+    **separate booleans rather than more `Toolset` values** because they select different *lanes*,
+    not different ways of searching the same one — folding them in would produce twelve
+    combinations, most of them meaningless, and would silently redefine the three names Phase 1b's
+    measurement is recorded under.
 
-    `runtime._build_agent` caches on both, so the return has to depend on nothing but the
+    `runtime._build_agent` caches on all three, so the return has to depend on nothing but the
     arguments.
 
     Order is the order the model sees the tools in, and it is preserved deliberately: the
-    general-purpose ranker first, the recovery moves last, the relational lane after the reference
-    one. Under `both`, lexical leads because it is the cheaper call and the one that wins on exact
-    vocabulary; the prompt says when to reach past it.
+    general-purpose ranker first, the recovery moves next, then the other lanes in the order they
+    were built — relational, then web. The web tool is **last on purpose**: it is the most expensive
+    call and the one whose over-use is the characteristic Phase 2 failure, and the prompt says when
+    to reach for it. Under `both`, lexical leads because it is the cheaper call and the one that
+    wins on exact vocabulary.
     """
     ranked = {
         "lexical": LEXICAL_TOOLS,
         "vector": VECTOR_TOOLS,
         "both": LEXICAL_TOOLS + VECTOR_TOOLS,
     }[toolset]
-    return [*ranked, *NAVIGATION_TOOLS, *(STRUCTURED_TOOLS if structured else ())]
+    return [
+        *ranked,
+        *NAVIGATION_TOOLS,
+        *(STRUCTURED_TOOLS if structured else ()),
+        *(WEB_TOOLS if web else ()),
+    ]
 
 
 def needs_vectors(toolset: Toolset) -> bool:
@@ -299,6 +311,7 @@ __all__ = [
     "NAVIGATION_TOOLS",
     "STRUCTURED_TOOLS",
     "VECTOR_TOOLS",
+    "WEB_TOOLS",
     "get_chunk",
     "grep_corpus",
     "list_documents",

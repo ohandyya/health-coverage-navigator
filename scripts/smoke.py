@@ -66,6 +66,7 @@ from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
 from health_coverage_navigator.vectors.store import VectorIndex
+from health_coverage_navigator.web.client import WebSearchClient, WebSearchNotConfiguredError
 
 #: In the corpus, and the question docs/agent.md §5 uses as its worked example of the agent
 #: reformulating a query BM25 handles badly on its own. A run that answers this one has exercised
@@ -75,6 +76,12 @@ DEFAULT_QUESTION = "What exactly is a deductible?"
 #: `abs-01` from the gold set. Provider-directory questions are the clearest out-of-corpus case
 #: there is — no amount of searching finds them — so this is the abstention path's smoke question.
 ABSTENTION_QUESTION = "Which dermatologists near ZIP 30076 accept Aetna?"
+
+#: The web lane's smoke question. Chosen so that **no offline lane can plausibly answer it**: the
+#: newest vendored publication is Medicare & You 2026 and the PUF mirror holds 2026 only, so a 2027
+#: enrollment date exists nowhere on this machine. A question the corpus could half-answer would let
+#: this pass while the web tool was broken.
+WEB_QUESTION = "What is the deadline to enroll in a 2027 Marketplace health plan?"
 
 
 def _normalize(text: str) -> str:
@@ -94,6 +101,7 @@ def _checks(
     index: CorpusIndex,
     *,
     expect_abstention: bool,
+    expect_web: bool = False,
 ) -> list[Check]:
     """Everything asserted about one live run, as a checklist rather than a traceback.
 
@@ -173,29 +181,44 @@ def _checks(
         f"abstained={response.abstained}",
     )
 
-    # Two citation shapes since Phase 1-c, and this check has to know the difference. A *passage*
+    # **Three citation shapes since Phase 2, and this check has to know all of them.** A *passage*
     # citation must name a chunk that resolves — a missing chunk id is as much a failure as a
-    # fabricated one. A *row* citation legitimately has none: it points at a query result, whose
-    # own guardrail (the cell-by-cell comparison in `runtime._validate_row_citation`) has already
-    # run by the time an answer exists. Requiring a chunk id of it, as this check did before the
-    # relational lane existed, would report the new lane working correctly as a failure.
+    # fabricated one. A *row* and a *web result* legitimately have none: each points at something
+    # whose own guardrail (`runtime._validate_row_citation`, `_validate_web_citation`) has already
+    # run by the time an answer exists, and neither leaves a chunk behind to resolve against.
+    #
+    # This is the second time this exact mistake has been made here, which is why it is spelled out.
+    # Before Phase 1-c the check demanded a chunk id of every citation, and the relational lane's
+    # first correct answer was reported as a fabrication. Phase 2 reproduced it: `make smoke-web`'s
+    # first live run scored 11/12 with `unresolvable chunk_id(s): [None, None]` against two
+    # perfectly good web citations. **A metric that punishes a capability for existing is worse than
+    # no metric, because it reads exactly like a real regression.** The lesson each time is the
+    # same: a check that enumerates lanes by exclusion has to be revisited by whoever adds one.
     #
     # Vacuously true for an abstention with no citations, which is the correct outcome there — what
     # this guards against is an abstention that invents sources anyway.
     rows = [c for c in response.citations if c.source_type == "structured_api"]
+    web_cites = [c for c in response.citations if c.source_type == "web"]
     unresolved = [
         c.chunk_id
         for c in response.citations
-        if c not in rows and (c.chunk_id is None or index.chunk(c.chunk_id) is None)
+        if c.source_type == "reference" and (c.chunk_id is None or index.chunk(c.chunk_id) is None)
     ]
     empty_rows = [c.id for c in rows if not c.snippet.strip()]
+    # A web citation resolves when it carries the two things that make it checkable by a reader:
+    # a link to follow and the words it claims the page says.
+    unlinked = [c.id for c in web_cites if not (c.url or "").startswith("http") or not c.snippet]
     check(
         "citations_resolve",
-        not unresolved and not empty_rows,
+        not unresolved and not empty_rows and not unlinked,
         f"{len(response.citations)} citation(s)"
         + (f", {len(rows)} from the plan data" if rows else "")
-        if not unresolved and not empty_rows
-        else f"unresolvable chunk_id(s): {unresolved}; empty row citation(s): {empty_rows}",
+        + (f", {len(web_cites)} from the web" if web_cites else "")
+        if not unresolved and not empty_rows and not unlinked
+        else (
+            f"unresolvable chunk_id(s): {unresolved}; empty row citation(s): {empty_rows}; "
+            f"unlinked web citation(s): {unlinked}"
+        ),
     )
 
     misquoted = [
@@ -222,6 +245,25 @@ def _checks(
             f"{len(response.citations)} citation(s)"
             if response.citations
             else "uncited — the output validator should have rejected this",
+        )
+
+    if expect_web:
+        # Three separate checks, because they fail for different reasons and the first is rarely
+        # the interesting one. A run that called the tool and cited nothing means Tavily answered
+        # and the model ignored it; a run that cited the web with no `http` url means the citation
+        # builder is wrong; a run that never called the tool means routing is broken, not the lane.
+        called = [s for s in steps if s.tool == "web_search" and s.kind == "tool_call"]
+        web_citations = [c for c in response.citations if c.source_type == "web"]
+        check("web_tool_called", bool(called), f"{len(called)} web_search call(s)")
+        check(
+            "web_lane_cited",
+            bool(web_citations),
+            f"{len(web_citations)} of {len(response.citations)} citations are web",
+        )
+        check(
+            "web_citation_has_a_real_url",
+            all(c.url and c.url.startswith("http") for c in web_citations),
+            ", ".join(c.url or "(none)" for c in web_citations[:3]),
         )
 
     return checks
@@ -288,6 +330,15 @@ def main() -> int:
             "agent to decline rather than answer"
         ),
     )
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help=(
+            "smoke the web lane instead: ask a current-events question and require the agent to "
+            "reach Tavily and cite a real URL. The only command in this repo that spends Tavily "
+            "credits."
+        ),
+    )
     parser.add_argument("--model", help="override config.yaml's agent.model for this run")
     parser.add_argument(
         "--plan-year",
@@ -323,7 +374,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    question = args.question or (ABSTENTION_QUESTION if args.abstain else DEFAULT_QUESTION)
+    if args.abstain and args.web:
+        raise SystemExit("--abstain and --web smoke opposite outcomes; run them separately")
+
+    question = args.question or (
+        WEB_QUESTION if args.web else ABSTENTION_QUESTION if args.abstain else DEFAULT_QUESTION
+    )
 
     try:
         index = get_corpus_index()
@@ -343,7 +399,15 @@ def main() -> int:
             print(f"{exc}", file=sys.stderr)
             return 1
 
-    lanes = "reference" + (" + plan data" if structured else "")
+    web = None
+    if args.web:
+        try:
+            web = WebSearchClient.open()
+        except WebSearchNotConfiguredError as exc:
+            print(f"{exc}", file=sys.stderr)
+            return 1
+
+    lanes = "reference" + (" + plan data" if structured else "") + (" + web" if web else "")
     print(f"Q: {question}")
     print(
         f"   ({len(index)} chunks indexed, toolset={toolset}, lanes={lanes}"
@@ -370,6 +434,7 @@ def main() -> int:
                 toolset=toolset,
                 vectors=vectors,
                 structured=structured,
+                web=web,
             )
         ]
 
@@ -383,7 +448,7 @@ def main() -> int:
         return 1
     elapsed = time.perf_counter() - started
 
-    checks = _checks(events, index, expect_abstention=args.abstain)
+    checks = _checks(events, index, expect_abstention=args.abstain, expect_web=args.web)
     _report(events, checks)
 
     failed = [c for c in checks if not c.ok]

@@ -695,3 +695,37 @@ def test_an_empty_row_citation_still_counts_as_unresolved(agent_kit) -> None:
     empty = _response([_row_citation("   ")])
     metrics = await_grade(groundedness_grader(agent_kit.index), _structured_question(), empty)
     assert metrics == {"citation_resolution": 0.0}
+
+
+def test_an_errored_question_still_counts_against_its_lane() -> None:
+    """A run that lost questions must never score better than one that answered them all.
+
+    `aggregate()` picks each lane's denominator by `expected_source_type`, so an errored result that
+    dropped that field would leave the denominator entirely rather than counting as the miss it is.
+    Measured on Phase 2's first eval before the fix: three questions died to
+    `Exceeded maximum output retries` and recall@5 was reported as **0.741 over 27** instead of
+    **0.667 over 30** — the score went *up* because the run went worse.
+    """
+    from health_coverage_navigator.evals.runner import aggregate
+
+    answered = [
+        EvalQuestionResult(
+            question_id=f"ref-{i}",
+            passed=True,
+            expected_source_type="reference",
+            rank=1,
+            metrics={"reciprocal_rank": 1.0},
+        )
+        for i in range(2)
+    ]
+    errored = EvalQuestionResult(
+        question_id="ref-2",
+        passed=False,
+        expected_source_type="reference",
+        error="UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+    )
+
+    assert aggregate(answered)["recall@5"] == 1.0
+    assert aggregate([*answered, errored])["recall@5"] == pytest.approx(2 / 3), (
+        "an errored question must stay in its lane's denominator"
+    )

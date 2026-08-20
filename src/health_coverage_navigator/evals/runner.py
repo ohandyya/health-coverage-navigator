@@ -56,6 +56,7 @@ from health_coverage_navigator.vectors.store import (
     VectorsNotBuiltError,
     VectorsStaleError,
 )
+from health_coverage_navigator.web.client import WebSearchClient, WebSearchNotConfiguredError
 
 #: The *k* in recall@k. Five because the chat UI shows a handful of citations and a hit ranked
 #: below that is not one a reader would find.
@@ -85,6 +86,20 @@ ProgressFn = Callable[[EvalQuestionResult], None]
 DEFAULT_CONCURRENCY = 5
 
 
+def _tools_used(response: ChatResponse) -> list[str]:
+    """Which tools this run called, in first-call order, deduplicated.
+
+    Order without repeats: "it searched, then queried" is the interesting shape, while "it searched
+    four times" is already visible in the trace itself and would make two runs of the same question
+    incomparable as lists.
+    """
+    return list(
+        dict.fromkeys(
+            step.tool for step in response.trace if step.kind == "tool_call" and step.tool
+        )
+    )
+
+
 def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuestionResult:
     """Grade one answer.
 
@@ -97,7 +112,11 @@ def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuesti
       would silently reward;
     * a **structured** question on whether the answer cites the exact cell values the mirror holds.
       Exact, not fuzzy: in this lane an approximate figure is a wrong figure, and a citation that
-      "nearly" matches is one whose evidence does not say what the answer says.
+      "nearly" matches is one whose evidence does not say what the answer says;
+    * a **web** question on whether it went to the web at all and came back with something —
+      deliberately *not* on what the answer said. A gold answer for "was there a recall this week"
+      is wrong within a week of being written, and a rotting number that keeps being reported is
+      worse than an honest gap (docs/web_search_tool.md §12).
     """
     retrieved = [c.doc_id for c in response.citations if c.doc_id]
 
@@ -115,11 +134,28 @@ def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuesti
             abstained=response.abstained,
             rank=None,
             retrieved_doc_ids=retrieved,
+            tools_used=_tools_used(response),
             metrics={
                 "structured_exact_match": len(matched) / len(question.expected_cells)
                 if question.expected_cells
                 else 0.0
             },
+        )
+
+    if question.is_web:
+        # `passed` is deliberately the same judgement `routing_grader` reports, rather than a second
+        # opinion computed differently: a run whose headline pass rate disagreed with its routing
+        # metric on the same questions would be a harness telling two stories.
+        lanes = [c.source_type for c in response.citations]
+        return EvalQuestionResult(
+            question_id=question.id,
+            passed=bool(lanes) and not response.abstained and lanes.count("web") * 2 > len(lanes),
+            expected_source_type=question.expected_source_type,
+            expected_abstain=False,
+            abstained=response.abstained,
+            rank=None,
+            retrieved_doc_ids=retrieved,
+            tools_used=_tools_used(response),
         )
 
     if question.expected_abstain:
@@ -131,6 +167,7 @@ def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuesti
             abstained=response.abstained,
             rank=None,
             retrieved_doc_ids=retrieved,
+            tools_used=_tools_used(response),
         )
 
     rank: int | None = None
@@ -148,6 +185,7 @@ def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuesti
         abstained=response.abstained,
         rank=rank,
         retrieved_doc_ids=retrieved,
+        tools_used=_tools_used(response),
         metrics={"reciprocal_rank": 1.0 / rank if rank else 0.0},
     )
 
@@ -160,14 +198,15 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
     accuracy (Phase 2/3) and citation accuracy (Phase 4) can be added without touching the API,
     the storage format, or the table.
     """
-    # Split by lane, not merely by "does it abstain". A structured question has no expected doc
-    # ids, so leaving it among the retrieval-scored questions would drop recall@5 by construction —
-    # a headline metric moving because the *question set* changed is exactly the confusion this
-    # harness exists to prevent, and it is how a phase that added a capability could look like a
-    # regression.
-    in_corpus = [
-        r for r in results if not r.expected_abstain and r.expected_source_type != "structured_api"
-    ]
+    # Split by lane, and **selected by what the reference lane is rather than by what it is not**.
+    # This was an exclusion list (`!= "structured_api"`), which meant every new lane had to remember
+    # to add itself — and Phase 2 is exactly the phase that would have forgotten: a web question has
+    # no expected doc ids, so it would have landed in the recall@5 denominator and scored a
+    # guaranteed miss. A headline metric moving because the *question set* changed is the confusion
+    # this harness exists to prevent, and it is how a phase that adds a capability comes to look
+    # like a regression.
+    in_corpus = [r for r in results if r.expected_source_type == "reference"]
+    web = [r for r in results if r.expected_source_type == "web"]
     abstentions = [r for r in results if r.expected_abstain]
 
     metrics: dict[str, float] = {}
@@ -183,6 +222,11 @@ def aggregate(results: list[EvalQuestionResult]) -> dict[str, float]:
         metrics["false_abstention_rate"] = sum(1 for r in in_corpus if r.abstained) / len(in_corpus)
     if abstentions:
         metrics["abstention_accuracy"] = sum(1 for r in abstentions if r.passed) / len(abstentions)
+    if web:
+        # Reported separately from `routing_correct`, which averages over all three lanes. This one
+        # answers the narrower question the phase was built for: when the corpus genuinely cannot
+        # help, does it go and look?
+        metrics["web_reach_rate"] = sum(1 for r in web if r.passed) / len(web)
 
     # Every other per-question metric key — whatever the graders reported — averaged over the
     # questions that reported it. Averaging over *reporters* rather than over the whole set is the
@@ -236,9 +280,19 @@ async def _grade_one(
         for grader in graders:
             result.metrics.update(await grader(question, response))
     except Exception as exc:  # noqa: BLE001 - one bad question must not abort the run
+        # **`expected_source_type` is carried onto the failure, and that is load-bearing.**
+        # `aggregate()` selects each lane's denominator by this field, so an errored question that
+        # dropped it would vanish from the denominator entirely rather than counting as the miss it
+        # is — which *inflates* the score in exactly the runs that went worst.
+        #
+        # Measured, on the first Phase 2 eval: three questions died to
+        # `Exceeded maximum output retries`, and recall@5 was reported as 0.741 over 27 questions
+        # instead of 0.667 over 30. A run losing questions must never look better than one that
+        # answered them all.
         result = EvalQuestionResult(
             question_id=question.id,
             passed=False,
+            expected_source_type=question.expected_source_type,
             expected_abstain=question.expected_abstain,
             error=f"{type(exc).__name__}: {exc}",
         )
@@ -294,6 +348,7 @@ async def run_gold_set(
     model: str | None = None,
     toolset: str | None = None,
     structured: bool | None = None,
+    web: bool | None = None,
     vectors_snapshot_id: str | None = None,
     max_concurrency: int = 1,
 ) -> EvalRun:
@@ -327,6 +382,7 @@ async def run_gold_set(
         config_fingerprint=get_config().fingerprint(),
         model=model,
         structured=structured,
+        web=web,
         # Phase 1b's comparison is between runs that differ *only* in `toolset`, so a run that does
         # not name it cannot take part in that comparison. `vectors_snapshot_id` does the same job
         # for the embeddings that `chunker_snapshot_id` does for the chunks — a recall number that
@@ -407,10 +463,17 @@ class RunPlan:
     model: str | None = None
     toolset: str | None = None
     structured: bool | None = None
+    web: bool | None = None
     vectors_snapshot_id: str | None = None
 
 
-async def _build(runner: str, judge: bool, toolset: str | None, structured: bool | None) -> RunPlan:
+async def _build(
+    runner: str,
+    judge: bool,
+    toolset: str | None,
+    structured: bool | None,
+    web: bool | None,
+) -> RunPlan:
     """Resolve the flags into an answerer, the questions to ask it, and how to grade it.
 
     The gold *set* varies by runner, which is the non-obvious part. A retrieval-only run is asked
@@ -470,20 +533,33 @@ async def _build(runner: str, judge: bool, toolset: str | None, structured: bool
     vectors = await _open_vectors() if needs_vectors(resolved) else None
     lanes = get_config().agent.structured_tools if structured is None else structured
     store = _open_structured() if lanes else None
+    web_on = get_config().agent.web_tools if web is None else web
+    searcher = _open_web() if web_on else None
 
     # Routing is only measurable once there is more than one lane to route between, so the grader
-    # goes on the agent runner and only when the relational lane is registered. Phase 2 widens the
-    # same metric to three lanes rather than introducing a second one.
-    if store is not None:
+    # goes on the agent runner and only when a second lane is registered. Phase 2 widens the same
+    # metric to three lanes rather than introducing a second one — `routing_grader` itself is
+    # unchanged, exactly as its docstring predicted.
+    if store is not None or searcher is not None:
         graders.append(routing_grader())
 
+    # Only ask a question the run can actually answer. A web question put to a run with no web lane
+    # scores a guaranteed miss, which is the same "report a certainty as a finding" mistake that
+    # keeps abstentions away from the retrieval-only runners.
+    questions = list(gold.in_corpus()) + list(gold.abstentions())
+    if store is not None:
+        questions += gold.structured()
+    if searcher is not None:
+        questions += gold.web()
+
     return RunPlan(
-        agent_answerer(index, vectors, resolved, store),
-        gold if store is not None else GoldSet(questions=gold.in_corpus() + gold.abstentions()),
+        agent_answerer(index, vectors, resolved, store, searcher),
+        GoldSet(questions=sorted(questions, key=lambda q: gold.questions.index(q))),
         graders,
         model=get_config().agent.model,
         toolset=resolved,
         structured=store is not None,
+        web=searcher is not None,
         vectors_snapshot_id=None if vectors is None else vectors.snapshot_id,
     )
 
@@ -499,6 +575,19 @@ def _open_structured() -> StructuredStore:
         return StructuredStore.open()
     except StructuredNotBuiltError as exc:
         raise SystemExit(f"{exc}") from exc
+
+
+def _open_web() -> WebSearchClient:
+    """Open the Tavily client, or exit with what to do about it.
+
+    A hard exit rather than a degradation, matching `_open_structured` and `_open_vectors`: a run
+    that quietly dropped the web questions would report a score for a configuration nobody asked
+    for, and the number would look like every other number in the table.
+    """
+    try:
+        return WebSearchClient.open()
+    except WebSearchNotConfiguredError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 async def _open_vectors() -> VectorIndex:
@@ -616,6 +705,17 @@ async def main() -> int:
         ),
     )
     parser.add_argument(
+        "--web",
+        default=None,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "whether the agent may see the web lane over Tavily (agent runner only). Phase 2's "
+            "eval axis, recorded on the run: --no-web is what measures whether the third lane "
+            "costs anything on the questions that were already answerable. "
+            "Default: agent.web_tools from config.yaml."
+        ),
+    )
+    parser.add_argument(
         "--judge",
         action="store_true",
         help="grade answer correctness with an LLM judge (agent runner only; costs a second "
@@ -646,8 +746,13 @@ async def main() -> int:
             f"--structured applies to the agent runner; the {args.runner} runner has no lanes to "
             f"route between."
         )
+    if args.web is not None and args.runner != "agent":
+        raise SystemExit(
+            f"--web applies to the agent runner; the {args.runner} runner has no lanes to "
+            f"route between."
+        )
 
-    plan = await _build(args.runner, args.judge, args.toolset, args.structured)
+    plan = await _build(args.runner, args.judge, args.toolset, args.structured, args.web)
 
     # Printed before the first call rather than after, so the cost is visible while there is still
     # time to interrupt it.
@@ -664,9 +769,14 @@ async def main() -> int:
         print(f"  model    {plan.model}", file=sys.stderr)
     if plan.toolset:
         print(f"  toolset  {plan.toolset}", file=sys.stderr)
-    if plan.structured is not None:
+    if plan.structured is not None or plan.web is not None:
+        lanes = "reference"
+        if plan.structured:
+            lanes += " + structured"
+        if plan.web:
+            lanes += " + web"
         print(
-            f"  lanes    reference{' + structured' if plan.structured else ' only'}",
+            f"  lanes    {lanes if lanes != 'reference' else 'reference only'}",
             file=sys.stderr,
         )
     if plan.vectors_snapshot_id:
@@ -682,6 +792,7 @@ async def main() -> int:
         model=plan.model,
         toolset=plan.toolset,
         structured=plan.structured,
+        web=plan.web,
         vectors_snapshot_id=plan.vectors_snapshot_id,
         on_progress=_progress_printer(total),
         max_concurrency=concurrency,

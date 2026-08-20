@@ -62,7 +62,21 @@ def _no_vector_store(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_vectors(monkeypatch, None)
 
 
-def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None, structured=None) -> None:
+@pytest.fixture(autouse=True)
+def _no_web_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every app in this module boots without a web client unless it asks for one.
+
+    Autouse for the same reason `_no_vector_store` is: `create_app`'s lifespan calls `_load_web`,
+    which builds the *live* Tavily client — and `conftest._no_live_web_search` refuses that,
+    correctly. Without this, every test that merely stands an app up would fail on a provider call
+    it never wanted to make.
+    """
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_web", lambda: None)
+
+
+def _use_fixture_stores(
+    monkeypatch: pytest.MonkeyPatch, agent_kit=None, structured=None, web=None
+) -> None:
     """Point the app's lifespan at the fixture corpus, vector store and plan mirror.
 
     The index would otherwise build all 6,722 chunks and the mirror would need a 24 MB download,
@@ -78,6 +92,7 @@ def _use_fixture_stores(monkeypatch: pytest.MonkeyPatch, agent_kit=None, structu
     index = None if agent_kit is None else agent_kit.index
     monkeypatch.setattr("health_coverage_navigator.api.app._load_index", lambda: index)
     monkeypatch.setattr("health_coverage_navigator.api.app._load_structured", lambda: structured)
+    monkeypatch.setattr("health_coverage_navigator.api.app._load_web", lambda: web)
     _patch_vectors(monkeypatch, None if agent_kit is None else agent_kit.vectors)
 
 
@@ -99,16 +114,19 @@ def app_structured(structured_kit, mirror: Path):
 
 @pytest.fixture
 def agent_client(agent_kit, app_structured, monkeypatch: pytest.MonkeyPatch):
-    """The real answering path: the two-chunk fixture corpus, the sample plan mirror, and a
-    scripted model.
+    """The real answering path: the two-chunk fixture corpus, the sample plan mirror, a mocked
+    Tavily client, and a scripted model.
 
     Every lane the configuration asks for is present, which is what makes this the *answering*
     fixture — `_unavailable` refuses to serve a run whose configured lanes are half there, and a
-    test that tripped that would be testing the 503 rather than the answer.
+    test that tripped that would be testing the 503 rather than the answer. Phase 2 added a lane, so
+    it added a handle here; the web client is the mock-transport one from `conftest`, which reaches
+    nothing.
     """
-    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
+    web = agent_kit.web_client(agent_kit.web_result())
+    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured, web=web)
     with (
-        build_agent(structured=True).override(
+        build_agent(structured=True, web=True).override(
             model=agent_kit.script(agent_kit.SEARCH, agent_kit.answer())
         ),
         TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as c,
@@ -402,10 +420,15 @@ def test_an_agent_failure_arrives_as_an_error_frame(
     failure cannot become a status code — it would truncate the body and the browser would report a
     network error for what was really a step limit or a rate limit. `useChat.ts` already renders
     `ErrorEvent`; this is what feeds it."""
-    _use_fixture_stores(monkeypatch, agent_kit, structured=app_structured)
+    _use_fixture_stores(
+        monkeypatch,
+        agent_kit,
+        structured=app_structured,
+        web=agent_kit.web_client(agent_kit.web_result()),
+    )
     # A script that never produces a final answer, so the run trips its tool-call ceiling.
     with (
-        build_agent(structured=True).override(model=agent_kit.script(agent_kit.SEARCH)),
+        build_agent(structured=True, web=True).override(model=agent_kit.script(agent_kit.SEARCH)),
         TestClient(create_app(dist_dir=Path("/nonexistent-dist"), stub=False)) as client,
     ):
         response = client.post("/api/chat/stream", json={"message": "loop forever"})

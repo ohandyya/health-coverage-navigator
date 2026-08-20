@@ -194,9 +194,12 @@ CREDENTIAL_MARKERS = [
         # Vendor-anchored on purpose. A bare `sk-` prefix is what produced the
         # "ask-about-preventive-services" false positive - see the module docstring.
         key="cred:vendor-secret-key",
-        label="Anthropic / OpenAI / Stripe secret key",
+        label="Anthropic / OpenAI / Stripe / Tavily secret key",
+        # `tvly-` added at Phase 2 with the web lane. Without it a leaked Tavily key was only caught
+        # when it happened to sit beside an `api_key =` (the `cred:assignment` marker); pasted into
+        # a doc, a comment or a fixture it would have passed. The prefix covers `tvly-dev-` too.
         pattern=(
-            r"(?<![A-Za-z0-9_-])(?:sk-ant-|sk-proj-|sk-live-|sk_live_|rk_live_|pk_live_)"
+            r"(?<![A-Za-z0-9_-])(?:sk-ant-|sk-proj-|sk-live-|sk_live_|rk_live_|pk_live_|tvly-)"
             r"[A-Za-z0-9_-]{16,}"
         ),
         severity="blocking",
@@ -416,6 +419,8 @@ ALL_MARKERS = CREDENTIAL_MARKERS + PII_MARKERS + LICENSING_MARKERS
 # near-miss worth defending; a regression here means a pattern got loosened.
 ANTI_CANARIES = [
     ("ask-about-preventive-services", "cred:vendor-secret-key"),
+    # Real prose that must not read as a Tavily key: the prefix needs a credential-length payload.
+    ("tvly-short", "cred:vendor-secret-key"),
     ("ask-when-choosing-a-plan-spanish", "cred:vendor-secret-key"),
     ('"next_token": "abcdefghijklmnopqrs"', "cred:assignment"),
     ('api_key = "${' + 'MY_SECRET}"', "cred:assignment"),

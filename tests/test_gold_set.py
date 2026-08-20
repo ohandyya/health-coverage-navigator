@@ -112,8 +112,33 @@ def test_difficulty_distribution(gold: GoldSet):
     assert counts == {"easy": 8, "medium": 14, "hard": 8}, f"got {dict(counts)}"
 
 
-def test_six_abstentions(gold: GoldSet):
-    assert len(gold.abstentions()) == 6
+def test_five_abstentions(gold: GoldSet):
+    """Was six until Phase 2 converted `abs-04` into `web-01`.
+
+    That conversion is the intended lifecycle of an abstention, not an erosion of the slice: the
+    question carried `becomes_answerable_at_phase: "2"` from the day it was written, and a phase
+    that adds a lane is supposed to turn its abstentions into answers. What must not happen is the
+    count drifting *silently*, which is why this asserts an exact number rather than a floor.
+    """
+    assert len(gold.abstentions()) == 5
+
+
+def test_four_web_questions(gold: GoldSet):
+    """Phase 2's slice, and the shape that keeps it from rotting.
+
+    Outside `in_corpus()` for the same reason the structured slice is — a retrieval-only runner
+    asked a live-web question can only miss. The absence of an expected answer is the load-bearing
+    part and is asserted here as well as in `GoldQuestion._check_shape`, because it is the kind of
+    thing a well-meaning later change would "fix": a gold answer about what is true this month is
+    wrong next month, and it would keep being scored (docs/web_search_tool.md §12).
+    """
+    web = gold.web()
+    assert len(web) == 4
+    assert not any(q.corpus or q.expected_doc_ids or q.expected_snippet for q in web)
+    assert not any(q.expected_answer or q.answer_key_facts for q in web), (
+        "a web question is graded on routing and groundedness, never on a pinned answer"
+    )
+    assert all(q.volatile for q in web), "a web answer is volatile by definition; say so"
 
 
 def test_four_structured_questions(gold: GoldSet):

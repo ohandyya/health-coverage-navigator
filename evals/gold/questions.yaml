@@ -740,16 +740,10 @@ questions:
       published it. Never answerable from this corpus; a genuine "I don't know yet," not a
       routing failure.
 
-  - id: abs-04
-    question: "Was there a recall of a blood pressure medication announced this week?"
-    expected_abstain: true
-    expected_source_type: null
-    expected_doc_ids: []
-    becomes_answerable_at_phase: "2"
-    notes: >
-      Time-sensitive current-events content is explicitly the web lane's job (plan.md Phase 2),
-      not the static reference corpus. Reference lane must abstain; answerable once web search
-      (or openFDA for recalls specifically, Phase 3) is wired up.
+  # abs-04 lived here as an abstention until Phase 2 and is now web-01 below. It carried
+  # `becomes_answerable_at_phase: "2"` and a note saying "answerable once web search is wired up" —
+  # the gold set anticipated this conversion exactly, which is a small piece of evidence that the
+  # phase boundary was drawn in the right place.
 
   - id: abs-06
     question: "Which pharmacies near ZIP 99501 are in network for Part D plan H0028-007?"
@@ -777,3 +771,74 @@ questions:
       the three corpora and are out of scope for every planned phase. Tests that the agent
       recognizes an out-of-domain question rather than reaching for a tangentially related
       Marketplace tax-credit page.
+
+  # ============================================================ web (5) ======================
+  #
+  # THESE CARRY NO EXPECTED ANSWER, AND THAT IS THE DESIGN (docs/web_search_tool.md §12). A gold
+  # answer for "was there a recall this week" is wrong within a week of being written, and a gold
+  # set that rots silently is worse than one that admits its scope: the number keeps being reported,
+  # keeps drifting, and the drift says nothing about the agent. What is graded instead is stable
+  # against the world moving — did it route to the web lane (routing_correct), and is every quoted
+  # snippet verbatim in what Tavily actually returned (groundedness). `GoldQuestion._check_shape`
+  # enforces the absence, so nobody can helpfully add an expected_answer later.
+
+  - id: web-01
+    question: "Was there a recall of a blood pressure medication announced recently?"
+    difficulty: medium
+    expected_source_type: web
+    volatile: true
+    notes: >
+      Was abs-04, an abstention, through Phase 1-c — it carried becomes_answerable_at_phase "2" and
+      a note predicting this conversion. Time-sensitive current-events content is explicitly the web
+      lane's job (plan.md Phase 2). "this week" was softened to "recently" on conversion: the
+      original phrasing made a PASS depend on there having been a recall in a specific seven-day
+      window, which grades the news cycle rather than the agent. Phase 3 gives openFDA a claim on
+      this question too, and the routing metric will then have to say which lane is correct.
+
+  - id: web-02
+    question: "What is the deadline to enroll in a 2027 Marketplace plan?"
+    difficulty: easy
+    expected_source_type: web
+    volatile: true
+    notes: >
+      A plan year past everything vendored — the newest corpus publication is Medicare & You 2026
+      and the PUF mirror holds 2026 only — so both offline lanes must decline and the web is the
+      only source. glossary.md calls open enrollment "the repo's canonical web-lane eval question"
+      for exactly this reason: the dates move every year, so a static corpus should never be trusted
+      for them. Distinct from abs-03 below, which asks for a figure CMS has not published at all.
+
+  - id: web-03
+    question: "Has CMS announced any changes to Medicare Part B for the upcoming plan year?"
+    difficulty: medium
+    expected_source_type: web
+    volatile: true
+    notes: >
+      "What changed" is the third of plan.md's three web-lane examples. The trap inside it is that
+      the corpus DOES contain a great deal about Part B, so a lexical search returns confident,
+      well-cited, out-of-date passages — this question fails by looking answerable offline, which is
+      the failure mode a corpus-only agent cannot detect.
+
+  # web-04 IS DELIBERATELY ABSENT, and the empty slot is the record of why. The draft held a "trap"
+  # question — *"what's the latest thinking on how deductibles work?"*, phrased to invite a web
+  # search for something the corpus answers better — labelled `reference`. Two objections killed it,
+  # the second decisive:
+  #
+  #   1. It would have been the 31st reference question, moving the recall@5 denominator. A headline
+  #      metric that shifts because the QUESTION SET changed is the confusion this harness exists to
+  #      prevent, and Phase 1-c's 0.800 would have stopped being comparable to Phase 2's.
+  #   2. It bought nothing. `routing_correct` is scored on every non-abstaining question, so ALL
+  #      THIRTY reference questions are already trap questions for over-reaching to the web — in
+  #      bulk, and without touching the denominator. One more would have added a rounding error to a
+  #      measurement thirty questions already make.
+
+  - id: web-05
+    question: "Who currently runs the Centers for Medicare & Medicaid Services?"
+    difficulty: medium
+    expected_source_type: web
+    volatile: true
+    notes: >
+      Out of corpus entirely rather than merely out of date — no vendored document names an
+      administrator, and no PUF column holds one — so this separates "the corpus is stale" from
+      "the corpus never covered this". Also a question where the DOMAIN of the answer matters: a
+      cms.gov page and a forum post are different evidence for the same claim, which is what the
+      web citation's domain label exists to surface.
