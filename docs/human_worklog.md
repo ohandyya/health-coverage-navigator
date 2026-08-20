@@ -35,9 +35,13 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - This means `AsyncTavilyClient` should be imported at the top of the module
 
-- What are the "citations" for web? Is it the full text? Is it the URL? Verify this from the UI
+- Manual validation on the FE
+
+    - What are the "citations" for web? Is it the full text? Is it the URL? Verify this from the UI
 
 - Make sure the metrics in README.md is updated
+
+- Use walkthrough to trace the code
 
 
 ### Aug 18, 2026
