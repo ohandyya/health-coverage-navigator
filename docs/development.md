@@ -30,8 +30,9 @@ A `Makefile` wraps every gate — `make help` lists them all.
 | `make ui-install` / `ui-dev` / `ui-build` / `ui-test` | Frontend equivalents. |
 | `make chunk` / `make chunk-check` | Rebuild `chunks.jsonl`; verify committed manifests still describe it. |
 | `make embed` / `make embed-check` | Build the LanceDB vector store; verify it matches its manifest. **~$0.03, ~50 s**, idempotent. |
-| `make smoke` | One real question through the live agent — checks the streaming path. **1 model call.** |
-| `make smoke-abstain` | Same, out-of-corpus: the agent must decline rather than invent sources. |
+| `make smoke` | One real question through the live agent — checks the streaming path. Runs the lanes `config.yaml` turns on (`toolset`, `structured_tools`, `web_tools`), so with the web lane on it needs `TAVILY_API_KEY` and may spend a credit. **1 model call.** |
+| `make smoke-abstain` | Same lanes, out-of-corpus: the agent must decline rather than invent sources. |
+| `make smoke-web` | Force-opens the web lane and asks what only the web can answer — requires `web_search` fired and cited a real URL. **1 model call + 1 Tavily credit.** |
 | `make eval` | Run the gold set through the agent → `data/eval_runs/`. **35 model calls**, ~90 s at the default `--concurrency 3`. |
 | `make eval-retrieval` | Score BM25 retrieval alone — free, instant, no key. The `bm25_b`/`k1` sweep loop. |
 | `make eval-retrieval-vector` | Score semantic retrieval alone — deterministic, ~30 embedding calls. **The lexical-vs-vector decision is taken here**, not on an agent A/B. |

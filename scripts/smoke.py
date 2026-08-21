@@ -35,7 +35,7 @@ Three rungs, no overlap:
 | | costs | asserts |
 |---|---|---|
 | `make check-all` | nothing, offline | the code is correct |
-| `make smoke` | one model call | the live path works at all |
+| `make smoke` | one model call (+ a Tavily credit with the web lane on) | the live path works |
 | `make eval` | 35 model calls | the answers are any good |
 
 Nothing here asserts answer *content*. The model is nondeterministic and the point is the plumbing;
@@ -315,7 +315,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Drive one real question through the live agent and check the streaming path. "
-            "Costs one model call and needs OPENAI_API_KEY."
+            "Costs one model call and needs OPENAI_API_KEY. Which lanes the agent gets comes "
+            "from config.yaml, so a run with agent.web_tools on also needs TAVILY_API_KEY and "
+            "may spend a Tavily credit if the model chooses to search."
         )
     )
     parser.add_argument(
@@ -335,8 +337,11 @@ def main() -> int:
         action="store_true",
         help=(
             "smoke the web lane instead: ask a current-events question and require the agent to "
-            "reach Tavily and cite a real URL. The only command in this repo that spends Tavily "
-            "credits."
+            "reach Tavily and cite a real URL. This selects the QUESTION AND THE CHECKS, not the "
+            "lane — whether the agent has web_search at all comes from config.yaml's "
+            "agent.web_tools, so a default run already carries the lane if it is on there. What "
+            "this adds is a question no offline lane can answer and the three checks that the "
+            "lane was actually used."
         ),
     )
     parser.add_argument("--model", help="override config.yaml's agent.model for this run")
@@ -399,8 +404,19 @@ def main() -> int:
             print(f"{exc}", file=sys.stderr)
             return 1
 
+    # **`--web` picks the scenario, not the lane.** Which lanes exist is config.yaml's call here,
+    # exactly as it is for the relational lane above and for `routes/chat.py` — so a default
+    # `make smoke` drives the same three-lane agent the app serves. Before this it did not:
+    # `agent.web_tools: true` was ignored unless `--web` was passed, and the default run smoked a
+    # two-lane agent no user ever gets. Registering a lane changes the system prompt (see
+    # `prompt.system_prompt`), so that was a different agent, not the shipped one with a tool held
+    # back.
+    #
+    # A missing key while config says the lane is on is a failure, not a quiet degrade: same
+    # refusal as the structured branch above, and the same one `routes/chat.py` turns into a 503.
+    # Set `agent.web_tools: false` to smoke without Tavily.
     web = None
-    if args.web:
+    if args.web or get_config().agent.web_tools:
         try:
             web = WebSearchClient.open()
         except WebSearchNotConfiguredError as exc:

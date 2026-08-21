@@ -116,15 +116,27 @@ types-check: ## Verify schema.d.ts is current with the Pydantic models (writes n
 # It covers the one property no offline test can: that `_partial_answer` still parses the output as
 # a *real* provider fragments it. If that breaks, every test stays green and streaming silently
 # degrades to one lump. See the module docstring.
-smoke: ## Ask the live agent one real question and check the streaming path (1 model call)
+#
+# It runs the agent config.yaml describes — `agent.toolset`, `agent.structured_tools` AND
+# `agent.web_tools` — so this smokes the same three-lane agent `make dev` serves, not a subset of
+# it. Consequence: with `agent.web_tools: true` this needs TAVILY_API_KEY (it fails naming the fix
+# rather than quietly dropping the lane, exactly as the API 503s), and the run may spend a Tavily
+# credit if the model chooses to search. Set `agent.web_tools: false` to smoke without one.
+smoke: ## One real question through the live agent, with the lanes config.yaml turns on (1 model call)
 	uv run python scripts/smoke.py
 
-smoke-abstain: ## Same, but out-of-corpus — the agent must decline, not invent sources
+smoke-abstain: ## Same lanes, but out-of-corpus — the agent must decline, not invent sources
 	uv run python scripts/smoke.py --abstain
 
-# The web lane's liveness check, and the only command in this repo that reaches Tavily. Same
-# three-rung logic as `smoke`: a failing test means this repo is wrong, a failing smoke check might
-# mean the vendor changed something, and one command meaning either teaches you to shrug at red.
+# The web lane's liveness check. Same three-rung logic as `smoke`: a failing test means this repo is
+# wrong, a failing smoke check might mean the vendor changed something, and one command meaning
+# either teaches you to shrug at red.
+#
+# What `--web` adds over plain `smoke` is the QUESTION and the CHECKS, not the lane: `smoke` already
+# registers web_search when config.yaml says so, but it asks a definitional question the corpus
+# answers, so the model never searches and a broken lane goes unnoticed. This asks one nothing on
+# this machine can answer (a 2027 date, past every vendored publication) and then requires that the
+# tool fired and cited a real URL. It force-opens the lane even with `agent.web_tools: false`.
 smoke-web: ## Ask a current-events question live — the agent must reach the web and cite a real URL
 	uv run python scripts/smoke.py --web
 
