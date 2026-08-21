@@ -43,7 +43,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - This means `AsyncTavilyClient` should be imported at the top of the module
 
-- Manual validation on the FE
+- [Done] Manual validation on the FE
 
     - What are the "citations" for web? Is it the full text? Is it the URL? Verify this from the UI
 
