@@ -89,6 +89,31 @@ def test_the_prompt_only_promises_lanes_the_run_actually_has() -> None:
     assert "anything needing current news" not in with_web
 
 
+def test_the_prompt_tells_the_agent_to_name_every_lane_it_holds() -> None:
+    """The mirror image of the test above, and a real observed failure rather than a hypothetical.
+
+    Asked "what kind of questions can you answer?", a three-lane run described its corpus and its
+    tables and never mentioned the web. Nothing in the prompt was *lying* by then — `_SOURCES_WEB`
+    was there — but the preamble still had the agent answering from "only a fixed library", and
+    every other sentence about the lane was a hedge. A capability the model never mentions is one
+    the reader never asks for, so the self-description names the lanes from the same booleans as
+    everything else instead of trusting the model to inventory them.
+    """
+    from health_coverage_navigator.agent.prompt import system_prompt
+
+    for structured, web in ((False, False), (True, False), (False, True), (True, True)):
+        prompt = system_prompt("both", structured=structured, web=web)
+        start = prompt.index("## If you are asked what you can do")
+        block = " ".join(prompt[start : prompt.index("## When to abstain", start)].split())
+
+        assert "the reference corpus" in block
+        assert ("plan tables" in block) is structured
+        assert ("web search" in block) is web
+
+    # And the preamble must no longer describe a three-lane agent as answering from prose alone.
+    assert "fixed library" not in " ".join(system_prompt("both", True, True).split())
+
+
 # ---------------------------------------------------------------- the happy path --------------
 
 

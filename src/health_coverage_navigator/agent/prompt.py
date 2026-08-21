@@ -27,6 +27,17 @@ place with the web lane registered, those two sentences would cause exactly the 
 abstaining on the questions the phase exists to answer. So the lane-dependent fragments are composed
 from per-lane pieces rather than hand-maintained per combination: four booleans' worth of prose
 written once each, assembled here.
+
+The same rule reaches the **preamble**, which is where it was caught late. Its opening sentence had
+the agent answering "using **only** a fixed library of public reference documents" — the one
+sentence in this file that composed nothing, and the one a model paraphrases when asked what it can
+do. With two more lanes registered it was simply false, and it showed: asked what kinds of question
+it could answer, a three-lane run described the corpus and the tables and never mentioned the web.
+The grounding rule that sentence carries is real, so it kept its force and lost its stale object —
+"only what your tools return" holds under every configuration. The lesson generalizes past the
+sentence: a lane also disappears when it is *described* only in the negative, so `_SOURCES_WEB`
+leads with the capability, and `_SELF_DESCRIPTION` names the lanes from the same booleans rather
+than trusting the model to inventory them.
 """
 
 import textwrap
@@ -35,12 +46,12 @@ from health_coverage_navigator.config import Toolset
 
 _PREAMBLE = """\
 You are a health-coverage assistant. You answer questions about U.S. health insurance — ACA
-marketplace coverage, Medicare, and what specific Medicare rules say — using **only** a fixed
-library of public reference documents that you read through your tools.
+marketplace coverage, Medicare, and what specific Medicare rules say — using **only** what your
+tools return to you, never your own memory.
 
-## Your reference library
+## What you can draw on
 
-Three corpora, ~2,000 documents:
+**A reference corpus** — three collections, ~2,000 documents:
 
 - **healthcare_gov** — HealthCare.gov's consumer articles and its glossary of insurance terms.
   ACA marketplace: enrollment, subsidies, plan categories, appeals, exemptions.
@@ -68,12 +79,16 @@ plan, drug, deductible or premium is answered: the reference corpus explains wha
 is, the tables say what one plan's deductible is. Call `list_tables` to see what exists, and note
 which plan years it holds."""
 
+#: Lead sentence is affirmative on purpose. Every *other* mention of this lane is a hedge — "the
+#: last place to look" in `_WEB_STEPS`, "does not mean every question is answerable" in
+#: `_OUT_OF_REACH_WITH_WEB` — and those hedges earn their place in routing. But a lane described
+#: only in the negative is one the model drops when asked what it can do, which is what happened.
 _SOURCES_WEB = """\
-You also have **web search** for what your own library cannot know: what is true *now*, and
-anything published outside it. Recent recalls and safety alerts, a deadline or figure for a plan
-year your documents do not cover, news, a specific insurer's own announcement. Use `web_search`
-for those — and note the difference in standing: your corpus and tables are CMS publications,
-while a web result is whatever ranked highly today."""
+You also have **live web search**, so you are not limited to what your library was built from. It
+reaches what is true *now* and anything published outside your other sources: recent recalls and
+safety alerts, a deadline or figure for a plan year your documents do not cover, news, a specific
+insurer's own announcement. Use `web_search` for those — and note the difference in standing: your
+corpus and tables are CMS publications, while a web result is whatever ranked highly today."""
 
 #: The closing sentence, which has to name what is *still* missing under each configuration.
 _NOTHING_ELSE = """\
@@ -194,6 +209,7 @@ Every factual sentence ends with the marker of the citation that supports it, li
 When a question spans several sources that agree, cite the clearest one rather than all of them.
 When sources genuinely differ — an ACA rule and a Medicare rule are different rules — say which
 applies to what, and cite each.
+{self_description}
 
 ## When to abstain
 
@@ -240,6 +256,32 @@ _OUT_OF_REACH_WITH_WEB = """\
 
 _OUT_OF_REACH_ALWAYS = """\
 - anything outside U.S. health coverage entirely."""
+
+#: What to say when the question is about the agent itself. Composed from the same two booleans as
+#: everything else, because a hand-written list of lanes is exactly what went stale: asked "what
+#: kind of questions can you answer?", a three-lane run described the corpus and the tables and left
+#: the web lane out entirely. A capability the model never mentions is one the reader never asks
+#: for, which makes an unmentioned lane the cheapest possible way to waste one.
+#:
+#: It deliberately does **not** say "no citations needed" for these, tempting as that is for a
+#: question with nothing to cite. `runtime._validate_grounding` refuses a non-abstained answer with
+#: an empty citation list, so that instruction would fight a guardrail and lose, spending the
+#: grounding-retry budget on the way.
+#:
+#: Stored as one paragraph and wrapped on render, like the closing sentence of `_sources`: the lane
+#: list is interpolated, so hand-wrapping it here would leave a ragged line in whichever
+#: configuration was not the one it was wrapped for.
+_SELF_DESCRIPTION = """\
+A question about your own scope is not a corpus question — answer it from these instructions rather
+than from a search. Name every source you actually hold: {lanes}.{weight} Then say what you do not
+hold — provider directories, networks, and their own account — so the shape of what you offer is
+clear in both directions."""
+
+#: Only meaningful with more than one lane, and the failure it names is a real observed one: the
+#: lane described last is the lane that gets dropped.
+_SELF_DESCRIPTION_WEIGHT = """ Give the last of those the same weight as the first; a capability you
+leave out is one the reader will never ask you for."""
+
 
 _EMPTY_IS_NOT_NO = """
 
@@ -311,6 +353,28 @@ def _out_of_reach(structured: bool, web: bool) -> str:
     return block + (_EMPTY_IS_NOT_NO if structured or web else "")
 
 
+def _self_description(structured: bool, web: bool) -> str:
+    """How to answer a question about the agent itself, naming the lanes it actually holds."""
+    lanes = ["the reference corpus"]
+    if structured:
+        lanes.append("the vendored plan tables")
+    if web:
+        lanes.append("live web search")
+    joined = (
+        lanes[0]
+        if len(lanes) == 1
+        else " and ".join(lanes)
+        if len(lanes) == 2
+        else ", ".join(lanes[:-1]) + ", and " + lanes[-1]
+    )
+    paragraph = _SELF_DESCRIPTION.format(
+        lanes=joined, weight=_SELF_DESCRIPTION_WEIGHT if len(lanes) > 1 else ""
+    )
+    return "\n\n## If you are asked what you can do\n\n" + textwrap.fill(
+        " ".join(paragraph.split()), width=98
+    )
+
+
 def _citation_forms(structured: bool, web: bool) -> str:
     """How to form a citation, listing only the shapes this configuration can actually produce."""
     if not structured and not web:
@@ -358,5 +422,6 @@ def system_prompt(toolset: Toolset, structured: bool = False, web: bool = False)
         sources=_sources(structured, web), steps=_number(steps)
     ) + _ANSWERING.format(
         citation_forms=_citation_forms(structured, web),
+        self_description=_self_description(structured, web),
         out_of_reach=_out_of_reach(structured, web),
     )
