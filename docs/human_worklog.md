@@ -23,6 +23,14 @@ AI (e.g., Claude) should **NOT** read this document.
     - User confirm which one to add
     - Then AI add
 
+4. Use AI to upgrade python package
+
+    - Ask AI to check for the packages we use
+    - Upgrade them
+    - Run tests
+    - Fix test errors
+    - Summarize the change
+
 ## Work Log
 
 ### Aug 19, 2026
