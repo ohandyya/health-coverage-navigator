@@ -51,6 +51,8 @@ AI (e.g., Claude) should **NOT** read this document.
 
 - Use walkthrough to trace the code
 
+    - In process, add to technical highlights if any is identified.
+
 
 ### Aug 18, 2026
 
