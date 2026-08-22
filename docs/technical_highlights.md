@@ -80,7 +80,28 @@ The rule underneath: **classify failures by detectability, not severity.**
 
 ---
 
-## 4. [Letting a model write SQL — safely, successfully, and with every number citable](highlights/model-written-sql.md)
+## 4. [A model will call your tools wrongly — so every rejection is written as a correction](highlights/tool-retries.md)
+
+An agent that composes its own tool calls writes unbalanced regexes, out-of-vocabulary arguments and
+SQL naming columns that do not exist. Letting those fail the run throws away a working conversation
+to punish a typo; swallowing them and returning nothing tells the model the corpus is empty, which
+is false. Both turn a **first draft** into a wrong answer.
+
+So every rejection raises `ModelRetry` — the text lands in the conversation and the model tries
+again — and every message carries three things: what was wrong, which value caused it, and **what to
+send instead**. That third clause is the one that gets skipped, and skipping it is how a retry
+budget gets spent producing the same call three times. Sometimes the best message is one you did not
+write: a bad column name is answered with DuckDB's own binder error, which ranks the near-misses out
+of 151 columns better than any hand-written string could.
+
+The other half is knowing where the bet is unwinnable. A spent search budget, a Tavily outage and a
+missing credential are **deliberately not retries** — the model cannot act differently to fix any of
+them — so they degrade with an explanation instead. *Retry what the model got wrong; degrade what
+the world got wrong.*
+
+---
+
+## 5. [Letting a model write SQL — safely, successfully, and with every number citable](highlights/model-written-sql.md)
 
 *"What is a deductible"* is a reference question; *"what is the deductible on plan 38344AK1060002"*
 is a **row**, and retrieval answers it with a passage that sounds right and cannot know the number.

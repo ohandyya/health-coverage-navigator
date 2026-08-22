@@ -39,7 +39,7 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 ## Technical highlights
 
 **If you are here to read the engineering, start with
-[docs/technical_highlights.md](docs/technical_highlights.md).** Four mechanisms written up in full —
+[docs/technical_highlights.md](docs/technical_highlights.md).** Five mechanisms written up in full —
 each stating the problem, the approach, the obvious alternative that was rejected, and the evidence
 that it works:
 
@@ -48,6 +48,7 @@ that it works:
 | [Hallucinated citations are made structurally impossible, not discouraged](docs/highlights/grounded-citations.md) | The citable set is recorded by the tools; an output validator refuses anything outside it. Not a prompt instruction — a code path the model cannot talk its way past. Most necessary in the web lane, where an invented URL is plausible and checkable by nobody |
 | [A test suite that *cannot* spend money — and the guard that had to be repaired](docs/highlights/offline-test-suite.md) | A safety flag borrowed from a library covers that library's surface area, not your intent. How the hole opened, how it was found, what closes it — and the phase that re-opened it exactly as the write-up predicted |
 | ["Missing" and "wrong" are different failures, and get opposite treatment](docs/highlights/missing-vs-stale.md) | Degrade when the system is visibly reduced; refuse when it would be invisibly wrong. One rule, four resources, a different policy at each call site |
+| [A model will call your tools wrongly — so every rejection is written as a correction](docs/highlights/tool-retries.md) | A bad regex or a wrong column name is a first draft, not an error. Every rejection says what broke, which value broke it, and **what to send instead** — and the failures a retry cannot fix degrade instead |
 | [Letting a model write SQL — safely, successfully, and with every number citable](docs/highlights/model-written-sql.md) | Two independent guards on model-written SQL, the mechanisms that make the model's queries *succeed*, and a byte-exact citation for a table cell |
 
 ---
