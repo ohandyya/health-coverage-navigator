@@ -489,6 +489,10 @@ web-sourced answer — and the agent chose the right lane on its own.
 
 ### Phase 3 — Add structured-API tools
 
+**[structured-api-tools.md](structured-api-tools.md) is the design document for this phase** — which
+sources need a credential and how to obtain one, and, as the phase is built, the endpoint contracts
+and the typed wrappers over them.
+
 Put live sources into the structured lane: the Marketplace API (plan/drug/provider lookups),
 openFDA (drug facts/recalls), and NPPES (provider lookup), wrapped as **typed tools** — Pydantic
 models in and out, so a malformed API response is a validation error rather than plausible-looking
