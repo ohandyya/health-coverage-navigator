@@ -516,10 +516,21 @@ provider and get a deterministic answer, not prose from a document.
 
 **User-facing capability**
 - [ ] Run precise lookups:
-  - *"find plans in ZIP 30076 for a family of 3"*
+  - *"find plans in ZIP 27360 for a family of 3"*
   - *"is drug X covered under plan Y"*
   - *"what's this NPI's specialty"*
   - *"has drug X been recalled"*
+
+> **ZIP corrected from 30076 to 27360 (2026-08-22), and the reason is a fact about the API rather
+> than a typo.** The Marketplace API serves **only the states that use HealthCare.gov**; a state
+> running its own exchange returns `400 "state is not a valid marketplace state"` — verified for
+> CA, GA and NY, against NC and TX which work. ZIP 30076 is in **Georgia**, which moved to its own
+> marketplace, so the original acceptance test could never have passed however well the phase was
+> built. 27360 is in North Carolina, which uses HealthCare.gov.
+>
+> The Georgia case was kept rather than discarded: it is a gold question of its own, because a 400
+> there is an **answer** — *that state runs its own marketplace* — and not an outage or an absence
+> of plans. See [structured-api-tools.md](structured-api-tools.md) §10d.
 
 **Software capability**
 - [ ] Typed tool wrappers (Pydantic models) for Marketplace API, openFDA, and NPPES, registered beside the Phase 1-c mirror tools in the same lane

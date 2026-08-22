@@ -94,6 +94,17 @@ class AgentConfig(BaseModel):
     #: naming the fix rather than quietly answering current-events questions from a static corpus.
     web_tools: bool
 
+    #: Whether the agent sees the Phase 3 live-API tools. The fourth axis, and a boolean for the
+    #: same reason `structured_tools` and `web_tools` are — except that this one selects the *live
+    #: half of an existing lane* rather than a new lane, which is why it is not a value of
+    #: `structured_tools`. The mirror tools and these answer different question shapes over the same
+    #: `source_type` (docs/structured-api-tools.md §15), and a run may sensibly want either alone.
+    #:
+    #: Unlike `web_tools`, **true with no credential is not fatal**: openFDA and NPPES are keyless,
+    #: so two of the three sources work regardless, and only the Marketplace tools go unregistered
+    #: when `CMS_MARKETPLACE_API_KEY` is unset.
+    live_tools: bool
+
 
 class EvalsConfig(BaseModel):
     """Grading. Separate from `agent:` because the judge must be swappable without touching what
@@ -239,6 +250,52 @@ class WebConfig(BaseModel):
     exclude_domains: tuple[str, ...] = ()
 
 
+class LiveConfig(BaseModel):
+    """Phase 3 live-API lane: the ceilings on three services this repo does not run.
+
+    `WebConfig` bounds a lane that costs money. This one bounds a lane that costs **somebody else's
+    capacity** — openFDA's per-IP daily limit, NPPES's undocumented one, CMS's 1000/minute
+    (docs/structured-api-tools.md §3, §4, §5). Same mechanism, different justification, and the
+    difference matters when reading a diff: none of these values changes what the agent *answers*,
+    so unlike `WebConfig`'s `search_depth` they are ceilings rather than tunables.
+    """
+
+    model_config = _FROZEN
+
+    #: Live-API lookups one agent run may make, across every live tool. Counted on `AnswerDeps`
+    #: exactly as web searches and structured queries are. Sized for the shape §7b describes: a drug
+    #: coverage question is *at least* two calls (resolve the name, then check the plan), so a
+    #: ceiling that only allowed a handful would fail compound questions rather than runaway ones.
+    max_calls_per_run: int = Field(gt=0)
+
+    #: Deadline for one live-API request. A browser holding an SSE stream open does not have a
+    #: minute, and one tool call must not be able to consume a whole request when
+    #: `agent.request_limit` allows twelve model calls.
+    timeout_s: float = Field(gt=0)
+
+    #: How long a 429's `retry-after` may ask us to wait before the lane degrades instead. Ours,
+    #: not the services': none of the three documents a retry policy.
+    retry_after_cap_s: float = Field(ge=0)
+
+    #: **A safety ceiling on one label section, not a routine truncation.** One openFDA label is
+    #: ~255,000 characters whole, but its individual sections measured 500-11,300 (2026-08-22), so
+    #: in normal operation this never binds. It exists for the pathological label, and when it does
+    #: bind the section is marked `truncated` rather than silently shortened — because a warnings
+    #: section that stops mid-sentence with no indication is worse than one that says it was cut.
+    max_section_chars: int = Field(gt=0)
+
+    #: Recalls returned for one drug. The FDA holds 44 for atorvastatin alone, most of them
+    #: terminated years ago; a reader wants the recent ones and a count, not the archive.
+    #: `DrugRecallResult.total_matching` carries the rest.
+    max_recalls: int = Field(gt=0)
+
+    #: Plans returned by one `find_plans` call. A real county carries 89-121 of them (measured
+    #: 2026-08-22 in NC and TX); handing the model all of those would spend a context window on a
+    #: catalogue nobody reads. `PlanMatches.total` carries the real count so "there are more" stays
+    #: sayable.
+    max_plans: int = Field(gt=0)
+
+
 class ChunkParams(BaseModel):
     """Chunking parameters, and the fingerprint that pins an eval run to them.
 
@@ -281,6 +338,7 @@ class Config(BaseModel):
     vectors: VectorsConfig
     structured: StructuredConfig
     web: WebConfig
+    live: LiveConfig
     evals: EvalsConfig
     chunking: ChunkParams
 

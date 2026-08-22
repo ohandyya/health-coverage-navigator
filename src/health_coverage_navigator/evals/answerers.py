@@ -39,6 +39,9 @@ from health_coverage_navigator.agent.models import ChunkHit
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, Citation, TraceStep
 from health_coverage_navigator.config import Toolset, get_config
 from health_coverage_navigator.evals.models import GoldQuestion
+from health_coverage_navigator.live.marketplace import MarketplaceClient
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
 from health_coverage_navigator.web.client import WebSearchClient
@@ -218,6 +221,9 @@ def agent_answerer(
     toolset: Toolset | None = None,
     structured: StructuredStore | None = None,
     web: WebSearchClient | None = None,
+    openfda: OpenFdaClient | None = None,
+    nppes: NppesClient | None = None,
+    marketplace: MarketplaceClient | None = None,
 ) -> AnswerFn:
     """The real answerer: the agent, one run per question.
 
@@ -244,6 +250,12 @@ def agent_answerer(
 
     `web` is Phase 2's third axis, and it is the same shape as `structured` for the same reason.
     `--no-web` measures the same thing one lane later.
+
+    The three live clients are Phase 3's axis, and they are **three parameters rather than one**
+    because they are independently absent: openFDA and NPPES are keyless, the Marketplace needs a
+    credential, and a run with two of the three is a real configuration rather than a broken one.
+    `--no-live` withholds all three, which is what §16b measures — whether six more tools cost
+    anything on the questions that were already answerable.
     """
     from health_coverage_navigator.agent.runtime import answer_question
 
@@ -255,6 +267,9 @@ def agent_answerer(
             vectors=vectors,
             structured=structured,
             web=web,
+            openfda=openfda,
+            nppes=nppes,
+            marketplace=marketplace,
         )
 
     return answer

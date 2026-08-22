@@ -14,6 +14,9 @@ from health_coverage_navigator.agent.models import ChunkHit
 from health_coverage_navigator.api.models import TraceStep
 from health_coverage_navigator.chunking.models import Chunk
 from health_coverage_navigator.config import RetrievalConfig, get_config
+from health_coverage_navigator.live.marketplace import MarketplaceClient
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.structured.models import Row
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
@@ -84,6 +87,57 @@ class AnswerDeps:
     web_searches: int = 0
     """How many web searches this run has made. Numbers the result ids (`web#s2.1`) *and* enforces
     `web.max_searches_per_run` — the web is the first lane where an unchecked loop spends money."""
+
+    openfda: OpenFdaClient | None = None
+    """The live lane's openFDA client, or `None` when this run has no live tools.
+
+    `None` is a real, expected state for the same reason `vectors`, `structured` and `web` are — a
+    run that deliberately excluded the lane — but it arrives for a *different* reason than the
+    others. There is no credential that can be missing here (docs/structured-api-tools.md §4), so
+    `None` only ever means "this run did not want the lane", never "this machine cannot have it"."""
+
+    marketplace: MarketplaceClient | None = None
+    """The live lane's CMS Marketplace client, or `None` when this run has no key or no live tools.
+
+    **Independently `None` from `openfda`, deliberately.** This is the only Phase 3 source with a
+    credential, so a deployment can perfectly reasonably have the FDA tools and not these — and the
+    agent is told which questions it therefore cannot answer, rather than the whole lane being
+    withheld because one third of it is unconfigured."""
+
+    nppes: NppesClient | None = None
+    """The live lane's NPI registry client, or `None` when this run has no live tools. Keyless like
+    `openfda`, so `None` here only ever means the configuration excluded the lane."""
+
+    market_year: int | None = None
+    """CMS's current plan year, resolved at most once per run and cached here.
+
+    `/market-years` is asked rather than hardcoded (§7c), but asking it per tool call would spend
+    the lookup budget on a value that cannot change mid-run. Distinct from `plan_year`, which is
+    what the *request* pinned: this is what CMS says today, and it is the fallback when the request
+    pinned nothing."""
+
+    live_cache: dict[str, object] = field(default_factory=dict)
+    """Live-API results already fetched **in this run**, keyed by tool and normalised arguments.
+
+    Run-scoped and in-memory, deliberately not persistent (docs/structured-api-tools.md §13c). The
+    value of caching here is almost entirely *within* a run — `find_drug` then
+    `check_drug_coverage` then `drug_recalls` on the same drug is the common shape — while a
+    cross-run disk cache would introduce staleness into the one lane whose selling point is being
+    current. *"Is this covered now"* answered from yesterday is the failure this lane exists to
+    avoid.
+
+    **The key must carry every dimension the result depends on**, which this repo has now got wrong
+    three times in two lanes: the resolved `year`, not the caller's `None`, and for `find_plans` the
+    whole household — two people in one ZIP with different incomes see different plans."""
+
+    live_calls: int = 0
+    """How many live-API lookups this run has made, across every live tool. Numbers the record ids
+    (`fda#r2.1`) *and* enforces `live.max_calls_per_run`.
+
+    **One counter for all three upstreams, not one each.** The ceiling exists to stop a runaway
+    loop, and a loop that alternates between two services is exactly as runaway as one that hammers
+    a single service — three separate budgets would each look healthy while the run made three times
+    the calls."""
 
     def _record(
         self,
@@ -156,3 +210,25 @@ class AnswerDeps:
         """The sequence number for the next web search."""
         self.web_searches += 1
         return self.web_searches
+
+    def cached_live(self, key: str) -> object | None:
+        """A live result already fetched this run, or `None`.
+
+        A hit costs no HTTP request and no budget — which is the point: a compound question that
+        asks about one drug three ways should pay for it once."""
+        return self.live_cache.get(key)
+
+    def remember_live(self, key: str, value: object) -> object:
+        """Record a live result under its cache key. Returns it, so it can wrap a return value."""
+        self.live_cache[key] = value
+        return value
+
+    def next_live_call(self) -> int:
+        """The sequence number for the next live-API lookup.
+
+        Shared across the live tools so a record id says which *call* in the run produced it, not
+        which call to that particular upstream — the trace reads in one sequence and the ids should
+        too.
+        """
+        self.live_calls += 1
+        return self.live_calls

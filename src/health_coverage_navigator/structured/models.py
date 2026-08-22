@@ -123,6 +123,22 @@ class Row(BaseModel):
     """Column → value, exactly as the query returned it. `null` is SQL NULL, which is **not** the
     same as an empty string in this data."""
 
+    url: str | None = None
+    """Where a reader can re-fetch **this exact record**, when such an address exists.
+
+    `None` for a mirror row, and that is not an omission: there is no public address for row 41,922
+    of a Parquet file, so a citation to one links to the source dataset instead. A Phase 3 live-API
+    record *does* have one — the query URL that produced it — and this is where it travels
+    (docs/structured-api-tools.md §14b). Additive, and the mirror path is untouched by it."""
+
+    title: str | None = None
+    """A display label for the citation, when `view` and `partition` do not produce a good one.
+
+    `None` for a mirror row, whose `source/partition/table` triple already reads well. A live record
+    has no partition, so without this every live citation would render as the generic "Structured
+    query result" — losing exactly the provenance §14c asks to be carried, such as which FDA label
+    version a warning was read from."""
+
 
 class QueryResult(BaseModel):
     """What `query_structured` reports."""

@@ -34,6 +34,11 @@ from pydantic_ai import ModelRetry, RunContext
 
 from health_coverage_navigator.agent.deps import AnswerDeps
 from health_coverage_navigator.agent.index import MAX_HITS, MAX_PATTERN_CHARS
+from health_coverage_navigator.agent.live_tools import (
+    MARKETPLACE_TOOLS,
+    NPPES_TOOLS,
+    OPENFDA_TOOLS,
+)
 from health_coverage_navigator.agent.models import ChunkHit, CorpusOverview
 from health_coverage_navigator.agent.structured_tools import STRUCTURED_TOOLS
 from health_coverage_navigator.agent.web_tools import WEB_TOOLS
@@ -264,7 +269,11 @@ VECTOR_TOOLS = (vector_search,)
 
 
 def select_tools(
-    toolset: Toolset, structured: bool = False, web: bool = False
+    toolset: Toolset,
+    structured: bool = False,
+    web: bool = False,
+    live: bool = False,
+    marketplace: bool = False,
 ) -> list[Callable[..., object]]:
     """Which tools the agent may see, for one run.
 
@@ -276,15 +285,27 @@ def select_tools(
     combinations, most of them meaningless, and would silently redefine the three names Phase 1b's
     measurement is recorded under.
 
-    `runtime._build_agent` caches on all three, so the return has to depend on nothing but the
+    `live` is Phase 3's, and it is a fourth boolean rather than a value of `structured` for a
+    reason worth stating: it selects the *live half of the structured lane*, which answers under the
+    same `source_type` over the same key space (docs/structured-api-tools.md §15). A run may
+    sensibly want the vendored half alone — offline, reproducible, free — or the live half alone,
+    and folding them into one flag would make "which half answered" unaskable at exactly the moment
+    the eval slice starts asking it.
+
+    `runtime._build_agent` caches on all four, so the return has to depend on nothing but the
     arguments.
 
     Order is the order the model sees the tools in, and it is preserved deliberately: the
     general-purpose ranker first, the recovery moves next, then the other lanes in the order they
-    were built — relational, then web. The web tool is **last on purpose**: it is the most expensive
-    call and the one whose over-use is the characteristic Phase 2 failure, and the prompt says when
-    to reach for it. Under `both`, lexical leads because it is the cheaper call and the one that
-    wins on exact vocabulary.
+    were built — relational, then web, then live. The web tool is **last but one on purpose**: it
+    is the most expensive call and the one whose over-use is the characteristic Phase 2 failure,
+    and the prompt says when to reach for it. Under `both`, lexical leads because it is the cheaper
+    call and the one that wins on exact vocabulary.
+
+    The live tools trail even the web tool, and the reason is Phase 3's characteristic failure
+    rather than cost: they are the *narrowest* tools here — each answers one specific question about
+    one specific drug, plan or provider — so a model that reaches for them early is a model that has
+    decided what kind of question it is looking at before it has looked.
     """
     ranked = {
         "lexical": LEXICAL_TOOLS,
@@ -296,6 +317,12 @@ def select_tools(
         *NAVIGATION_TOOLS,
         *(STRUCTURED_TOOLS if structured else ()),
         *(WEB_TOOLS if web else ()),
+        *(OPENFDA_TOOLS if live else ()),
+        *(NPPES_TOOLS if live else ()),
+        # A fifth *sub*-axis rather than a sixth lane. The Marketplace tools are the only ones in
+        # the phase behind a credential, so they are registered separately: a deployment with no
+        # key keeps the keyless two-thirds of the live lane instead of losing all of it.
+        *(MARKETPLACE_TOOLS if live and marketplace else ()),
     ]
 
 
@@ -311,6 +338,9 @@ __all__ = [
     "NAVIGATION_TOOLS",
     "STRUCTURED_TOOLS",
     "VECTOR_TOOLS",
+    "MARKETPLACE_TOOLS",
+    "NPPES_TOOLS",
+    "OPENFDA_TOOLS",
     "WEB_TOOLS",
     "get_chunk",
     "grep_corpus",

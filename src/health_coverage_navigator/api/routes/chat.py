@@ -136,7 +136,14 @@ async def post_chat(
         raise HTTPException(status_code=503, detail=detail)
     assert ctx.index is not None  # narrowed by _unavailable
     return await answer_question(
-        request, ctx.index, vectors=ctx.vectors, structured=ctx.structured, web=ctx.web
+        request,
+        ctx.index,
+        vectors=ctx.vectors,
+        structured=ctx.structured,
+        web=ctx.web,
+        openfda=ctx.openfda,
+        marketplace=ctx.marketplace,
+        nppes=ctx.nppes,
     )
 
 
@@ -177,7 +184,14 @@ async def _agent_events(request: ChatRequest, ctx: AppContext) -> AsyncIterator[
     assert ctx.index is not None  # guarded by the route
     try:
         async for event in stream_answer(
-            request, ctx.index, vectors=ctx.vectors, structured=ctx.structured, web=ctx.web
+            request,
+            ctx.index,
+            vectors=ctx.vectors,
+            structured=ctx.structured,
+            web=ctx.web,
+            openfda=ctx.openfda,
+            marketplace=ctx.marketplace,
+            nppes=ctx.nppes,
         ):
             yield sse_frame(event)
     except asyncio.CancelledError:  # pragma: no cover - client hung up

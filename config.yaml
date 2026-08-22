@@ -50,7 +50,18 @@ agent:
   # 12/16 leaves room for that path plus the grounding retries, and is still far below the runaway
   # loop these exist to stop.
   request_limit: 12
-  tool_calls_limit: 16
+  # Raised 16 -> 20 at Phase 3, and the reason is arithmetic rather than a test that failed. This
+  # ceiling was set for a NINE-tool agent; the live lane makes it fifteen, and a legitimate compound
+  # question now costs more calls than any Phase 2 question could: "is this drug covered, and what
+  # does the FDA say about it" is find_drug + check_drug_coverage + drug_label, on top of whatever
+  # reference searching preceded it. The first Phase 3 sweep put abs-02 into a UsageLimitExceeded at
+  # 17 calls.
+  #
+  # STILL A CEILING, not a budget: it exists to stop a runaway loop, and 20 is comfortably below
+  # what a loop reaches while comfortably above what a four-hop question needs. If a future sweep
+  # trips it again, look for the loop before raising it — a limit that keeps rising to accommodate
+  # whatever happened is not a limit.
+  tool_calls_limit: 20
 
   # Transport-level retries, which is a DIFFERENT THING from `retries` above: that one is about
   # whether an answer is grounded, this one is about whether the request arrived. The OpenAI SDK
@@ -95,6 +106,17 @@ agent:
   # rather than quietly meeting a current-events question with a static corpus — the same
   # refusal-to-degrade as a missing vector store or a missing PUF mirror.
   web_tools: true
+
+  # Whether the agent sees the Phase 3 live-API tools — openFDA, NPPES, and the CMS Marketplace API.
+  # The FOURTH axis, and the one that is NOT a new lane: these answer with the same
+  # `structured_api` source_type the mirror tools do, over the same key space
+  # (docs/structured-api-tools.md §15). A separate switch from structured_tools because a run may
+  # sensibly want the vendored half alone — offline, reproducible, free — or the live half alone.
+  #
+  # UNLIKE web_tools, true with no credential is NOT fatal: openFDA and NPPES are keyless, so two of
+  # the three sources work regardless. Only the Marketplace tools go unregistered when
+  # CMS_MARKETPLACE_API_KEY is unset, and the agent is told what it therefore cannot answer.
+  live_tools: true
 
 retrieval:
   # Matches the eval set's headline metric (recall@5), so a retrieval change and its measurement
@@ -220,6 +242,43 @@ web:
   # a slower copy of the reference lane and guarantees an abstention on what the phase exists to
   # answer (docs/web_search_tool.md §7). This is the escape hatch for a site that proves to be noise.
   exclude_domains: []
+
+live:
+  # Phase 3 live-API lane: openFDA, NPPES, and the CMS Marketplace API. These are CEILINGS, not
+  # tunables — none of them changes what the agent answers, only how much of somebody else's
+  # capacity it may spend doing so (docs/structured-api-tools.md §13b).
+
+  # Live lookups one agent run may make, ACROSS ALL live tools. Sized for the call shape §7b
+  # describes rather than for a round number: a drug-coverage question is at least TWO calls,
+  # because /drugs/covered takes RxCUIs and no user types one — so the name has to be resolved
+  # first. A compound question ("is it covered, and has it been recalled") is four. A ceiling below
+  # that would fail legitimate questions rather than runaway loops, which is the wrong failure.
+  max_calls_per_run: 8
+
+  # Deadline for one live-API request. Same reasoning as web.timeout_s and deliberately shorter:
+  # these are per-record lookups against indexed data, not a search that has to crawl.
+  timeout_s: 15.0
+
+  # How long a 429's `retry-after` may ask us to wait before the lane degrades honestly instead.
+  # Ours, not the services' — NONE of the three documents a retry policy.
+  retry_after_cap_s: 5.0
+
+  # A SAFETY CEILING on one label section, NOT a routine truncation. Measured 2026-08-22: a whole
+  # openFDA label is ~255,000 chars, but its individual sections run 500-11,300, so this does not
+  # bind in normal operation — it exists for the pathological label. When it does bind the section
+  # is MARKED as truncated rather than quietly shortened: a warnings section that stops mid-sentence
+  # with no indication is worse than one that says it was cut.
+  max_section_chars: 20000
+
+  # Recalls returned for one drug. The FDA holds 44 for atorvastatin alone, most terminated years
+  # ago. A reader wants the recent ones plus a total, not the archive — DrugRecallResult carries
+  # `total_matching` so "there are more" is sayable without shipping them.
+  max_recalls: 5
+
+  # Plans returned by one find_plans call. A real county carries 89-121 (measured 2026-08-22 in NC
+  # and TX), so this is a sample and PlanMatches.total says so. Sized to be comparable in one
+  # answer rather than to be complete — a plan catalogue is not an answer to "what can I buy".
+  max_plans: 10
 
 evals:
   # The LLM judge behind `make eval-judge`, which grades each answer against the gold set's

@@ -13,6 +13,9 @@ from fastapi import Request
 
 from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.evals.models import GoldSet
+from health_coverage_navigator.live.marketplace import MarketplaceClient
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
 from health_coverage_navigator.web.client import WebSearchClient
@@ -55,6 +58,28 @@ class AppContext:
     as the two above, with one difference worth noting: the others are `None` because a *build step*
     has not run here, this one because a *credential* is absent — so no `make` target fixes it and
     the 503 names `.env` instead. Whether `None` is fatal depends on `agent.web_tools`."""
+
+    openfda: OpenFdaClient | None = None
+    """The live lane's openFDA client, or `None` when `agent.live_tools` is off.
+
+    **The one lane here whose `None` can never be an accident.** The three above are `None` because
+    a build step has not run or a credential is absent — states a deployment can fall into without
+    meaning to. openFDA needs no key and no local artifact (docs/structured-api-tools.md §4), so
+    this is `None` only when the configuration says so, and `routes/chat.py` has no 503 to raise for
+    it."""
+
+    nppes: NppesClient | None = None
+    """The live lane's NPI registry client, or `None` when `agent.live_tools` is off. Keyless like
+    `openfda`, so this is never `None` by accident either."""
+
+    marketplace: MarketplaceClient | None = None
+    """The live lane's CMS Marketplace client, or `None` with no `CMS_MARKETPLACE_API_KEY`.
+
+    **`None` here is degradation, not a 503** — the asymmetry with `web` is deliberate. A missing
+    Tavily key removes the entire web lane, so answering a current-events question would be a lie
+    by omission and the app refuses. A missing Marketplace key removes one of three live sources;
+    the FDA tools still work, so the honest response is a narrower agent that is *told* it cannot
+    price plans, not a refusal to start."""
 
 
 def get_context(request: Request) -> AppContext:

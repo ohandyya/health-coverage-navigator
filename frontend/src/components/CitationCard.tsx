@@ -38,21 +38,55 @@ function isRow(citation: Citation): boolean {
   )
 }
 
-/** The cited cells, one per line — the shape `runtime._row_citation` builds them in. */
+/** A line that starts a new cell: a bare identifier, then `: `. Anything else continues the value
+ *  above it.
+ *
+ *  The naive split — one line, one cell — was correct until Phase 3, when a live-API record could
+ *  carry a cell that is a **passage** rather than a value: an FDA label section is multi-line prose.
+ *  Splitting that per line invented a column out of every sentence containing a colon, so
+ *  `LIPITOR is indicated: • To reduce...` rendered as a column named "LIPITOR is indicated".
+ *
+ *  **Case-insensitive, and that is not laziness.** The first version anchored on snake_case, which
+ *  is what the live lane emits — and would have broken every mirror citation, because the Exchange
+ *  PUF's columns are CamelCase (`TEHBDedInnTier1Individual`). The two halves of this lane name their
+ *  columns differently and both are real.
+ *
+ *  The remaining ambiguity is accepted rather than solved: a prose line opening with a single
+ *  word and a colon (`Note: ...`) still reads as a new cell. Real column names never contain
+ *  spaces, which is what the pattern actually keys on, and the cost of the residue is a
+ *  mis-labelled row rather than a wrong value. */
+const CELL_START = /^[A-Za-z][A-Za-z0-9_]*: /
+
+/** The cited cells — the shape `runtime._row_citation` builds them in, one per line **unless the
+ *  value is a passage**, which spans lines. */
+export function parseCells(snippet: string): { column: string; value: string }[] {
+  const rows: { column: string; value: string }[] = []
+  for (const line of snippet.split('\n')) {
+    if (CELL_START.test(line)) {
+      const at = line.indexOf(': ')
+      rows.push({ column: line.slice(0, at), value: line.slice(at + 2) })
+    } else if (rows.length > 0) {
+      rows[rows.length - 1].value += `\n${line}`
+    } else {
+      rows.push({ column: '', value: line })
+    }
+  }
+  return rows
+}
+
 function RowCells({ snippet }: { snippet: string }) {
-  const rows = snippet.split('\n').map((line) => {
-    const at = line.indexOf(': ')
-    return at === -1 ? { column: '', value: line } : { column: line.slice(0, at), value: line.slice(at + 2) }
-  })
+  const rows = parseCells(snippet)
 
   return (
     <dl className="grid grid-cols-[minmax(0,auto)_1fr] gap-x-3 gap-y-1 font-mono text-xs">
       {rows.map((row, index) => (
         <Fragment key={`${row.column}-${index}`}>
           <dt className="truncate text-muted-foreground">{row.column}</dt>
-          {/* `whitespace-pre` because the value is the published one: '$4,500 ' keeps its trailing
-              space, and a citation that renders it away stops being the evidence it claims to be. */}
-          <dd className="whitespace-pre break-all">{row.value}</dd>
+          {/* `whitespace-pre-wrap`, not `whitespace-pre`: the value is the published one, so
+              '$4,500 ' keeps its trailing space and a citation that renders it away stops being the
+              evidence it claims to be — but a Phase 3 cell can be a multi-line label section, and
+              `pre` would send that off the side of the card rather than wrapping it. */}
+          <dd className="whitespace-pre-wrap break-words">{row.value}</dd>
         </Fragment>
       ))}
     </dl>

@@ -210,7 +210,9 @@ def test_a_runaway_tool_loop_hits_the_usage_limit(agent_kit):
     shape of the failure the limits exist for.
     """
     with (
-        build_agent(structured=False, web=False).override(model=agent_kit.script(agent_kit.SEARCH)),
+        build_agent(structured=False, web=False, live=False).override(
+            model=agent_kit.script(agent_kit.SEARCH)
+        ),
         pytest.raises(UsageLimitExceeded),
     ):
         asyncio.run(answer_question(ChatRequest(message="q"), agent_kit.index))

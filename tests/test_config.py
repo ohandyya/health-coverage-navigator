@@ -42,6 +42,7 @@ def valid() -> dict:
             "toolset": "both",
             "structured_tools": True,
             "web_tools": True,
+            "live_tools": True,
         },
         "retrieval": {"top_k": 5, "bm25_k1": 1.2, "bm25_b": 0.75},
         "vectors": {
@@ -65,6 +66,14 @@ def valid() -> dict:
             "timeout_s": 20.0,
             "retry_after_cap_s": 5.0,
             "exclude_domains": [],
+        },
+        "live": {
+            "max_calls_per_run": 8,
+            "timeout_s": 15.0,
+            "retry_after_cap_s": 5.0,
+            "max_section_chars": 20000,
+            "max_recalls": 5,
+            "max_plans": 10,
         },
         "evals": {"judge_model": "openai:gpt-5.4-mini-2026-03-17"},
         "chunking": {

@@ -35,6 +35,28 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ### Aug 22, 2026
 
+#### TO Dos
+
+- [Done] Remove my github repo URL from `USER_AGENT`
+
+- [Done] Use real openFDA API key
+
+- Manual UI walkthrough
+
+- Code walkthrough
+
+#### Questions
+
+- Is there an suggested ordering on the tools? Is it anywhere in the prompt?
+
+    - Desired ordering
+
+        - local database tool
+        - structured API
+        - web tools
+
+- How does the citation work for structured API? by id? by url? Verify this in UI manually.
+
 #### API Requesat status
 
 - `Marketplace API` API 

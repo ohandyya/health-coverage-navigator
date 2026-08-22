@@ -185,6 +185,18 @@ eval-web: ## Agent with the web lane on (needs TAVILY_API_KEY; ~39 model calls +
 eval-no-web: ## Agent with the web lane off — the control for eval-web (~35 model calls)
 	uv run python -m health_coverage_navigator.evals.runner --runner agent --no-web
 
+# Phase 3's axis, and the same pair one lane later. `eval-no-live` is the control that answered the
+# phase's real question: six more tools took the agent from nine to fifteen, and the risk was that
+# it would start reaching for them on questions the other lanes already answered. It did not — the
+# comparison is in README's measured table. `eval-live` needs no key for two of its three sources;
+# without CMS_MARKETPLACE_API_KEY the three Marketplace tools go unregistered and their gold
+# questions are dropped rather than scored as routing failures.
+eval-live: ## Agent with the live-API tools on (~49 model calls; CMS key optional)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --live
+
+eval-no-live: ## Agent with the live-API tools off — the control for eval-live (~43 model calls)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --no-live
+
 eval-judge: ## Run the gold set through the agent AND grade answers with the LLM judge
 	uv run python -m health_coverage_navigator.evals.runner --runner agent --judge
 
