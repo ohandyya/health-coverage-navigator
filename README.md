@@ -98,7 +98,7 @@ a *pre-existing* streaming bug the web lane happened to expose.
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 373 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
+| **Gates** | 374 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
