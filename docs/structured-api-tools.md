@@ -18,8 +18,9 @@ line exists only so a reader of this file is not misled by its level of detail.
 
 ## 1. What this document holds
 
-Right now, **access**: which of the three sources need a credential, how to obtain one, and the
-properties of those credentials that constrain the design rather than merely the setup.
+Right now, **access**: which of the three sources need a credential, how to obtain one, the
+properties of those credentials that constrain the design rather than merely the setup, and the one
+key that was available and deliberately declined.
 
 As the phase is built it grows the sections its two peer documents have — the **endpoint contracts**
 (§7, reserved below), the tool surface and its descriptions, the typed request/response models, the
@@ -32,14 +33,18 @@ else's operational policy and can change without warning; re-check before blamin
 
 ## 2. The three sources at a glance
 
-| Source | Credential | How to get it | Blocks the build? |
+| Source | Credential | Status | Blocks the build? |
 |---|---|---|---|
-| **Marketplace API** | **Required** | Web form → key emailed; turnaround not published | **Yes — request before writing code** |
-| **openFDA** | **Optional, but take it** | Self-serve signup, key emailed in seconds | No |
-| **NPPES NPI Registry** | **None** | Nothing to request | No |
+| **Marketplace API** | **Required** | Web form → key emailed; turnaround not published (§3) | **Yes** |
+| **openFDA** | Optional — **deliberately not requested** | Keyless limits are sufficient; §4 records why and what would reverse it | No |
+| **NPPES NPI Registry** | **None exists** | Nothing to request, ever | No |
 
-`.env.example` has carried a commented `CMS_MARKETPLACE_API_KEY` placeholder since Phase 0, for
-exactly this phase. openFDA needs a new one. NPPES needs nothing, ever.
+**Exactly one credential enters this repo for Phase 3**, and `.env.example` has carried its
+commented `CMS_MARKETPLACE_API_KEY` placeholder since Phase 0. The other two lanes are keyless — one
+because the API has no such concept, one by the decision in §4.
+
+[progress.md](progress.md) records when the Marketplace key was requested and where that stands;
+this document does not carry status.
 
 One consequence for build order: **NPPES is the only tool of the three that is unblocked today**,
 which makes it the right place to prove the typed-wrapper and fixture patterns while the Marketplace
@@ -97,25 +102,41 @@ plans sold *outside* the Marketplace (separate key, separate 60-day expiry, 1000
 Marketplace, openFDA, and NPPES. **Off-exchange plans are not in scope**, so the key is not
 requested — recorded here so the omission reads as a decision rather than an oversight.
 
-## 4. openFDA — keyless works, keyed is worth two minutes
+## 4. openFDA — run keyless, by decision
 
-**Get one:** <https://open.fda.gov/apis/authentication/>, which signs up through
-<https://api.data.gov/signup/>. Free, instant, emailed.
-
-The API works with no key at all. The reason to bother is the daily ceiling:
+A free key is available (<https://open.fda.gov/apis/authentication/>, signing up through
+<https://api.data.gov/signup/>, instant and emailed). **This project does not request one.** The
+decision was taken 2026-08-22, before the phase was built, and the rest of this section is the
+reasoning and the tripwire that would reverse it.
 
 | | Per minute | Per day |
 |---|---|---|
-| No key | 240 per IP | **1,000 per IP** |
-| With key | 240 per key | **120,000 per key** |
+| **No key** — what this repo uses | 240 per IP | **1,000 per IP** |
+| With key | 240 per key | 120,000 per key |
 
-1,000/day is **per IP, not per process** — shared with everything else on the same address, and
-easy to burn through in a single eval sweep. That is what makes the key worth having for a project
-whose evals run in bulk, even though a hand-run demo would never notice.
+**The judgement: 1,000 requests a day is not a ceiling this project reaches.** The openFDA questions
+Phase 3 asks are per-drug lookups — *has drug X been recalled*, *what are its indications* — a
+handful per user question, against a gold set of tens of questions, not thousands. Nothing in this
+repo does whole-corpus scanning against openFDA; [plan.md](plan.md) rules the bulk files out for the
+same reason. A credential that buys 120× headroom over a limit that is not approached buys nothing,
+and costs a secret to rotate, a `Secrets` field to validate, and one more way for `cp .env.example
+.env` to produce a live 401.
 
-**The parameter is `api_key`.** The Marketplace API's is `apikey`. Two adjacent tools in the same
-lane spell it differently, which is a small argument for each typed wrapper owning its own auth
-detail rather than a shared helper guessing from the hostname.
+**The consequence to build against, since the headroom is not there:** the per-minute limit is
+identical either way, but **the daily limit is per *IP*, not per process** — it is shared with
+anything else on the same address, and it is not reset by restarting the run. That makes the
+response cache in Phase 3's checklist load-bearing for openFDA specifically, rather than a
+nice-to-have: a repeated eval sweep must not re-fetch what it fetched an hour ago.
+
+**What would reverse this** — record it here rather than rediscovering it from a 429: a sustained
+eval or smoke loop that issues openFDA calls in the hundreds per run, or any use from a shared or
+CI IP address where the 1,000 is not this project's alone. Either one, and the key is two minutes
+away; §6's wiring notes what would then have to be added.
+
+**One detail that survives the decision:** openFDA's key parameter is `api_key` where the
+Marketplace API's is `apikey`. Two adjacent tools in the same lane spell it differently — a small
+argument for each typed wrapper owning its own auth detail rather than a shared helper guessing from
+the hostname.
 
 ## 5. NPPES — nothing to request
 
@@ -128,18 +149,22 @@ evals that would hammer it.
 
 ## 6. Where the keys live in this repo
 
-Unchanged rules, restated because this is the phase that adds two credentials at once:
+Per §2 and §4, this phase adds **exactly one** credential — the Marketplace key. Unchanged rules,
+restated because it is the first one to arrive since Tavily:
 
-- **Both new keys are optional** — `SecretStr | None`, following `tavily_api_key` in
+- **It is optional** — `SecretStr | None`, following `tavily_api_key` in
   [settings.py](../src/health_coverage_navigator/settings.py) and not `openai_api_key`. The
   asymmetry is the same one Phase 2 recorded: there is no agent without a model, but there *is* an
   agent without live APIs, and a clone that wants only the reference and relational lanes must still
-  boot. Suggested names: `cms_marketplace_api_key`, `openfda_api_key`.
-- **Both need the `_blank_is_none` treatment.** `cp .env.example .env` with no edit yields `""`,
+  boot. Suggested name: `cms_marketplace_api_key`.
+- **It needs the `_blank_is_none` treatment.** `cp .env.example .env` with no edit yields `""`,
   which is a valid `str` that reads as "configured", boots cleanly, and 401s on the first question.
-  Extend the existing validator's field list rather than writing a third copy of it.
-- **`.env.example`:** uncomment `CMS_MARKETPLACE_API_KEY`, add `OPENFDA_API_KEY=`. Blank, always —
-  that file is committed and must never hold a real value.
+  Extend the existing validator's field list rather than writing a second copy of it.
+- **`.env.example`:** uncomment `CMS_MARKETPLACE_API_KEY`; leave it blank, as that file is committed
+  and must never hold a real value. **Do not add an `OPENFDA_API_KEY` placeholder** — §4 decided
+  against the key, and a commented placeholder for a credential nobody holds is an invitation to
+  request one without re-reading the reasoning. If §4's tripwire ever fires, the placeholder and a
+  second `SecretStr | None` field are added together, in the change that reverses the decision.
 - **Nothing goes in `config.yaml`.** It is committed, and `make scan` treats a credential-shaped
   assignment there as a blocking error. What *may* go there is the non-secret half — whether a
   missing key is fatal, per-source budgets, cache TTLs — the way `agent.web_tools` decides Tavily's

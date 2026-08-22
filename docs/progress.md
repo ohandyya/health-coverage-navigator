@@ -27,6 +27,12 @@ mid-stream.
   `search_corpus` alone with the web tool registered (`make smoke`, 9/9), so no over-reaching on the
   one live sample there is. Design: [web_search_tool.md](web_search_tool.md); §17 there records what
   building it changed about the design; numbers and caveats: [agent.md](agent.md) §6.
+- **Phase 3 has not started, and is gated on one credential.** A **CMS Marketplace API key was
+  requested 2026-08-22** and is awaited; CMS publishes no turnaround time. It is the phase's *only*
+  credential — **openFDA runs keyless by decision** (its 1,000/day-per-IP limit is not one per-drug
+  lookups approach) and NPPES has no key at all. So the first tool to build is **NPPES**, which is
+  unblocked today. Access design and the reasoning:
+  [structured-api-tools.md](structured-api-tools.md).
 - **The headline: routing is 1.000 across three lanes, and the third lane costs the first two
   nothing measurable.** Recall@5 0.667 with the web lane against 0.633 without — one question, well
   inside the 0.200 spread, so "no evidence of harm" rather than an improvement. `web_reach_rate`
@@ -369,6 +375,62 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-22 (later) — Phase 3 access: one key requested, one declined
+
+**Did:** opened [structured-api-tools.md](structured-api-tools.md) as Phase 3's design document and
+established what the phase needs to reach its three live sources. Docs only; no source changed.
+Verified every access fact against the live CMS and FDA pages the same day, because all of it is
+someone else's operational policy and will rot.
+
+**Did: requested a CMS Marketplace API key on 2026-08-22**, via
+[developer.cms.gov/marketplace-api/key-request.html](https://developer.cms.gov/marketplace-api/key-request.html).
+**Awaiting delivery — CMS publishes no turnaround time.** This is the phase's one gating item: it is
+the only credential Phase 3 needs, and the only one of the three lanes that cannot be built without
+waiting on someone else. The reason it was submitted before any code was written.
+
+**Consequence for build order:** NPPES needs no credential at all, so it is the tool to build first
+— it proves the typed-wrapper and fixture patterns while the key is in flight, and it is unblocked
+today. openFDA is unblocked too, per the decision below.
+
+**Decided: openFDA runs keyless. The free key was available and was not requested.** Keyless is
+1,000 requests/day per **IP**; a key would make it 120,000. The questions this project asks openFDA
+are per-drug lookups — *has drug X been recalled*, *what are its indications* — a handful per user
+question against a gold set of tens, and nothing here scans openFDA whole (plan.md rules out its
+bulk files for the same reason). 120× headroom over a limit that is not approached buys nothing, and
+costs a secret to rotate, a `Secrets` field to validate, and one more way for a stock `cp
+.env.example .env` to produce a live 401. **So Phase 3 introduces exactly one credential, not two.**
+
+**The consequence that decision creates, recorded so it is not learned from a 429:** the daily limit
+is per *IP*, not per process, so it is shared with anything else on that address and is not reset by
+restarting a run. That promotes the response cache from Phase 3's checklist item to something
+load-bearing for openFDA specifically. [structured-api-tools.md](structured-api-tools.md) §4 carries
+the tripwire that would reverse the decision — a sustained loop issuing hundreds of openFDA calls
+per run, or use from a shared/CI IP where the 1,000 is not this project's alone.
+
+**Decided:** no `OPENFDA_API_KEY` placeholder goes in `.env.example`. A commented placeholder for a
+credential nobody holds is an invitation to request one without re-reading why it was declined; if
+the tripwire fires, the placeholder and the `Secrets` field are added in the same change that
+reverses it.
+
+**Decided:** the **Finder API** — CMS's companion for private plans sold outside the Marketplace,
+separate key and separate 60-day expiry — is **not** requested. plan.md mentions it under *Live Web
+/ API tools*, but Phase 3's scope names only Marketplace, openFDA, and NPPES, so off-exchange plans
+are out of scope. Recorded so the omission reads as a decision rather than an oversight.
+
+**Noticed, not yet handled:** the Marketplace key **expires every 60 days** with a replacement
+emailed automatically — so the first rotation is due around **2026-10-21**. `Secrets` is
+`frozen=True` and `get_secrets()` is `@lru_cache(maxsize=1)`, so a rotation needs `.env` edited
+*and* the process restarted; a running server will not pick up the new key. The failure mode is a
+401 that looks like a code bug and is really a calendar. Whatever Phase 3 does about it, the
+constraint it must meet is Phase 2's: an expired key is an outage with a due date, and an outage
+must never reach the user as a confident answer.
+
+**Also:** the glossary's openFDA entry said "Keyless, no registration" — true but incomplete once
+the per-IP ceiling matters. It and the Marketplace entry now carry the limits and the 60-day expiry.
+Every other Phase 3 term (RxCUI, NPI, SPL, NDC, Window Shop) was already there and correct.
+
+**Stopped at:** clean, nothing built. Phase 3 code starts with NPPES.
 
 ### 2026-08-22 — a walkthrough of Phase 2, and three highlight pages caught up to the code
 
