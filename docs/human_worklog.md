@@ -53,7 +53,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - In process, add to technical highlights if any is identified.
 
-- New screenshot
+- [Done] New screenshot
 
 #### Worthy of highlight
 

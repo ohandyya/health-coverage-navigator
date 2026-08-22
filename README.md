@@ -345,6 +345,29 @@ card, and an **expandable citation card** with the retrieved chunk verbatim, a l
 and a drill-down into the full corpus document. The plan-year selector sits beside the input and is
 sent on every request, per the domain's most common correctness bug.
 
+### Chat — the web lane, and what makes a web citation trustworthy
+
+![The chat page answering "Is there any recent virus outbreak in the US?" with an amber web source badge, two cited CDC pages whose citation cards are titled with their domain and publication date, and the agent trace panel showing two web_search calls with topic=news and time_range=month, the second narrowed to site:cdc.gov, each summarised by the domains it reached](docs/img/chat-page-web.png)
+
+Asked something no vendored document can know, the agent routes to `web_search` — and the trace
+shows it doing so twice: a broad `topic="news"` search over the last month, then a **narrower
+reformulation** scoped to `site:cdc.gov`. Reformulation is the only recovery this lane has, because
+there is deliberately no tool to read further into a page.
+
+The two details that matter for provenance are both visible. Each trace step is summarised by the
+**domains it reached** (*"4 result(s) from cdc.gov, who.int"*) rather than by a result count, because
+*where* the agent went is the interesting part of a web step. And each citation card is titled with
+its **domain and publication date** — `… — cdc.gov, Wed, 12 Aug 2026` — built from the retrieved
+result, never from the model. In this domain who published a claim is part of the claim, and a card
+that showed only a title would hide a forum post behind the same chrome as a CDC page. The date is
+there because the agent searched with `topic="news"`, which is the only way Tavily returns one; an
+undated page about a deadline is weak evidence, and the model is told to say so.
+
+The answer is also a good illustration of the grounding rule under a *negative* result: it says
+*"I found no indication in the recent sources I checked"* rather than "there is no outbreak", and it
+declines to let an E. coli and Salmonella investigation stand in for a virus. Both citations quote
+their page verbatim — the output validator would have rejected them otherwise.
+
 ### Abstention — the answer that is worth the most
 
 ![The chat page showing an abstention: a distinct dashed panel headed "NOT IN MY REFERENCE MATERIAL" explaining that live provider directories are not available, citing HealthCare.gov on how to check a plan's directory](docs/img/abstention.png)
