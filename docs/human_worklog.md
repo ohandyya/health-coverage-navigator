@@ -33,6 +33,15 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Work Log
 
+### Aug 22, 2026
+
+#### API Requesat status
+
+- `Marketplace API` API 
+
+    - https://developer.cms.gov/marketplace-api/
+    - Request access on Aug 22, 2026
+
 ### Aug 19, 2026
 
 #### To Dos
