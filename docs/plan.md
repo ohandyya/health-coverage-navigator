@@ -145,7 +145,12 @@ yearly costs. Interface highlights: [Cms](https://developer.cms.gov/marketplace-
 - Base: `https://marketplace.api.healthcare.gov/api/v1/`
 - Drug autocomplete → RxCUI: `GET /drugs/autocomplete?q={query}&apikey={key}`
 - Drug coverage check: `GET /drugs/covered?year={yr}&drugs={rxcui}&planids={planid}&apikey={key}`
-- Plan search + cost estimates: `POST /households/eligibility/estimates`
+- Plan search: `POST /plans/search` — takes a `PlanSearchRequest` (household, place, market, year)
+- Cost estimates (APTC/CSR): `POST /households/eligibility/estimates` — **a different endpoint**,
+  returning subsidy eligibility rather than plans
+
+The full contract, and how far its published spec can be trusted, is
+[structured-api-tools.md](structured-api-tools.md) §7.
 
 You request a key via the CMS developer portal; note API keys are rate limited, with the limit
 passed back in the response headers. There's also a companion **Finder API** for private health

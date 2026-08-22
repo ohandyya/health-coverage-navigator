@@ -22,33 +22,34 @@ Right now, **access**: which of the three sources need a credential, how to obta
 properties of those credentials that constrain the design rather than merely the setup, and the one
 key that was available and deliberately declined.
 
-As the phase is built it grows the sections its two peer documents have — the **endpoint contracts**
-(§7, reserved below), the tool surface and its descriptions, the typed request/response models, the
-mirror-vs-live reconciliation rule, caching and rate-limit handling, provenance for a live-API
-citation, the fixture strategy, and the eval slice. Sections are numbered so those can be added
-without renumbering what is already here.
+Also the **Marketplace contract** (§7) and the **fixture strategy** (§8), both established by
+exercising the live API rather than by reading about it. Still to come as the phase is built: the
+tool surface and its descriptions, the typed models themselves, the mirror-vs-live reconciliation
+rule, caching, provenance for a live-API citation, and the eval slice. Sections are numbered so
+those can be added without renumbering what is here.
 
-**Verified against the live CMS and FDA pages on 2026-08-22.** Everything in §3–§5 is someone
-else's operational policy and can change without warning; re-check before blaming the code.
+**Verified 2026-08-22** — the access facts in §3–§5 against the live CMS and FDA pages, and every
+claim in §7 against the running API. All of it is someone else's operational policy or someone
+else's deployment; re-check before blaming the code.
 
 ## 2. The three sources at a glance
 
 | Source | Credential | Status | Blocks the build? |
 |---|---|---|---|
-| **Marketplace API** | **Required** | Web form → key emailed; turnaround not published (§3) | **Yes** |
+| **Marketplace API** | **Required** | Web form → key emailed; turnaround not published (§3) | **No — see §3a** |
 | **openFDA** | Optional — **deliberately not requested** | Keyless limits are sufficient; §4 records why and what would reverse it | No |
 | **NPPES NPI Registry** | **None exists** | Nothing to request, ever | No |
 
-**Exactly one credential enters this repo for Phase 3**, and `.env.example` has carried its
-commented `CMS_MARKETPLACE_API_KEY` placeholder since Phase 0. The other two lanes are keyless — one
-because the API has no such concept, one by the decision in §4.
+**Exactly one credential enters this repo for Phase 3** — `CMS_MARKETPLACE_API_KEY`, live in
+`.env.example`. The other two lanes are keyless: one because the API has no such concept, one by the
+decision in §4.
 
 [progress.md](progress.md) records when the Marketplace key was requested and where that stands;
 this document does not carry status.
 
-One consequence for build order: **NPPES is the only tool of the three that is unblocked today**,
-which makes it the right place to prove the typed-wrapper and fixture patterns while the Marketplace
-key is in flight.
+**No tool is blocked on a credential.** NPPES needs none, openFDA runs keyless by decision, and the
+Marketplace lane can be built and fixtured against CMS's own published demo key (§3a) before a
+personal key arrives.
 
 ## 3. Marketplace API — the one real request
 
@@ -91,8 +92,41 @@ Base URL `https://marketplace.api.healthcare.gov/api/v1/`; the key is passed as 
    This is the same rule CLAUDE.md already enforces from the other direction (no bulk downloader for
    a live source), and it settles the fixture question before it is asked: test fixtures are a few
    recorded responses, never a harvested slice.
-3. **Rate limits are returned in response headers, not documented.** So the budget is read off a
-   live call rather than hardcoded from a doc that does not state one.
+3. **Rate limits live in response headers, not in the documentation** — so they were read off a
+   live call rather than guessed. Measured 2026-08-22:
+
+   | Window | Limit | Header |
+   |---|---|---|
+   | Per second | **200** | `x-ratelimit-limit-second` / `-remaining-second` |
+   | Per minute | **1000** | `x-ratelimit-limit-minute` / `-remaining-minute` |
+
+   **No daily-limit header is returned**, so either there is no daily cap or it is not advertised —
+   do not assume the former. Both windows are generous relative to a per-question handful of calls;
+   what they do *not* survive is an unthrottled fixture-recording loop or a parallel eval sweep. The
+   budget belongs where Phase 2 put Tavily's: enforced in code, not in a comment.
+
+### 3a. Developing before the key arrives, on CMS's published demo key
+
+CMS embeds a **shared, rate-limited demo key** in the Quickstart section of its
+[spec page](https://developer.cms.gov/marketplace-api/api-spec), and repeats it as the `x-example`
+on the spec's `securityDefinitions`. **The value is deliberately not written down here or anywhere
+else in this repo** — it is two clicks away at that URL, and a 32-hex literal in a tracked file is
+exactly what `make scan` exists to block. Copy it from CMS into `.env`; `.gitignore` excludes that
+file, and the scanner enumerates candidates with `git ls-files --others --exclude-standard`, so an
+ignored file is never a candidate. `.env.example` carries the same instruction, by location and not
+by value.
+
+**Everything in §7 and §8 was established with that key**, which is the evidence it suffices: all
+four endpoints Phase 3 needs answer on it, for the current market year.
+
+**Its boundary, which is not a nicety.** The key is *shared* — every reader of CMS's quickstart uses
+the same one, against the same 1000/minute. That makes it fine for hand-run calls and for recording
+a handful of fixtures, and wrong for anything sustained: an eval sweep run on it is both a burden on
+a public resource and a source of 429s that will look like a CMS outage. **Nothing in the code
+distinguishes it from a real key**, so the distinction has to be enforced somewhere deliberate. The
+cheap version is three lines — the eval runner refuses to start when the configured key equals the
+published demo value — and it converts a comment into a rule. Deferred to the build, recorded here
+so it is not forgotten.
 
 ### The Finder API is deliberately not requested
 
@@ -160,20 +194,144 @@ restated because it is the first one to arrive since Tavily:
 - **It needs the `_blank_is_none` treatment.** `cp .env.example .env` with no edit yields `""`,
   which is a valid `str` that reads as "configured", boots cleanly, and 401s on the first question.
   Extend the existing validator's field list rather than writing a second copy of it.
-- **`.env.example`:** uncomment `CMS_MARKETPLACE_API_KEY`; leave it blank, as that file is committed
-  and must never hold a real value. **Do not add an `OPENFDA_API_KEY` placeholder** — §4 decided
-  against the key, and a commented placeholder for a credential nobody holds is an invitation to
-  request one without re-reading the reasoning. If §4's tripwire ever fires, the placeholder and a
-  second `SecretStr | None` field are added together, in the change that reverses the decision.
+- **`.env.example` already carries it**, uncommented and blank, with the 60-day expiry and §3a's
+  demo-key instruction written as comments — the value by location, never inline. **No
+  `OPENFDA_API_KEY` placeholder goes there** — §4 decided against the key, and a commented
+  placeholder for a credential nobody holds is an invitation to request one without re-reading the
+  reasoning. If §4's tripwire fires, the placeholder and a second `SecretStr | None` field are added
+  together, in the change that reverses the decision.
 - **Nothing goes in `config.yaml`.** It is committed, and `make scan` treats a credential-shaped
   assignment there as a blocking error. What *may* go there is the non-secret half — whether a
   missing key is fatal, per-source budgets, cache TTLs — the way `agent.web_tools` decides Tavily's
   case today. Which flags Phase 3 actually needs is an open question for the build, not settled here.
 
-## 7. Endpoint contracts
+## 7. The Marketplace contract, and how far the spec can be trusted
 
-*Reserved.* Per-endpoint request and response shapes, the Pydantic models that wrap them, and what a
-malformed response does — to be written as each tool is built.
+CMS publishes a complete **OpenAPI 2.0 spec** — 38 endpoints, 91 model definitions, request and
+response schemas, enums — embedded as inline YAML in the
+[spec page](https://developer.cms.gov/marketplace-api/api-spec). **It is readable without a key**,
+which is why the typed wrappers were never actually blocked on one. It is not offered as a
+downloadable file; it is extracted from the page's `swaggerUIOptions.spec` string.
+
+### 7a. The rule: authoritative for requests, not for responses
+
+This is the load-bearing finding of the phase's access work, and it was established by comparing
+declared schemas against live calls rather than by trusting either.
+
+**Requests: correct.** Every parameter, required flag, and enum the spec declares held on every call
+made — path shapes, `year` semantics, `Household` / `Place` / `Person` field names, the lot.
+
+**Responses: wrong on four of the five endpoints checked**, and wrong in a way that would break a
+generated model on the *first* real call, not on some edge case:
+
+| Endpoint | Spec envelope | Live envelope | |
+|---|---|---|---|
+| `POST /plans/search` | `plans, total, rate_area, facet_groups, ranges` | identical | ✅ |
+| `GET /drugs/autocomplete` | `{drugs: [...]}` | **bare array** | ❌ |
+| `GET /providers/autocomplete` | `{providers: [...]}` | **bare array** | ❌ |
+| `GET /drugs/covered` | `{"Provider & Drug Coverage": [...]}` | `{coverage: [...]}` | ❌ |
+| `GET /providers/covered` | `{"Provider & Drug Coverage": [...]}` | `{coverage: [...]}` | ❌ |
+
+The pattern is not random: **the POST endpoint is accurate and every GET is not.** And
+`"Provider & Drug Coverage"` is the Swagger **tag** name leaking into the schema — an authoring bug,
+which is why it appears identically on two otherwise unrelated endpoints. Neither is a field that
+was renamed and can be mapped; the spec simply describes a response the server does not send.
+
+**Field level is much better than envelope level**, which is the half that makes the spec still
+worth having:
+
+- `ProviderCoverage` — exact match, 5/5 fields.
+- `Coverage` enum — exact match: `Covered`, `NotCovered`, `DataNotProvided`, `GenericCovered`.
+- `Plan` — 36 fields match. 3 spec-only (`certification`, `network_adequacy`, `sbcs`), 3 live-only
+  (`tiered_deductibles`, `tiered_moops`, `waiting_period_duration`). Stale in both directions.
+- `Provider` — the spec's `type` is the live `provider_type`, a real rename; live also adds `sex`,
+  `imported_on`, `group_id`.
+- `Drug` — the spec carries an `id` the live response does not, and marks **nothing** required, so
+  optionality cannot be inherited from it at all.
+
+**So: request models are derived from the spec; response models are derived from recorded
+fixtures.** The spec remains the map of what exists — which endpoints, which parameters, which enum
+values — and is never the source for what comes back. §8 is the other half of that rule.
+
+### 7b. The four endpoints Phase 3 needs
+
+Verified live. `apikey` is a **query** parameter on every one (`securityDefinitions: {type: apiKey,
+in: query}`), and `year` defaults to the current market year where it is optional.
+
+| Endpoint | Request | Live response |
+|---|---|---|
+| `GET /drugs/autocomplete` | `q` (≥3 chars) | bare array of `{rxcui, name, strength, route, full_name, rxterms_dose_form, rxnorm_dose_form}` |
+| `GET /drugs/covered` | `drugs` (comma-joined RxCUIs), `planids`, `year` | `{coverage: [{rxcui, plan_id, coverage, generic_rxcui?}]}` |
+| `GET /providers/covered` | `providerids` (NPIs), `planids`, `year` | `{coverage: [{npi, plan_id, coverage, addresses, accepting}]}` |
+| `POST /plans/search` | `PlanSearchRequest`: `household{income, people[]}`, `place{countyfips, state, zipcode}`, `market`, `year` | `{plans[], total, rate_area, facet_groups[], ranges}` |
+
+Two notes that matter more than they look:
+
+- **`generic_rxcui` is conditional, not optional-and-usually-present.** It appears exactly when
+  `coverage == "GenericCovered"` — the plan does not cover the branded drug but does cover its
+  generic, and the field names which one. That is a *different answer to the user's question*, not a
+  missing field, and a wrapper that models it as a plain optional will let the agent report "not
+  covered" when the truthful answer is "not as branded; the generic is".
+- **`/drugs/autocomplete` is a required first hop, not a convenience.** `/drugs/covered` takes
+  RxCUIs, and no user types one. Every drug-coverage question is therefore at least two calls, which
+  is worth knowing before a per-question call budget is chosen.
+
+### 7c. Plan year is discoverable, and the default is wrong
+
+`GET /market-years` returns `{"supported": [2016...2026], "current": 2026}` — so the plan year is
+asked for, never hardcoded. This is the live counterpart to
+[relational-tool.md](relational-tool.md) §7's plan-year handling, and it lets the two halves of the
+structured lane agree on which year they are talking about instead of each assuming.
+
+**The reason this is not a footnote:** CMS's own quickstart uses `year=2019`, and against 2019 data
+both `/drugs/covered` and `/providers/covered` return `coverage: "DataNotProvided"` — the
+quickstart's prose still claims "the API confirms that ibuprofen is covered", which no longer
+reproduces. Against a **2026** plan the same call returns real answers, including a `GenericCovered`
+with its `generic_rxcui` populated. **Fixtures recorded from the quickstart's year would be nearly
+empty and would teach the wrappers the wrong optionality** — precisely the `generic_rxcui` trap
+above. Record against the current market year.
+
+## 8. Fixtures
+
+CLAUDE.md's rule is fixtures over live calls, and §7a settles where they come from: **recorded from
+the live API, not generated from the spec.** The spec's response schemas are wrong often enough that
+a fixture built from them would assert the wrong shape and pass — the worst of both worlds, a test
+that is green and false.
+
+**Stamp each fixture with the `x-version` and `request-id` of the call that produced it.** The API
+reports its own build (`x-version: r1.2635.0` at time of writing); a fixture that starts failing
+after a CMS deploy then says *which* deploy, and drift becomes a diagnosis instead of a mystery.
+This costs two header reads and is the only provenance available for a response that cannot be
+re-fetched identically.
+
+Fixture content is CMS public data and does not depend on which key fetched it, so recording with
+the demo key of §3a is fine — with one exception, which is not.
+
+### 8a. The provider endpoints return real people, and this repo has promised they will not
+
+`/providers/autocomplete` and `/providers/search` return **real practitioners: real names, real
+NPIs.** That collides directly with two commitments already written down:
+
+- CLAUDE.md: *"no provider-level data is ever vendored here"*, stated as a consequence of never
+  bulk-downloading NPPES.
+- [glossary.md](glossary.md) under **FOIA**: `scripts/scan_sensitive.py`'s `pii:npi` count *"is
+  expected to stay at zero permanently"*.
+
+Both were written when the only provider source was NPPES, which is queried live and never stored.
+The Marketplace API reopens the question from a direction neither anticipated — a provider fixture
+is a *recorded response*, and recording it is vendoring. **A fixture from either endpoint would put
+real clinician names and real NPIs into a public repo and break a baseline the scanner enforces.**
+
+The drug and plan endpoints have no such problem; this is specifically about `/providers/*`.
+
+**Recommended: synthesise provider fixtures rather than relax the invariant.** The invariant is
+cheap to keep and expensive to re-establish once broken, and `pii:npi == 0` is a genuinely useful
+tripwire precisely because it has no legitimate exceptions. The cost is real but small: an NPI
+carries a Luhn check over the prefix `80840` plus its first nine digits, so a synthetic NPI must be
+*constructed* to pass — and a fixture whose NPIs fail the check would be caught by the very
+validation the wrappers exist to perform. **This is an open decision, not a settled one**; it is
+recorded in [progress.md](progress.md) as such, and it must be resolved before the first
+`/providers/*` fixture is written, not after.
 
 ## References
 

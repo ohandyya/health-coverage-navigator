@@ -27,12 +27,23 @@ mid-stream.
   `search_corpus` alone with the web tool registered (`make smoke`, 9/9), so no over-reaching on the
   one live sample there is. Design: [web_search_tool.md](web_search_tool.md); §17 there records what
   building it changed about the design; numbers and caveats: [agent.md](agent.md) §6.
-- **Phase 3 has not started, and is gated on one credential.** A **CMS Marketplace API key was
-  requested 2026-08-22** and is awaited; CMS publishes no turnaround time. It is the phase's *only*
-  credential — **openFDA runs keyless by decision** (its 1,000/day-per-IP limit is not one per-drug
-  lookups approach) and NPPES has no key at all. So the first tool to build is **NPPES**, which is
-  unblocked today. Access design and the reasoning:
+- **Phase 3 has not started, and — contrary to the first read — nothing in it is blocked.** A **CMS
+  Marketplace API key was requested 2026-08-22** and is awaited, but the lane can be built without
+  it: CMS publishes a shared rate-limited **demo key**, and all four endpoints Phase 3 needs answer
+  on it against the current market year. **openFDA runs keyless by decision**; NPPES has no key at
+  all. **The Marketplace contract is fully known** — CMS's OpenAPI spec is public and was verified
+  endpoint by endpoint against the live API. Design, contract, and the reasoning:
   [structured-api-tools.md](structured-api-tools.md).
+- **The finding that shapes the build: the published spec is authoritative for requests and wrong
+  about responses** — four of five endpoints declare an envelope the server does not send. So
+  request models come from the spec and **response models come from recorded fixtures**, never the
+  other way round. Details and the evidence table: [structured-api-tools.md](structured-api-tools.md) §7a.
+- **One open decision, and it must be settled before the first provider fixture is written:** the
+  Marketplace API's `/providers/*` endpoints return **real clinician names and real NPIs**, which
+  collides with CLAUDE.md's *"no provider-level data is ever vendored here"* and the scanner's
+  permanently-zero `pii:npi` baseline. Both were written when NPPES — queried live, never stored —
+  was the only provider source; a recorded fixture is vendoring. Recommendation is to synthesise
+  provider fixtures and keep the invariant. Not yet decided. §8a.
 - **The headline: routing is 1.000 across three lanes, and the third lane costs the first two
   nothing measurable.** Recall@5 0.667 with the web lane against 0.633 without — one question, well
   inside the 0.200 spread, so "no evidence of harm" rather than an improvement. `web_reach_rate`
@@ -375,6 +386,69 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-22 (later still) — the Marketplace contract, read off the live API
+
+**Did:** established the full Marketplace API contract without holding a key, and wrote it into
+[structured-api-tools.md](structured-api-tools.md) §7–§8. Docs only; no source changed.
+
+**Found: CMS publishes its complete OpenAPI 2.0 spec** — 38 endpoints, 91 model definitions,
+schemas and enums — embedded as inline YAML in the
+[spec page](https://developer.cms.gov/marketplace-api/api-spec), **readable without a key**. It is
+not offered as a download; it comes out of the page's `swaggerUIOptions.spec` string.
+
+**Found: CMS also publishes a shared, rate-limited demo key** in that page's Quickstart. It works.
+**This corrects the previous entry's framing** — Phase 3 was recorded as gated on the key request,
+and it is not: the lane can be built and fixtured today. The key request still matters for anything
+sustained, because the demo key is shared with every other reader of the quickstart.
+**The value is written nowhere in this repo** — it lives only in the author's gitignored `.env`,
+referenced in tracked files by location. `make scan` never sees it (`.gitignore:16`, and the scanner
+enumerates with `git ls-files --others --exclude-standard`).
+
+**Decided: the spec is authoritative for requests and not for responses.** Established by comparing
+declared schemas against live calls. Requests held on every call. Responses were wrong on **four of
+five** endpoints checked — `/drugs/autocomplete` and `/providers/autocomplete` declare an object
+envelope and return a bare array; `/drugs/covered` and `/providers/covered` declare a property
+literally named `"Provider & Drug Coverage"` (the Swagger *tag* leaking into the schema) where the
+server sends `coverage`. Only `POST /plans/search` matched. The pattern — **POST accurate, every GET
+wrong** — is what makes it a rule rather than a list of exceptions. Field level is far better: the
+`Coverage` enum and `ProviderCoverage` match exactly; `Plan` is stale in both directions by three
+fields each; `Provider.type` is really `provider_type`.
+
+**Consequence:** response models are derived from recorded fixtures, never generated from the spec.
+A fixture built from a wrong schema asserts the wrong shape *and passes* — green and false, the one
+failure mode worse than a red test.
+
+**Decided: record fixtures against the current market year, not the quickstart's.** CMS's own
+quickstart uses `year=2019` and its prose claims "the API confirms that ibuprofen is covered"; that
+no longer reproduces — 2019 returns `DataNotProvided` for both drug and provider coverage. The same
+call against a 2026 plan returns real answers including `GenericCovered` with `generic_rxcui`
+populated. **Fixtures from 2019 would have been near-empty and would have taught the wrappers that
+`generic_rxcui` is merely optional** — when it is in fact conditional on `coverage ==
+"GenericCovered"` and carries a materially different answer to the user's question ("not as branded;
+the generic is" rather than "not covered"). A real trap, avoided by one comparison.
+
+**Noticed:** `GET /market-years` returns the supported years and which is current, so plan year is
+asked for rather than hardcoded — the live counterpart to
+[relational-tool.md](relational-tool.md) §7, and what lets the two halves of the structured lane
+agree on which year they mean.
+
+**Measured:** Marketplace rate limits, which exist only in response headers — **200/second,
+1000/minute**, no daily-limit header. Recorded in §3 so the budget is not guessed.
+
+**Open — must be settled before any `/providers/*` fixture:** those endpoints return real
+practitioners. See the *Current state* bullet above; the recommendation is to synthesise, and NPIs
+carry a Luhn check over the `80840` prefix, so a synthetic NPI has to be constructed rather than
+invented.
+
+**Also:** fixed [plan.md](plan.md)'s Marketplace endpoint list, which conflated `POST /plans/search`
+with `POST /households/eligibility/estimates` — different endpoints returning plans and subsidy
+eligibility respectively. Anyone implementing from that line would have called the wrong one. Added
+four glossary entries the contract work introduced (**market year**, **FIPS county code**, **rate
+area**, **APTC**), and `.env.example` now carries the live `CMS_MARKETPLACE_API_KEY` placeholder with
+the 60-day expiry and the demo-key instruction as comments.
+
+**Stopped at:** clean, nothing built. `make scan` green, demo key absent from every scannable file.
 
 ### 2026-08-22 (later) — Phase 3 access: one key requested, one declined
 
