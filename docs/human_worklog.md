@@ -57,7 +57,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
 #### Worthy of highlight
 
-- How do we ensure LLM does not invent a URL in the web tool citation?
+- [Done] How do we ensure LLM does not invent a URL in the web tool citation?
 
 - Use `ModelRetry` to instruct the LLM to re-run the tool with the correct usage.
 

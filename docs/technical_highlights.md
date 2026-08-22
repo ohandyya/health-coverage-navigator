@@ -26,8 +26,14 @@ then rebuilt from the real evidence, so an invented title has no path to the bro
 
 **The web lane is where this stops being tidy and starts being necessary.** An invented `chunk_id`
 is visibly internal machinery; an invented *URL* is well-formed, plausible, and checkable by nobody
-— so a web citation names an id only a search can assign, never the URL it points at. The page also
-records what three lanes' worth of extension actually cost, including the one that was not free.
+— there is no artifact to compare it against, because the thing it claims to cite is the open web.
+So a web citation names a positional id only a search can hand out (`web#s1.2`), never the URL,
+which is then read off the recorded result. Validity stops being a property of the string and
+becomes membership in a set code filled before the model spoke. The retrieved page is stored
+**whole** for the same reason — unlike a chunk it cannot be re-read afterwards, so the citable set
+has to *be* the evidence — and the served citation carries its **domain and date in the title**,
+because for a health question who published a claim is part of it. The page also records what three
+lanes' worth of extension actually cost, including the one that was not free.
 
 `groundedness` and `citation_resolution` read **1.000 on every agent run ever recorded** — and the
 reason they are measured anyway is that a number below 1.0 would be a bug in the validator, not a

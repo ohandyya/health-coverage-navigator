@@ -39,6 +39,13 @@ There are **three such sets now, one per kind of evidence** — `seen_chunks` fo
 `seen_rows` for queried rows (Phase 1-c), `seen_results` for web results (Phase 2) — and each is
 filled the same way, by the tool that produced the evidence rather than by the model that cites it.
 
+They differ in one respect that the web lane forces. `seen_chunks` stores chunks it *resolved
+through the corpus index*, because a chunk id can always be re-read from `chunks.jsonl` later. **A
+web result can not.** Once the run ends, the page Tavily extracted exists nowhere on this machine —
+so `remember_results` records the `WebResult` **whole**, text included, because the validator has to
+hold the words it will check a quotation against. The citable set is not a list of identifiers here;
+it is the evidence itself.
+
 **B. An output validator rejects any answer whose provenance does not hold up.**
 
 Registered on the agent, so it runs on **every** candidate answer before anything is served
@@ -137,10 +144,54 @@ authoritative-looking, and never retrieved — and *neither a reader nor a post-
 by looking*. There is no artifact to check it against, because the thing it claims to cite is the
 open web.
 
-So a web citation names a `result_id` that only a search can assign (`web#s1.2`), never the URL. The
-URL is then read off the recorded result, exactly as a title is. **The lane where "do not invent
-sources" would have been least enforceable by inspection is the lane where it is enforced by
-construction** — which is the whole point of preferring a code path to a prompt instruction.
+So a web citation names a `result_id` that only a search can assign, never the URL. The id is
+positional — `web#s1.2` is *search 1, result 2* — and that is what makes it unforgeable: **nothing
+carries an id of that shape until a search hands one out.** A model cannot reason its way to
+`web#s1.2` being valid, the way it can reason that a CMS press-release URL is plausible, because
+validity here is not a property of the string. It is membership in a dictionary that code filled
+before the model spoke. The URL is then read off the recorded result, exactly as a title is.
+
+**The lane where "do not invent sources" would have been least enforceable by inspection is the lane
+where it is enforced by construction** — which is the whole point of preferring a code path to a
+prompt instruction.
+
+### The one thing the prompt does say, and why it is not duplication
+
+Everywhere else this design keeps the prompt out of the guardrail's business. The web lane is the
+exception, and the distinction is worth being precise about:
+
+```
+- a **web result**: its `result_id`, plus a `snippet` copied **exactly** from that result's
+  `content`. Cite the `result_id`, never the URL — a URL you did not get back from `web_search` is
+  not a source you have, however plausible it looks;
+```
+
+That is not the prompt asking the model not to fabricate — the validator already makes fabrication
+impossible. It is telling the model **which field to put the identifier in**, which no guardrail can
+do: a model that writes a real, retrieved URL into `result_id` has not lied about anything, it has
+filled in the wrong box, and the only outcomes available are a wasted retry or a rejected answer.
+Guardrails enforce invariants; prompts describe shapes. Confusing the two in either direction is how
+this kind of system gets brittle.
+
+### Provenance the reader can act on
+
+A checked citation is worth less if the reader cannot tell *whose page it is*. The citation card
+shows a title and hides the URL behind a link, so the web lane's wire citation deliberately builds
+the domain — and the publication date, when Tavily returned one — into the title:
+
+```python
+dated = f", {result.published_date}" if result.published_date else ""
+title = f"{result.title} — {result.domain}{dated}"
+```
+
+Both halves come off the recorded result, so this is the same rebuilt-from-evidence rule as
+everywhere else rather than an exception to it. The reason it earns its place: for a health
+question, *who is saying this* is part of the claim, and a card reading only *"Ebola Outbreak: What
+CDC is Doing"* renders a forum post in the same chrome as `cms.gov`. Surfacing the source is also
+the deliberate **alternative to filtering the web to an allowlist** — an allowlist would guarantee
+an abstention on exactly the questions this lane exists to answer, so the design shows the reader
+where a claim came from instead of pretending it vetted it
+([web_search_tool.md §7](../web_search_tool.md)).
 
 ## Evidence
 
