@@ -23,7 +23,44 @@ AI (e.g., Claude) should **NOT** read this document.
     - User confirm which one to add
     - Then AI add
 
+4. Use AI to upgrade python package
+
+    - Ask AI to check for the packages we use
+    - Upgrade them
+    - Run tests
+    - Fix test errors
+    - Summarize the change
+
 ## Work Log
+
+### Aug 19, 2026
+
+#### To Dos
+
+- [Done] Annotation change
+
+    - In `src/health_coverage_navigator/web/client.py`, `tavily_client(..)` returns Any, and `WebSearchClient._client` is of of type Any. Change them to `AsyncTavilyClient`.
+
+    - This means `AsyncTavilyClient` should be imported at the top of the module
+
+- [Done] Manual validation on the FE
+
+    - What are the "citations" for web? Is it the full text? Is it the URL? Verify this from the UI
+
+- [Done] Make sure the metrics in README.md is updated
+
+- [Done] Use walkthrough to trace the code
+
+    - In process, add to technical highlights if any is identified.
+
+- [Done] New screenshot
+
+#### Worthy of highlight
+
+- [Done] How do we ensure LLM does not invent a URL in the web tool citation?
+
+- Use `ModelRetry` to instruct the LLM to re-run the tool with the correct usage.
+
 
 ### Aug 18, 2026
 

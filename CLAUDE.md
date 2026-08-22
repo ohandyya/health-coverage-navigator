@@ -23,7 +23,9 @@ Reference docs: [development.md](docs/development.md) (commands, gates, toolchai
 [configuration.md](docs/configuration.md) · [chunking.md](docs/chunking.md) ·
 [agent.md](docs/agent.md) (toolset, grounding guardrail, loop limits, grading) ·
 [lancedb.md](docs/lancedb.md) · [relational-tool.md](docs/relational-tool.md) (Phase 1-c: the
-structured lane's design — tools, SQL guard, row citations) · per-source data guides
+structured lane's design — tools, SQL guard, row citations) ·
+[web_search_tool.md](docs/web_search_tool.md) (Phase 2: the web lane's design — Tavily client,
+budgets, web citations, three-lane routing evals) · per-source data guides
 (`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
 **Presentation, not reference:** [technical_highlights.md](docs/technical_highlights.md) indexes
@@ -102,6 +104,21 @@ entry in the same change** — not later, not in a follow-up. Read it when an un
 appears rather than re-deriving the meaning. What qualifies, what an entry must contain, and what
 not to duplicate: [*Maintaining this glossary*](docs/glossary.md#maintaining-this-glossary).
 
+## Version control — do not stage or commit unless asked
+
+**Claude does not run `git add`, `git commit`, `git push`, or `gh pr create` unless the user asks.**
+Do the work, run the gates, say what changed, and stop there. An unstaged diff is how the user reads
+what was written; committing on Claude's initiative takes that reading away and has to be undone
+before it can be redone properly. A request to commit covers the commit it was made for — it is not
+standing permission for the rest of the session, unless the user says so.
+
+When the user does ask:
+
+- **Stage explicit paths. Never `git add -A` or `git add .`** — `docs/human_worklog.md` is the
+  author's file, and a `git add -A` has already swept it into a commit whose message did not mention
+  it ([docs/progress.md](docs/progress.md) records the incident). A path list cannot do that.
+- **Run `make scan` first** if anything under `data/` is involved — see the guardrail below.
+
 ## Public-repo data guardrail (ACTION REQUIRED before committing data)
 
 **This repo is public.** Before staging, committing, or writing any file under `data/` (or any new
@@ -134,13 +151,17 @@ current phase's scope unless asked.** Full detail — acceptance tests, capabili
 rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0–F4 in
 [docs/frontend_plan.md](docs/frontend_plan.md) §6.
 
+**No completion marks in this table** — which phases are done is
+[docs/progress.md](docs/progress.md)'s job, per *Read first* above. This table says what each phase
+*is*, so it changes only when a phase's scope does.
+
 | Phase | Adds | Eval slice |
 |---|---|---|
 | **0** | Corpus + eval scaffold, before any agent: ingestion, gold set, runner over a **pluggable answerer**, frozen contract, UI on a stub | retrieval quality |
 | **1a** | **The agent itself** — one PydanticAI agent, small full-text toolset it composes (`list_documents` / `grep_corpus` / `search_corpus` / `get_chunk`), **no database of any kind** (stdlib BM25, no vector store, no DuckDB/SQLite FTS, no embeddings). Output schema, provenance, grounding rule, step limits written once, here | answer correctness + groundedness |
-| **1b** ✅ | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them. Toolset (`lexical`/`vector`/`both`) is a per-run flag | lexical vs. vector vs. both |
+| **1b** | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them. Toolset (`lexical`/`vector`/`both`) is a per-run flag | lexical vs. vector vs. both |
 | **1c** | The **structured lane**: `list_tables` / `describe_table` / `query_structured` over the vendored PUF mirrors, DuckDB querying Parquet in place. Design: [relational-tool.md](docs/relational-tool.md) | structured-lookup correctness + prose-vs-rows routing |
-| **2** | Web search (Tavily or Exa, chosen by measurement — not a scraped SERP) as a third lane | routing across three lanes |
+| **2** | Web search — `web_search` over **Tavily** (decided, not measured against Exa; not a scraped SERP) as a third lane. Design: [web_search_tool.md](docs/web_search_tool.md) | routing across three lanes |
 | **3** | Typed tools for Marketplace API, openFDA, NPPES + rate limits, caching, fixtures | tri-modal routing |
 | **4** | Planning and decomposition, per-claim provenance, tracing, cycle detection + hop ceiling | multi-hop + citation accuracy |
 | **5** | Plan comparison, drug costs, network checks, appeals, "what changed" monitor — over the Phase 1-c query tools, not a new backend | regression suite |

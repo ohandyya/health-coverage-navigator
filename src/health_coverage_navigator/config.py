@@ -88,6 +88,12 @@ class AgentConfig(BaseModel):
     #: `--no-structured` overrides it for one run, and the run record carries which was used.
     structured_tools: bool
 
+    #: Whether the agent sees the Phase 2 web lane. The third axis, and a boolean for exactly the
+    #: reason `structured_tools` is: it selects a *lane*. Also an eval axis (`--web` / `--no-web`),
+    #: recorded on the run. Needs `TAVILY_API_KEY`; with this true and no key the app returns a 503
+    #: naming the fix rather than quietly answering current-events questions from a static corpus.
+    web_tools: bool
+
 
 class EvalsConfig(BaseModel):
     """Grading. Separate from `agent:` because the judge must be swappable without touching what
@@ -173,6 +179,66 @@ class StructuredConfig(BaseModel):
     threads: int = Field(gt=0)
 
 
+class WebConfig(BaseModel):
+    """Phase 2 web lane: what one search asks for, and the ceilings on a lane that costs money.
+
+    Two kinds of value live here, and the difference matters when reading a diff. `search_depth`,
+    `max_results` and `chunks_per_source` are **tunables** — they change what the agent sees and
+    therefore what it answers, which is precisely why they are committed rather than
+    environment-readable (`config.py`'s docstring makes the general argument; this is the block
+    where breaking it would be most tempting, because the key beside them *does* come from the
+    environment). Everything else is a **ceiling** on a lane where, unlike BM25 or DuckDB, one agent
+    run can spend real money and real seconds — the same distinction `StructuredConfig` draws.
+    """
+
+    model_config = _FROZEN
+
+    #: Tavily search depth. `basic` is 1 API credit, `advanced` is 2 and buys *broader source
+    #: coverage* rather than richer per-result text — both depths return query-reranked chunks.
+    #: Worth revisiting by measurement rather than by assumption.
+    search_depth: Literal["basic", "advanced", "fast", "ultra-fast"]
+
+    #: Results per search. Mirrors `retrieval.top_k` and `vectors.top_k` so a web result list is the
+    #: same size as a passage list, and is deliberately its own key for the same reason
+    #: `vectors.top_k` is. Tavily's own guidance warns that raising this returns lower-quality
+    #: results, so it is not a free dial.
+    max_results: int = Field(gt=0, le=20)
+
+    #: Reranked chunks of each page. Tavily's range is 1-3. **The only lever on how much of a page
+    #: comes back**, because this phase ships no widening tool — `read_url` is deferred
+    #: (docs/web_search_tool.md §15), so the agent's only recovery from a truncated snippet is to
+    #: search again. Pinned at the maximum, and stated rather than left to the default: a value that
+    #: matters should be visible in a diff.
+    chunks_per_source: int = Field(ge=1, le=3)
+
+    #: Results kept from any one domain. Without it a single well-ranked site fills the list and
+    #: "several sources agree" is one source repeated.
+    max_results_per_domain: int = Field(gt=0)
+
+    #: Searches one agent run may make. Counted on `AnswerDeps` exactly as structured queries are.
+    #: Doing more work here than it would with a widening tool: reformulation is the *only* recovery
+    #: from a truncated snippet, so a run that keeps not-quite-finding an answer spends its whole
+    #: allowance on near-identical searches. The first number to revisit against real traces.
+    max_searches_per_run: int = Field(gt=0)
+
+    #: Deadline for one Tavily request. The SDK defaults to 60s and caps at 120; a browser holding
+    #: an SSE stream open does not have two minutes, and one tool call must not be able to consume a
+    #: whole request when `agent.request_limit` allows twelve model calls.
+    timeout_s: float = Field(gt=0)
+
+    #: How long a 429's `retry-after` may ask us to wait before the lane degrades instead. The SDK
+    #: neither retries nor reads that header, so this is ours. Deliberately much smaller than
+    #: `agent.request_retries`: a paid eval run can afford to wait out a TPM limit, a user watching
+    #: a spinner cannot.
+    retry_after_cap_s: float = Field(ge=0)
+
+    #: Domains Tavily must not return. Empty by design — an allowlist would turn the web lane into a
+    #: slower copy of the reference lane and guarantee abstention on exactly the questions it exists
+    #: for (docs/web_search_tool.md §7). This is the escape hatch for a site that proves to be
+    #: noise, and a value here is a reviewable line in a committed diff.
+    exclude_domains: tuple[str, ...] = ()
+
+
 class ChunkParams(BaseModel):
     """Chunking parameters, and the fingerprint that pins an eval run to them.
 
@@ -214,6 +280,7 @@ class Config(BaseModel):
     retrieval: RetrievalConfig
     vectors: VectorsConfig
     structured: StructuredConfig
+    web: WebConfig
     evals: EvalsConfig
     chunking: ChunkParams
 

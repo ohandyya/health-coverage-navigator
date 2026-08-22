@@ -35,6 +35,18 @@ MARKER_RE = re.compile(r"\[(c\d+)\]")
 #: 500 (`api/models.ChatResponse._check_provenance`).
 CITATION_ID_RE = re.compile(r"^c\d+$")
 
+#: The three citation shapes: which field identifies each, which companion field it requires, how to
+#: name it to the model, and how to spell the pair. Module-level rather than a class attribute
+#: because a leading-underscore name on a `BaseModel` is a pydantic private attribute, which this
+#: is not — it is a constant the validator reads.
+#:
+#: Ordered as the lanes were built: passage (1a), row (1-c), web page (2).
+CITATION_SHAPES = (
+    ("chunk_id", "snippet", "a retrieved passage", "chunk_id + snippet"),
+    ("row_id", "cells", "a queried row", "row_id + cells"),
+    ("result_id", "snippet", "a web result", "result_id + snippet"),
+)
+
 
 class ChunkHit(BaseModel):
     """One retrieval unit, as the agent sees it."""
@@ -97,14 +109,15 @@ class CorpusOverview(BaseModel):
 
 
 class AgentCitation(BaseModel):
-    """One source the answer leans on: a retrieved passage, or a queried row.
+    """One source the answer leans on: a retrieved passage, a queried row, or a web result.
 
-    **One class with two shapes, not a union.** The two lanes' evidence is genuinely different — a
-    passage is quoted, a row is read — but they share one id space (`c1`, `c2`, ... across both),
-    and the model has to be able to mix them in a single list. A discriminated union would express
-    that more precisely at the cost of an `anyOf` in the output schema, which is exactly the kind
-    of structure a provider's strict-JSON mode handles unevenly. `_check_shape` recovers the
-    precision, and its error message is what the model reads on a retry.
+    **One class with three shapes, not a union.** The lanes' evidence is genuinely different — a
+    passage is quoted, a row is read, a web page is quoted from an extract — but they share one id
+    space (`c1`, `c2`, ... across all three), and the model has to be able to mix them in a single
+    list. A discriminated union would express that more precisely at the cost of an `anyOf` in the
+    output schema, which is exactly the kind of structure a provider's strict-JSON mode handles
+    unevenly. `_check_shape` recovers the precision, and its error message is what the model reads
+    on a retry.
     """
 
     id: str = Field(pattern=CITATION_ID_RE.pattern)
@@ -114,56 +127,69 @@ class AgentCitation(BaseModel):
     """For a **passage**: the `chunk_id` of a hit a tool returned **in this conversation**.
     Anything else is rejected and you will be asked to try again."""
 
-    snippet: str | None = None
-    """The words from that chunk's `text` that support the claim, copied exactly. Not a paraphrase
-    and not a summary — this is shown to the reader as what the source says."""
-
     row_id: str | None = None
     """For a **row**: the `row_id` of a row a query returned **in this conversation**."""
 
+    result_id: str | None = None
+    """For a **web page**: the `result_id` of a result `web_search` returned **in this
+    conversation**. Cite this, never the URL — a URL you did not retrieve is not a source."""
+
+    snippet: str | None = None
+    """For a passage or a web page: the words from that source's text that support the claim,
+    copied exactly. Not a paraphrase and not a summary — this is shown to the reader as what the
+    source says."""
+
     cells: dict[str, str] | None = None
-    """The columns of that row you relied on, and their values copied **exactly** as the query
+    """For a row: the columns you relied on, and their values copied **exactly** as the query
     returned them — including a trailing space, a comma, or a `$`. The stored value is the
     evidence; your prose may tidy it, the citation may not."""
 
     @model_validator(mode="after")
     def _check_shape(self) -> "AgentCitation":
-        """Exactly one of the two shapes, complete.
+        """Exactly one of the three shapes, complete.
 
-        A half-filled citation is the realistic model error here — a `row_id` with a `snippet`, or
-        a `chunk_id` with no quotation — and catching it as a validation error means the model is
-        told which half is missing rather than having the answer rejected two layers later by the
-        grounding validator with a less specific complaint.
+        **Discriminated on the id field alone**, which is load-bearing rather than tidy. The
+        original two-shape version detected a passage as `chunk_id is not None or snippet is not
+        None` — and a web citation also carries a `snippet`, so every one of them would have been
+        rejected as a malformed passage. Keying on the ids keeps each shape's test independent of
+        which companion fields it happens to share with another.
+
+        A half-filled citation is the realistic model error here — a `result_id` with no quotation,
+        a `row_id` with a `snippet` — and catching it as a validation error means the model is told
+        which half is missing rather than having the answer rejected a layer later by the grounding
+        validator with a less specific complaint.
         """
-        passage = self.chunk_id is not None or self.snippet is not None
-        row = self.row_id is not None or self.cells is not None
-        if passage and row:
+        present = [
+            (id_field, companion, label)
+            for id_field, companion, label, _ in CITATION_SHAPES
+            if getattr(self, id_field) is not None
+        ]
+        forms = ", ".join(form for *_, form in CITATION_SHAPES)
+
+        if len(present) > 1:
+            named = " and ".join(label for *_, label in present)
             raise ValueError(
-                f"citation {self.id} mixes a passage and a row. One citation is either a "
-                f"chunk_id + snippet or a row_id + cells; use two citations."
+                f"citation {self.id} mixes {named}. One citation points at one thing — use a "
+                f"separate citation for each."
             )
-        if passage:
-            if not self.chunk_id or not self.snippet:
-                raise ValueError(
-                    f"citation {self.id} of a passage needs both chunk_id and a snippet copied "
-                    f"from that passage."
-                )
-        elif row:
-            if not self.row_id or not self.cells:
-                raise ValueError(
-                    f"citation {self.id} of a row needs both row_id and the cells you used, "
-                    f"copied exactly as the query returned them."
-                )
-        else:
+        if not present:
+            raise ValueError(f"citation {self.id} points at nothing. Give one of: {forms}.")
+
+        id_field, companion, label = present[0]
+        if not getattr(self, companion):
             raise ValueError(
-                f"citation {self.id} points at nothing. Give either chunk_id + snippet for a "
-                f"retrieved passage, or row_id + cells for a queried row."
+                f"citation {self.id} of {label} needs {companion} as well as {id_field}, copied "
+                f"exactly from what the tool returned."
             )
         return self
 
     @property
     def is_row(self) -> bool:
         return self.row_id is not None
+
+    @property
+    def is_web(self) -> bool:
+        return self.result_id is not None
 
 
 class AgentAnswer(BaseModel):

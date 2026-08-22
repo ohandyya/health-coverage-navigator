@@ -2,6 +2,7 @@
         chunk chunk-check embed embed-check puf scan scan-staged scan-unstaged scan-selftest \
         ui-install ui-dev ui-build ui-test ui-check api-dev dev serve types types-check \
         eval eval-retrieval eval-retrieval-vector eval-lexical eval-vector eval-judge \
+        eval-web eval-no-web smoke-web \
         eval-stub smoke smoke-abstain
 
 .DEFAULT_GOAL := help
@@ -115,11 +116,29 @@ types-check: ## Verify schema.d.ts is current with the Pydantic models (writes n
 # It covers the one property no offline test can: that `_partial_answer` still parses the output as
 # a *real* provider fragments it. If that breaks, every test stays green and streaming silently
 # degrades to one lump. See the module docstring.
-smoke: ## Ask the live agent one real question and check the streaming path (1 model call)
+#
+# It runs the agent config.yaml describes — `agent.toolset`, `agent.structured_tools` AND
+# `agent.web_tools` — so this smokes the same three-lane agent `make dev` serves, not a subset of
+# it. Consequence: with `agent.web_tools: true` this needs TAVILY_API_KEY (it fails naming the fix
+# rather than quietly dropping the lane, exactly as the API 503s), and the run may spend a Tavily
+# credit if the model chooses to search. Set `agent.web_tools: false` to smoke without one.
+smoke: ## One real question through the live agent, with the lanes config.yaml turns on (1 model call)
 	uv run python scripts/smoke.py
 
-smoke-abstain: ## Same, but out-of-corpus — the agent must decline, not invent sources
+smoke-abstain: ## Same lanes, but out-of-corpus — the agent must decline, not invent sources
 	uv run python scripts/smoke.py --abstain
+
+# The web lane's liveness check. Same three-rung logic as `smoke`: a failing test means this repo is
+# wrong, a failing smoke check might mean the vendor changed something, and one command meaning
+# either teaches you to shrug at red.
+#
+# What `--web` adds over plain `smoke` is the QUESTION and the CHECKS, not the lane: `smoke` already
+# registers web_search when config.yaml says so, but it asks a definitional question the corpus
+# answers, so the model never searches and a broken lane goes unnoticed. This asks one nothing on
+# this machine can answer (a 2027 date, past every vendored publication) and then requires that the
+# tool fired and cited a real URL. It force-opens the lane even with `agent.web_tools: false`.
+smoke-web: ## Ask a current-events question live — the agent must reach the web and cite a real URL
+	uv run python scripts/smoke.py --web
 
 # All three write to data/eval_runs/, so deliberately not in check-all for the same reason as
 # `chunk`. `eval` and `eval-judge` also cost money — 35 model calls each, doubled with the judge —
@@ -154,6 +173,18 @@ eval-vector: ## Agent restricted to vector_search (35 model calls)
 
 # Answer correctness, graded per key fact by a second model. Opt-in and deliberately unreachable
 # from the UI: a button that spends money on every click is the wrong affordance.
+# Phase 2's axis. `eval-web` is what `make eval` already does when config.yaml has web_tools on;
+# it exists as a named target so the pair reads as a pair. `eval-no-web` is the one that earns its
+# keep: it answers "does the third lane cost anything on the questions that were already
+# answerable", which is the same question `--no-structured` asked one lane earlier. Run them
+# back-to-back and compare, and read both against progress.md's standing caveat that a single agent
+# run at fixed config has a 0.200 spread.
+eval-web: ## Agent with the web lane on (needs TAVILY_API_KEY; ~39 model calls + Tavily credits)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --web
+
+eval-no-web: ## Agent with the web lane off — the control for eval-web (~35 model calls)
+	uv run python -m health_coverage_navigator.evals.runner --runner agent --no-web
+
 eval-judge: ## Run the gold set through the agent AND grade answers with the LLM judge
 	uv run python -m health_coverage_navigator.evals.runner --runner agent --judge
 

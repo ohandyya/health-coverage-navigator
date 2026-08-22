@@ -205,6 +205,17 @@ class TokenEvent(BaseModel):
     type: Literal["token"] = "token"
     delta: str
 
+    reset: bool = False
+    """Discard everything streamed so far and start again from `delta`.
+
+    **Set when the agent abandons a draft mid-stream**, which happens when the grounding guardrail
+    rejects an answer and the retry writes different text. Without it a client that appends deltas
+    shows the rejected draft *followed by* the real answer — and in a health tool the rejected draft
+    is, by construction, the ungrounded one. `done` has always corrected this after the fact; this
+    corrects it while the reader is watching.
+
+    Additive and defaulted, so a client that ignores it behaves exactly as before."""
+
 
 class CitationEvent(BaseModel):
     type: Literal["citation"] = "citation"
@@ -332,6 +343,22 @@ class EvalQuestionResult(BaseModel):
     §5.2's "not retrieved"."""
 
     retrieved_doc_ids: list[str] = Field(default_factory=list)
+
+    tools_used: list[str] = Field(default_factory=list)
+    """Which tools the agent called, in order, with repeats collapsed to first appearance.
+
+    Added at Phase 2 to close a gap docs/progress.md had been recording since 1b: **no question
+    about tool *choice* could be answered from a run file at all.** "How often does it reach for
+    `vector_search`?" and "how often does it widen with `get_chunk`?" were both answered from a
+    handful of hand-captured traces rather than from the 175 agent questions on disk. Routing is
+    this phase's headline metric, so the shape was close to a prerequisite rather than a nicety.
+
+    Deliberately *not* what `routing_correct` is scored on — that reads the citations, because what
+    the reader is shown is what the answer claims to rest on, and a lookup the agent ran and then
+    ignored is not evidence. This field is what makes the *difference* between the two visible: a
+    question with `web_search` here and no web citation is an agent that looked and then answered
+    from somewhere else, which is a distinct and interesting failure."""
+
     metrics: dict[str, float] = Field(default_factory=dict)
     error: str | None = None
 
@@ -357,6 +384,11 @@ class EvalRunSummary(BaseModel):
     `None` for every runner with no agent in it. Recorded for the same reason as `toolset`: a
     comparison between two runs that differ only in this is only possible if a run says which it
     was."""
+
+    web: bool | None = None
+    """Whether the agent could see the web lane over Tavily (Phase 2). `None` for every runner with
+    no agent in it. Recorded for the same reason as `toolset` and `structured`: a comparison between
+    two runs that differ only in this is only possible if a run says which it was."""
 
     config_fingerprint: str | None = None
     """`Config.fingerprint()` — a sha256 over every value in `config.yaml`. The answer to "what

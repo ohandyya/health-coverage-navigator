@@ -10,9 +10,10 @@ Three ways this module can answer, in the order it tries them:
 
 1. **stub** — `create_app(stub=True)`. The Phase 0 canned answers, still what the contract tests
    assert against and what an offline demo runs on.
-2. **missing data** — `chunks.jsonl`, the vector store, or the plan-data mirrors were never built
-   here. A 503 that names the command (`make chunk`, `make embed`, `make puf`). Deliberately not a
-   fallback to (1), and deliberately not a quiet degradation to whatever lanes *are* available:
+2. **missing data or credentials** — `chunks.jsonl`, the vector store, or the plan-data mirrors
+   were never built here, or `TAVILY_API_KEY` is unset. A 503 that names the fix (`make chunk`,
+   `make embed`, `make puf`, or `.env`). Deliberately not a fallback to (1), and deliberately not
+   a quiet degradation to whatever lanes *are* available:
    canned or narrowed output must never be mistakable for a full answer, which is the whole reason
    `HealthResponse.stub` is a boolean.
 3. **the agent** — the real path.
@@ -73,18 +74,28 @@ NO_PLAN_DATA = (
     "`agent.structured_tools: false`."
 )
 
+#: Unlike the three above, no build step fixes this one — it is a missing credential, so the message
+#: names `.env` rather than a `make` target.
+NO_WEB_KEY = (
+    "The web lane is configured (`agent.web_tools` in config.yaml) but `TAVILY_API_KEY` is not set "
+    "on this machine. Add it to `.env` (see `.env.example`) and restart the server. To answer "
+    "without it, set `agent.web_tools: false`."
+)
+
 
 def _unavailable(ctx: AppContext) -> str | None:
     """Why this server cannot answer, or `None` when it can.
 
-    All three are 503s that name the command that fixes them, and none falls back to the stub:
+    All four are 503s that name the fix, and none falls back to the stub:
     canned output must never be mistakable for a real answer, which is the whole reason
     `HealthResponse.stub` is a boolean. Degrading a `both` configuration to lexical-only would be
     the same mistake in a subtler form — the answer would be real but measured against a retrieval
     setup nobody chose, and nothing in the response would say so. The relational lane is the
     sharpest case of it: without its mirror the agent would meet a plan-specific question with an
     abstention, or with prose about plans in general — a wrong answer caused by a missing download,
-    and nothing in the response to say that is why.
+    and nothing in the response to say that is why. The web lane is the same argument with a
+    credential in place of a download: without a key, a question about what changed this month would
+    be met with a confident answer from a corpus that cannot know.
     """
     config = get_config().agent
     if ctx.index is None:
@@ -93,6 +104,8 @@ def _unavailable(ctx: AppContext) -> str | None:
         return NO_VECTORS
     if config.structured_tools and ctx.structured is None:
         return NO_PLAN_DATA
+    if config.web_tools and ctx.web is None:
+        return NO_WEB_KEY
     return None
 
 
@@ -122,7 +135,9 @@ async def post_chat(
     if (detail := _unavailable(ctx)) is not None:
         raise HTTPException(status_code=503, detail=detail)
     assert ctx.index is not None  # narrowed by _unavailable
-    return await answer_question(request, ctx.index, vectors=ctx.vectors, structured=ctx.structured)
+    return await answer_question(
+        request, ctx.index, vectors=ctx.vectors, structured=ctx.structured, web=ctx.web
+    )
 
 
 async def _stub_events(request: ChatRequest) -> AsyncIterator[str]:
@@ -162,7 +177,7 @@ async def _agent_events(request: ChatRequest, ctx: AppContext) -> AsyncIterator[
     assert ctx.index is not None  # guarded by the route
     try:
         async for event in stream_answer(
-            request, ctx.index, vectors=ctx.vectors, structured=ctx.structured
+            request, ctx.index, vectors=ctx.vectors, structured=ctx.structured, web=ctx.web
         ):
             yield sse_frame(event)
     except asyncio.CancelledError:  # pragma: no cover - client hung up

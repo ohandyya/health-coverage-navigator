@@ -58,7 +58,7 @@ querying are then testable with no model and no agent, which is what makes `make
 need the type and `tools.py` needs the structured tools to build `select_tools`, so leaving it in
 `tools.py` closes an import cycle.
 
-## 2. Eight tools, not one `retrieve()`
+## 2. Nine tools, not one `retrieve()`
 
 | tool | for | when registered |
 |---|---|---|
@@ -93,19 +93,20 @@ unbounded `k` is a context-window problem before it is a latency one) and
 Python's engine — a length cap does not make catastrophic backtracking impossible, it removes the
 room to construct one by accident).
 
-## 3. What the agent can see is a per-run choice — on two independent axes
+## 3. What the agent can see is a per-run choice — on three independent axes
 
-`config.Toolset` is `lexical | vector | both` and `agent.structured_tools` is a boolean;
-`tools.select_tools(toolset, structured)` turns the pair into the registered list and
-`prompt.system_prompt(toolset, structured)` into the matching instructions. `config.yaml` sets what
-the app ships (`both`, and the relational lane on); `--toolset` and `--structured` /
-`--no-structured` override them for one eval run, and the run record carries both. That is what
-makes each comparison **one runner with a flag rather than several code paths** (docs/plan.md §1b).
+`config.Toolset` is `lexical | vector | both`; `agent.structured_tools` and `agent.web_tools` are
+booleans. `tools.select_tools(toolset, structured, web)` turns the three into the registered list
+and `prompt.system_prompt(toolset, structured, web)` into the matching instructions. `config.yaml`
+sets what the app ships (`both`, both lanes on); `--toolset`, `--structured` / `--no-structured`
+and `--web` / `--no-web` override them for one eval run, and the run record carries all three. That
+is what makes each comparison **one runner with a flag rather than several code paths**
+(docs/plan.md §1b).
 
-**Two axes rather than a four-valued toolset**, because they select different things: `toolset`
-picks how the *reference lane* is searched, `structured` picks whether a *second lane* exists.
-Folding them together would make six combinations, three of them meaningless, and would redefine
-the three names Phase 1b's measurement is already recorded under.
+**Booleans rather than more `Toolset` values**, because they select different things: `toolset`
+picks how the *reference lane* is searched, while `structured` and `web` each pick whether another
+*lane* exists at all. Folding them together would make twelve combinations, most of them
+meaningless, and would redefine the three names Phase 1b's measurement is already recorded under.
 
 Three things about it are load-bearing rather than incidental:
 
@@ -120,15 +121,20 @@ tool the agent does not have is not a cosmetic flaw in an eval: it would make th
 a measurement of how well each configuration copes with misleading instructions.
 `tests/test_agent.py` asserts that no prompt names a tool its toolset does not register.
 
-**`_build_agent` caches on `(model, toolset, structured)`.** Two agents that differ in what they
-can do must not share one cached object, and every default is resolved *before* the lookup —
+**`_build_agent` caches on `(model, toolset, structured, web)`.** Two agents that differ in what
+they can do must not share one cached object, and every default is resolved *before* the lookup —
 docs/progress.md records the Phase 1a bug where `build_agent()` and `build_agent(None)` were two
 cache keys and an `override` silently went to the real provider. Each new defaulted argument is
-another chance at exactly that, and **Phase 1-c took it**: adding the third key made every agent
-test build a *structured* agent while the run under test built a reference-only one, so the
-override applied to an object nobody used and the run tried to reach OpenAI. The suite-wide
-`ALLOW_MODEL_REQUESTS = False` is what turned a would-be bill into a red test, and
-`tests/conftest.py`'s `AgentKit._agent` now derives the key the same way `stream_answer` does.
+another chance at exactly that, and **every phase since has taken it.** Phase 1-c: adding the third
+key made every agent test build a *structured* agent while the run under test built a reference-only
+one, so the override applied to an object nobody used and the run tried to reach OpenAI. Phase 2:
+adding the fourth key broke three tests that pinned `structured=` explicitly and let `web` default,
+producing the identical mismatch. The suite-wide `ALLOW_MODEL_REQUESTS = False` is what turned a
+would-be bill into a red test both times.
+
+`tests/conftest.py`'s `AgentKit._agent` derives the key the same way `stream_answer` does, and
+`tests/test_web_agent.py::test_each_lane_configuration_is_a_separate_cached_agent` now asserts the
+property directly — so the fifth axis, whenever it arrives, fails a test instead of a bill.
 
 ## 4. The grounding guardrail is code
 
@@ -217,6 +223,52 @@ rather than in the prompt, because the failure it prevents (a figure from the wr
 exactly as authoritative as the right answer.
 
 ## 6. What the numbers actually say
+
+### Phase 2: what does a third lane cost the first two?
+
+Measured 2026-08-20, `gpt-5.6-luna`, toolset `both`, 43 questions with the web lane on and 39
+without (`run_2026-08-20_1` / `_2`). One run each — read the caveat at the end of this section.
+
+| | web ON | web OFF |
+|---|---|---|
+| **routing_correct** (3 lanes / 2) | **1.000** | 1.000 |
+| **web_reach_rate** | **1.000** (4/4) | — |
+| structured_exact_match | 1.000 | 1.000 |
+| recall@5 (30 reference questions) | 0.667 | 0.633 |
+| MRR | 0.650 | 0.633 |
+| groundedness · citation_resolution | 1.000 · 1.000 | 1.000 · 1.000 |
+| abstention_accuracy | **0.800** | 1.000 |
+
+**The third lane costs the first two nothing measurable.** Recall moves 0.667 against 0.633 — one
+question, and the known run-to-run spread at fixed config is 0.200, so read this as "no evidence of
+harm", never as an improvement.
+
+**The agent did not over-reach once**, which was the phase's characteristic new risk. `tools_used`
+— added this phase precisely so this question could be answered from a run file rather than from
+hand-captured traces — says `web_search` was called on **0 of 30 reference questions** and on
+**4 of 4 web questions**. Routing scored 1.000 on both runs.
+
+**The one real cost is `abs-03`, and it is the interesting result.** *"What will the standard Part B
+premium be in 2027?"* is a figure CMS has not published. Without the web lane the agent abstains,
+correctly. With it, the agent finds projections and estimates written *about* the figure and answers
+anyway — dropping abstention accuracy from 1.000 to 0.800 on a five-question slice.
+
+That is the failure this question was deliberately kept as an abstention to expose
+(docs/web_search_tool.md §12 predicted it in those words). It is **not** a routing error: the web
+was the right lane to try. It is a harder judgement one level down — *finding something written
+about a figure is not the same as the figure existing* — and neither the prompt's "say what you do
+not know" nor the grounding guardrail catches it, because the answer **is** grounded: the quoted
+words really are on the page. The guardrail checks that a source says what the answer says; nothing
+checks whether the source is *authoritative for that claim*. Phase 4's per-claim provenance is where
+that could be addressed; naming it here is the honest interim step.
+
+**Three questions errored** on the web-on run (`UnexpectedModelBehavior: Exceeded maximum output
+retries`), the recurring failure docs/progress.md has tracked since 1a. Their treatment exposed a
+harness bug that this section would otherwise have quoted wrongly: an errored result dropped its
+`expected_source_type`, so it left the recall denominator instead of counting as a miss, and the run
+first reported **0.741 over 27** rather than 0.667 over 30. A run that loses questions must never
+score better than one that answered them all. Fixed, with a regression test; the table above is
+recomputed.
 
 ### Phase 1-c: what does a second lane cost the first one?
 
@@ -374,6 +426,22 @@ Trace steps come from `deps.trace`, not from the framework's tool events, becaus
 the arguments, the real duration, and a summary of what came back — none of which the event stream
 carries.
 
+### Abandoned drafts
+
+Found by `make smoke-web` and **pre-existing since Phase 1a**: when the grounding validator rejects
+an answer and the retry words the replacement differently, the reader saw the rejected draft
+*followed by* the accepted one. `done` had always corrected it after the fact, but during the stream
+the visible text was the ungrounded draft — which is the single worst thing this UI can display.
+
+It had gone unnoticed because it needs a retry *and* a materially reworded second attempt, which no
+earlier live run happened to produce. `TokenEvent` now carries `reset: bool`, set when the answer
+being written no longer extends what was streamed; `useChat.ts` replaces rather than appends on it.
+The field is additive and defaulted, so a client that ignores it behaves exactly as before.
+
+The guard on the reset branch matters: early fragments of a retry are usually still a prefix of what
+was streamed, and resetting on those would flicker the answer away and back. It fires only once the
+two genuinely diverge.
+
 ## 8. Three things that will bite
 
 **Two runs in a row will hit the tokens-per-minute ceiling.** One agent run is ~6,000 tokens, so
@@ -413,6 +481,20 @@ this project, so the explicit construction has to match what inference would hav
 `make check-all` cannot spend money, cannot need a key, and cannot fail because a provider is
 having a bad afternoon.
 
+**That flag covers PydanticAI's model requests and nothing else, so each phase that adds a provider
+has to add its own guard.** There are now three: the flag, `_no_live_embeddings` (Phase 1b — an
+embedding call goes out through the OpenAI SDK directly), and `_no_live_web_search` (Phase 2 — a
+Tavily search goes out through `httpx`). Each is patched **at the factory**, so a test that trips
+one gets an error naming the seam it should have used rather than an authentication failure from
+inside a vendor library. Without them a test would reach the network on the developer's own key and
+**pass**, which is the worst direction for a guard to fail in.
+
+The web lane is tested against `httpx.MockTransport` injected into a real `AsyncTavilyClient` —
+the SDK accepts an external client, which is the concrete reason it was chosen over a hand-rolled
+HTTP call (docs/web_search_tool.md §4). Its fixtures are **synthetic, over `example.org`**, and that
+is a licensing decision rather than a testing preference: a real Tavily response body carries
+extracted third-party page text, and this repo is public.
+
 The `agent_kit` fixture supplies a two-chunk corpus and a scripted `FunctionModel`. It provides
 **both** a `function` and a `stream_function`, because the runtime only ever streams — and the
 streaming half emits arguments in 17-character JSON fragments, deliberately aligned to nothing, so
@@ -430,7 +512,19 @@ pause then a wall of text. `make smoke` makes one live call and fails when a run
 token event. It stays out of pytest deliberately: a failing test means this repo is wrong, a failing
 smoke check might mean the provider changed, and one command that means either teaches you to shrug
 at red. `make smoke-abstain` runs the same checks over an out-of-corpus question, where an invented
-citation would be the worst failure this tool has.
+citation would be the worst failure this tool has. `make smoke-web` (Phase 2) asks a question no
+offline lane can answer and requires the agent to reach Tavily and cite a real URL — the only
+command in the repo that spends a Tavily credit.
+
+**`make smoke-web` earned its place on its first run**, which is the argument for keeping a rung
+that no offline test can replace. It caught two things `check-all` could not:
+
+- **A metric punishing a capability for existing.** `citations_resolve` demanded a resolvable
+  `chunk_id` of every citation that was not a row, so two perfectly good web citations were reported
+  as fabrications. This is the *second* time that check has made the mistake — Phase 1-c made it
+  first, about rows. A check that enumerates lanes by exclusion has to be revisited by whoever adds
+  one.
+- **A real, pre-existing streaming bug** (§7).
 
 ## 10. Grading
 

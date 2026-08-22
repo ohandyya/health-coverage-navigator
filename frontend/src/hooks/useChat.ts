@@ -32,7 +32,8 @@ export interface UserMessage {
 export interface AssistantMessage {
   role: 'assistant'
   id: string
-  /** Text accumulated from `token` events, replaced wholesale by `done`. */
+  /** Text accumulated from `token` events — replaced wholesale by `done`, and by any `token`
+   *  carrying `reset` (an abandoned draft; see the `token` case in the reducer). */
   answer: string
   abstained: boolean
   citations: Citation[]
@@ -110,7 +111,14 @@ export function chatReducer(state: State, action: Action): State {
         case 'step':
           return patchLast(state, (m) => ({ ...m, trace: [...m.trace, event.step] }))
         case 'token':
-          return patchLast(state, (m) => ({ ...m, answer: m.answer + event.delta }))
+          // `reset` means the agent abandoned the draft streamed so far — the grounding guardrail
+          // rejected it and the retry is writing something different. Appending would leave the
+          // rejected draft on screen above the answer that replaced it, and the rejected draft is
+          // by construction the ungrounded one. Replace rather than append.
+          return patchLast(state, (m) => ({
+            ...m,
+            answer: event.reset ? event.delta : m.answer + event.delta,
+          }))
         case 'citation':
           return patchLast(state, (m) => ({ ...m, citations: [...m.citations, event.citation] }))
         case 'done': {

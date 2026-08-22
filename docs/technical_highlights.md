@@ -7,7 +7,8 @@ was rejected, and what evidence exists that it works.
 
 This is a *presentation* index. The reference docs the pages point at carry the full reasoning —
 [agent.md](agent.md), [chunking.md](chunking.md), [lancedb.md](lancedb.md),
-[relational-tool.md](relational-tool.md) — and [progress.md](progress.md) carries the history.
+[relational-tool.md](relational-tool.md), [web_search_tool.md](web_search_tool.md) — and
+[progress.md](progress.md) carries the history.
 
 ---
 
@@ -21,7 +22,18 @@ which is a preference rather than a guarantee.
 Instead, the citable set is **recorded by the tools as a side effect of retrieval**, and an output
 validator rejects any answer citing outside it or misquoting inside it, handing the model the reason
 and letting it retry. There is no wording the model can choose that gets around this. Citations are
-then rebuilt from the real `Chunk`, so an invented title has no path to the browser.
+then rebuilt from the real evidence, so an invented title has no path to the browser.
+
+**The web lane is where this stops being tidy and starts being necessary.** An invented `chunk_id`
+is visibly internal machinery; an invented *URL* is well-formed, plausible, and checkable by nobody
+— there is no artifact to compare it against, because the thing it claims to cite is the open web.
+So a web citation names a positional id only a search can hand out (`web#s1.2`), never the URL,
+which is then read off the recorded result. Validity stops being a property of the string and
+becomes membership in a set code filled before the model spoke. The retrieved page is stored
+**whole** for the same reason — unlike a chunk it cannot be re-read afterwards, so the citable set
+has to *be* the evidence — and the served citation carries its **domain and date in the title**,
+because for a health question who published a claim is part of it. The page also records what three
+lanes' worth of extension actually cost, including the one that was not free.
 
 `groundedness` and `citation_resolution` read **1.000 on every agent run ever recorded** — and the
 reason they are measured anyway is that a number below 1.0 would be a bug in the validator, not a
@@ -42,7 +54,12 @@ refuses the live factory, a deterministic fake at the seam we own, and a product
 because `from x import y` freezes a reference where `import x` keeps a seam, and that difference
 decided whether the guard bound at all.
 
-**300 tests, no API key, no network, about twelve seconds.**
+**Phase 2 re-opened the same hole, exactly as the write-up predicted it would** — a Tavily search
+leaves through `httpx` and consults neither existing guard. It cost a paragraph rather than a
+debugging session, because the shape had already been paid for and written down. Three guards now,
+one per dependency that can open a socket.
+
+**373 tests, no API key, no network, about twelve seconds.**
 
 ---
 
@@ -63,7 +80,28 @@ The rule underneath: **classify failures by detectability, not severity.**
 
 ---
 
-## 4. [Letting a model write SQL — safely, successfully, and with every number citable](highlights/model-written-sql.md)
+## 4. [A model will call your tools wrongly — so every rejection is written as a correction](highlights/tool-retries.md)
+
+An agent that composes its own tool calls writes unbalanced regexes, out-of-vocabulary arguments and
+SQL naming columns that do not exist. Letting those fail the run throws away a working conversation
+to punish a typo; swallowing them and returning nothing tells the model the corpus is empty, which
+is false. Both turn a **first draft** into a wrong answer.
+
+So every rejection raises `ModelRetry` — the text lands in the conversation and the model tries
+again — and every message carries three things: what was wrong, which value caused it, and **what to
+send instead**. That third clause is the one that gets skipped, and skipping it is how a retry
+budget gets spent producing the same call three times. Sometimes the best message is one you did not
+write: a bad column name is answered with DuckDB's own binder error, which ranks the near-misses out
+of 151 columns better than any hand-written string could.
+
+The other half is knowing where the bet is unwinnable. A spent search budget, a Tavily outage and a
+missing credential are **deliberately not retries** — the model cannot act differently to fix any of
+them — so they degrade with an explanation instead. *Retry what the model got wrong; degrade what
+the world got wrong.*
+
+---
+
+## 5. [Letting a model write SQL — safely, successfully, and with every number citable](highlights/model-written-sql.md)
 
 *"What is a deductible"* is a reference question; *"what is the deductible on plan 38344AK1060002"*
 is a **row**, and retrieval answers it with a passage that sounds right and cannot know the number.

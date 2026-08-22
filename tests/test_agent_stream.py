@@ -120,7 +120,9 @@ def test_answer_question_returns_the_done_payload(agent_kit):
         events = [e async for e in stream_answer(request, agent_kit.index)]
         return events[-1], await answer_question(request, agent_kit.index)
 
-    with build_agent(structured=False).override(model=agent_kit.script(agent_kit.SEARCH, answer)):
+    with build_agent(structured=False, web=False).override(
+        model=agent_kit.script(agent_kit.SEARCH, answer)
+    ):
         done, direct = asyncio.run(both())
 
     assert isinstance(done, DoneEvent)
@@ -176,3 +178,73 @@ def test_a_retried_answer_does_not_leave_a_stale_prefix(agent_kit):
     assert isinstance(done, DoneEvent)
     assert done.response.answer == LONG_ANSWER
     assert "".join(e.delta for e in events if isinstance(e, TokenEvent)).endswith(LONG_ANSWER)
+
+
+# ---------------------------------------------------------------- abandoned drafts ------------
+#
+# Found by `make smoke-web` on Phase 2's first live run, and **pre-existing since Phase 1a** rather
+# than caused by the web lane: it needs a grounding retry whose second attempt words the answer
+# differently, which is rare enough that no earlier live run had hit it. What the reader saw was the
+# rejected draft, then the accepted answer, concatenated — and the rejected draft is by construction
+# the ungrounded one.
+
+
+def _render(events) -> str:
+    """What a correct client displays: append deltas, but honour `reset`.
+
+    This is the semantics `useChat.ts` implements, restated here so the assertion below is about the
+    contract rather than about one component's code.
+    """
+    text = ""
+    for event in events:
+        if isinstance(event, TokenEvent):
+            text = event.delta if event.reset else text + event.delta
+    return text
+
+
+def test_an_abandoned_draft_is_reset_rather_than_appended(agent_kit) -> None:
+    """A rejected draft must not survive on screen next to the answer that replaced it."""
+    rejected = agent_kit.answer(
+        answer="A deductible is the sum you pay up front. [c1]",
+        citations=[
+            {
+                "id": "c1",
+                "chunk_id": agent_kit.DEDUCTIBLE_ID,
+                "snippet": "the sum you pay up front",  # not verbatim -> ModelRetry
+            }
+        ],
+    )
+    accepted = agent_kit.answer(
+        answer="A deductible is what you pay before your plan starts to pay. [c1]",
+        citations=[
+            {
+                "id": "c1",
+                "chunk_id": agent_kit.DEDUCTIBLE_ID,
+                "snippet": "The amount you pay for covered health care services",
+            }
+        ],
+    )
+    events = agent_kit.stream(agent_kit.SEARCH, rejected, accepted)
+    done = [e for e in events if isinstance(e, DoneEvent)][-1].response
+
+    assert any(e.reset for e in events if isinstance(e, TokenEvent)), (
+        "the run abandoned a draft, so some token event has to say so"
+    )
+    assert _render(events) == done.answer
+    assert "sum you pay up front" not in _render(events)
+
+
+def test_an_ordinary_run_never_resets(agent_kit) -> None:
+    """`reset` is for abandoned drafts only. A client that saw it on every run would flicker."""
+    answer = agent_kit.answer(
+        answer="A deductible is what you pay first. [c1]",
+        citations=[
+            {
+                "id": "c1",
+                "chunk_id": agent_kit.DEDUCTIBLE_ID,
+                "snippet": "The amount you pay for covered health care services",
+            }
+        ],
+    )
+    events = agent_kit.stream(agent_kit.SEARCH, answer)
+    assert not any(e.reset for e in events if isinstance(e, TokenEvent))

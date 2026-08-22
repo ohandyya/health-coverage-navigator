@@ -15,6 +15,7 @@ from health_coverage_navigator.agent.index import CorpusIndex
 from health_coverage_navigator.evals.models import GoldSet
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
+from health_coverage_navigator.web.client import WebSearchClient
 
 
 @dataclass(slots=True, frozen=True)
@@ -48,6 +49,12 @@ class AppContext:
     """The relational lane's DuckDB handle over the vendored plan mirrors, or `None` when they have
     never been downloaded here. Same shape as `vectors`, including the part that matters: whether
     `None` is fatal depends on `agent.structured_tools`, and only `routes/chat.py` decides."""
+
+    web: WebSearchClient | None = None
+    """The web lane's Tavily client, or `None` when this machine has no `TAVILY_API_KEY`. Same shape
+    as the two above, with one difference worth noting: the others are `None` because a *build step*
+    has not run here, this one because a *credential* is absent — so no `make` target fixes it and
+    the 503 names `.env` instead. Whether `None` is fatal depends on `agent.web_tools`."""
 
 
 def get_context(request: Request) -> AppContext:

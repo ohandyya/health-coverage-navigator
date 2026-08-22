@@ -41,6 +41,7 @@ from health_coverage_navigator.config import Toolset, get_config
 from health_coverage_navigator.evals.models import GoldQuestion
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors.store import VectorIndex
+from health_coverage_navigator.web.client import WebSearchClient
 
 #: What every answerer looks like from the runner's side. Defined here rather than in `runner.py`
 #: so `runner` can import it alongside the builders without the two modules importing each other.
@@ -216,6 +217,7 @@ def agent_answerer(
     vectors: VectorIndex | None = None,
     toolset: Toolset | None = None,
     structured: StructuredStore | None = None,
+    web: WebSearchClient | None = None,
 ) -> AnswerFn:
     """The real answerer: the agent, one run per question.
 
@@ -239,6 +241,9 @@ def agent_answerer(
     selects a different lane rather than a different way of searching one. Passing `None` runs the
     agent with no relational tools at all, which is what `--no-structured` measures: whether the
     extra lane costs anything on the questions that were already answerable.
+
+    `web` is Phase 2's third axis, and it is the same shape as `structured` for the same reason.
+    `--no-web` measures the same thing one lane later.
     """
     from health_coverage_navigator.agent.runtime import answer_question
 
@@ -249,6 +254,7 @@ def agent_answerer(
             toolset=toolset,
             vectors=vectors,
             structured=structured,
+            web=web,
         )
 
     return answer

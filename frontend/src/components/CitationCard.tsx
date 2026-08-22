@@ -19,12 +19,23 @@ import { citationDomId, cn } from '@/lib/utils'
 /**
  * A citation of a queried row rather than a retrieved passage.
  *
- * Decided by the *absence* of a chunk rather than by `source_type`, deliberately: Phase 3 puts
- * live-API answers in the same `structured_api` lane, and whether those arrive as rows is not this
+ * Still decided partly by the *absence* of a chunk, which is deliberate: Phase 3 puts live-API
+ * answers in the same `structured_api` lane, and whether those arrive as rows is not this
  * component's business. What it renders is "cells or prose", and cells are what has no chunk.
+ *
+ * **But the lane check is now load-bearing, and Phase 2 is why.** A `web` citation also has no
+ * `chunk_id` and no `doc_id`, and its snippet is arbitrary prose that may well contain `": "` —
+ * *"The deadline is: January 15"*. Without `source_type === 'structured_api'` it would render as a
+ * table of invented columns. The original two-condition test was right for the citation shapes that
+ * existed when it was written and wrong the moment a third one appeared.
  */
 function isRow(citation: Citation): boolean {
-  return citation.chunk_id == null && citation.doc_id == null && citation.snippet.includes(': ')
+  return (
+    citation.source_type === 'structured_api' &&
+    citation.chunk_id == null &&
+    citation.doc_id == null &&
+    citation.snippet.includes(': ')
+  )
 }
 
 /** The cited cells, one per line — the shape `runtime._row_citation` builds them in. */

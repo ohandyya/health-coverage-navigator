@@ -17,15 +17,37 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-19.*
+*Updated 2026-08-22.*
 
-- **Phase:** **1-c is complete and measured; the agent has two lanes.** Alongside the reference
+- **Phase:** **Phase 2 is complete and measured; the agent has three lanes.**
+  `web_search` over Tavily is registered beside the reference and relational tools, cites web
+  results by a `result_id` only a search can assign, and degrades to an honest *"I could not check
+  the web"* on a rate limit or an outage. `make check-all` is green (374 tests, pyright clean) and
+  `make smoke-web` passes **12/12 against live Tavily**; a reference question still routes to
+  `search_corpus` alone with the web tool registered (`make smoke`, 9/9), so no over-reaching on the
+  one live sample there is. Design: [web_search_tool.md](web_search_tool.md); §17 there records what
+  building it changed about the design; numbers and caveats: [agent.md](agent.md) §6.
+- **The headline: routing is 1.000 across three lanes, and the third lane costs the first two
+  nothing measurable.** Recall@5 0.667 with the web lane against 0.633 without — one question, well
+  inside the 0.200 spread, so "no evidence of harm" rather than an improvement. `web_reach_rate`
+  1.000 (4/4). **The agent never over-reached: `web_search` was called on 0 of 30 reference
+  questions and 4 of 4 web questions** — answerable from a run file for the first time, because
+  `tools_used` landed this phase.
+- **The one real cost is `abs-03`, and it is the most interesting result of the phase.** *"What will
+  the standard Part B premium be in 2027?"* is a figure CMS has not published. Without the web lane
+  the agent abstains; with it, it finds projections written *about* the figure and answers anyway,
+  taking abstention accuracy from 1.000 to 0.800. **This is not a routing error** — the web was the
+  right lane to try — and the grounding guardrail cannot catch it, because the answer *is* grounded:
+  the quoted words really are on the page. What is missing is a check that the source is
+  *authoritative for that claim*, which nothing in this repo does yet. Phase 4's per-claim
+  provenance is where it belongs. The question was deliberately kept as an abstention to expose
+  exactly this, and it did.
+- **Phase 1-c, still true:** **complete and measured; the agent had two lanes.** Alongside the reference
   corpus it now queries the vendored CMS plan data — `list_tables` / `describe_table` /
   `query_structured`, DuckDB over the Parquet mirrors — and cites **rows**, byte-for-byte, with the
   SQL it wrote visible in the trace. Routing measured **1.000** and the reference questions did not
   move (0.800 against 0.767, inside the noise band). Design: [relational-tool.md](relational-tool.md);
-  numbers and caveats: [agent.md](agent.md) §6. **Phase 2 (web search) is next, and it now widens an
-  existing routing metric rather than introducing one.**
+  numbers and caveats: [agent.md](agent.md) §6.
 - **Phase 1b, still true and unchanged by 1-c:** the reference lane is searched by a five-tool
   toolset — stdlib BM25 *and* LanceDB embeddings, with which tools the agent sees a per-run flag —
   it abstains when the question is out of corpus, and it streams its answer and its tool trace to
@@ -45,25 +67,63 @@ mid-stream.
   rank 1. But `ncd-05` and `pub-10` go the other way, and **six of thirty defeat both methods**.
   That complementarity is the empirical case for `both`; the six mutual misses say the remaining
   gap is not one more index.
-- **1b has since merged to `main`** (`c67f952`, PR #17). One thing it left undone and 1-c repeats:
-  **new frontend surfaces keep shipping unviewed.** The eval run-comparison view was never opened in
-  a browser at 1b, and neither has 1-c's row citation card or its SQL trace step. Every automated
-  gate passes on all of them; no human has looked.
-- **[technical_highlights.md](technical_highlights.md) is now an index over
+- **The "new frontend surfaces ship unviewed" streak is broken at Phase 2.** It held through 1b (the
+  run-comparison view) and 1-c (the row citation card and the SQL trace step) — every automated gate
+  green, no human ever having looked. Phase 2's web surfaces *were* opened in a browser, and
+  [docs/img/chat-page-web.png](img/chat-page-web.png) is the record: the amber `web` badge, two
+  domain-and-date citation titles, and a trace showing `web_search` reformulating from a broad
+  `topic="news"` query to a narrower `site:cdc.gov` one. Worth keeping as a habit — the two worst UI
+  defects this repo has had were both found in a browser and neither by a test.
+- **[technical_highlights.md](technical_highlights.md) is an index over
   [highlights/](highlights/)** — the mechanisms worth *presenting*, which is deliberately not a job
-  any of the four canonical docs has. Four entries (grounding · the test-suite provider guard ·
-  missing-vs-stale · model-written SQL), one page each, and the README links them from above the
-  status section. **CLAUDE.md now names it**, deliberately outside the four-docs table and labelled
+  any of the four canonical docs has. **Five entries** (grounding · the test-suite provider guard ·
+  missing-vs-stale · `ModelRetry` as a correction channel · model-written SQL), one page each, and
+  the README links them from above the status section. **CLAUDE.md now names it**, deliberately outside the four-docs table and labelled
   *presentation, not reference*: it is derived from the docs that own each design, so a change
   updates the owning doc first and the highlight page second.
-- **Next up:** **Phase 2 — the web-search tool** (1-c is done) —
-  [plan.md](plan.md#phase-2--add-the-web-search-tool). No longer the *first* lane routing decision —
-  1-c made that one and measured it at 1.000 — but the first destination the agent cannot inventory
-  before deciding to go there: the wrong answer is a confident abstention, or a web answer to
-  something the corpus already settles. Tavily vs. Exa is to be chosen by measuring both on the gold
-  set's out-of-corpus slice. What 1b and 1-c leave in place for it: `select_tools` already makes
-  "what may the agent see" a per-run choice on two axes, `system_prompt` already composes against
-  both, and `routing_grader` already exists — so Phase 2 widens a metric rather than inventing one.
+- **Next up: Phase 3 — the structured lane's live half** ([plan.md](plan.md) → Phase 3): typed
+  tools for the CMS Marketplace API, openFDA and NPPES, with rate limits, caching and fixtures.
+  Phase 2 is done, measured and merged, so nothing blocks starting. Two things to carry in rather
+  than rediscover. **The `_build_agent` cache-key trap will be taken a fifth time** unless the new
+  lane's flag is resolved before the cache lookup — there is now a test asserting the property, so
+  it should fail red rather than bill. And **openFDA gives Phase 3 a claim on `web-01`** (the drug
+  recall question), which today expects `web`: the routing metric will have to say which lane is
+  correct when two could be, and that is a gold-set decision to take deliberately rather than
+  discover from a score. The lane boundary Phase 1-c left open is the concrete first win — the Part
+  D formulary holds NDC and RxCUI and **no drug names**, so *"is metformin on this formulary"* needs
+  the openFDA name→NDC lookup before it can be answered at all.
+- **Phase 2 decisions worth outliving the code.** **Tavily, decided rather than measured** —
+  `plan.md` had called for a Tavily-vs-Exa A/B, and that paragraph is now amended rather than left
+  standing: this phase grades routing, not answer quality, so the comparison would have measured
+  the prompt rather than the backend. **One tool, not two** — `read_url` over Tavily's `/extract`
+  (the `get_chunk` of this lane) is deferred with a named trigger condition, because a two-tool web
+  lane would make a routing number partly about navigation *within* the lane. **No domain
+  allowlist** — restricting to cms.gov/medicare.gov would turn the web lane into a slower copy of
+  the reference lane and guarantee abstention on exactly the questions it exists for; the domain is
+  surfaced on every citation instead. **The SDK over a raw HTTP call**, for one concrete reason:
+  `AsyncTavilyClient` accepts an injected `httpx.AsyncClient`, which is what lets the entire test
+  suite drive the real client over `MockTransport` with no key and no socket.
+- **Two bugs this phase found that were not this phase's.** Both are recorded because each is the
+  *second* instance of a mistake this repo has already made once:
+  - **`make smoke-web`'s first run scored 11/12 on `citations_resolve`**, reporting two perfectly
+    good web citations as fabrications — because the check demanded a resolvable `chunk_id` of every
+    citation that was not a row. Phase 1-c made the identical mistake about rows. **A metric that
+    punishes a capability for existing reads exactly like a real regression**, and a check that
+    enumerates lanes by exclusion has to be revisited by whoever adds one. Same shape found in two
+    more places and fixed: `aggregate()`'s `!= "structured_api"` and `GoldSet.in_corpus()`, both now
+    `== "reference"`.
+  - **A pre-existing Phase 1a streaming bug**: when the grounding validator rejects an answer and
+    the retry words the replacement differently, the reader saw the *rejected draft* followed by the
+    accepted one. `done` corrected it after the fact, but the visible text mid-stream was the
+    ungrounded one. It survived four phases because it needs a retry **and** a materially reworded
+    second attempt, and every scripted test retry was byte-identical or a clean extension.
+    `TokenEvent` now carries an additive `reset: bool`. This is the case for keeping a rung that
+    spends one real call: `make check-all` could not have found it.
+- **The `_build_agent` cache-key trap was taken for the third time**, exactly as
+  [agent.md](agent.md) §3 predicted it would be. Adding the fourth axis broke three tests that
+  pinned `structured=` explicitly and let `web` default, so the `override` applied to an agent
+  nobody used. `ALLOW_MODEL_REQUESTS = False` turned it into a red test rather than a bill again.
+  There is now a test asserting the property directly, so the fifth axis fails a test instead.
 - **Phase 1b design decisions, each with a reason that outlives the code:** **`text-embedding-3-small` at 1536d** (~$0.04 a build; `-3-large` was rejected not on cost
   but because 30 in-corpus questions cannot resolve the difference between two good embedding
   models). **No hybrid search** — LanceDB carries BM25 in the same table and it is deliberately
@@ -85,6 +145,17 @@ mid-stream.
     0.800) are one run each, against a known spread of 0.200. Phase 1b routed *around* this by
     deciding on the deterministic retrieval runners rather than fixing it. Either the runner grows
     a repeat-and-aggregate mode or the docs keep saying "one sample" by hand — they do today.
+  - **An errored eval question used to leave its lane's denominator, inflating the score.** Found
+    while reading Phase 2's first run: three questions died to `Exceeded maximum output retries`,
+    and recall@5 was reported as **0.741 over 27** instead of 0.667 over 30 — the number went *up*
+    because the run went worse. Introduced by this phase's own `== "reference"` inversion in
+    `aggregate()` (the previous exclusion-list form happened to count errors as misses), fixed with
+    a regression test. **Every recall number quoted in this repo from a run with ERR rows is
+    therefore suspect and reads high**; the 1a and 1b entries below that mention errored questions
+    are the ones to re-derive if they are ever load-bearing.
+  - **`UnexpectedModelBehavior: Exceeded maximum output retries` is still unexplained and still
+    recurring** — 3 of 43 on the web-on run, 0 on the web-off run. Not web-specific on this
+    evidence (1a saw 17 of 35 with no web lane at all), but nobody has characterised it.
   - **`request_retries: 5` reduced the TPM 429s; it did not end them, and Phase 1b made it worse.**
     Running `eval-lexical`, `eval-vector` and `eval` back-to-back put **16 of 35** questions into
     `Rate limit reached` on the third, scoring 0.400 recall and 0.400 abstention accuracy — a
@@ -125,8 +196,14 @@ mid-stream.
     build fetches three (Service Area as well, for the ZIP→plan mapping). Minor, and the reason
     is recorded in [exchange_puf_data.md](exchange_puf_data.md) — correct it if the paragraph is
     ever touched for another reason.
-  - **Eval run records carry no tool trace, so no question about tool *choice* can be answered from
-    a run file.** `EvalQuestionResult` has `retrieved_doc_ids` but not the tool sequence. Two
+  - ~~**Eval run records carry no tool trace.**~~ **Closed at Phase 2.** `EvalQuestionResult` now
+    carries `tools_used: list[str]` — the tools called, in first-call order, repeats collapsed.
+    Deliberately *not* what `routing_correct` is scored on (that reads the citations, because a
+    lookup the agent ran and then ignored is not evidence); the value is in the *difference*, which
+    makes "searched the web, then answered from the corpus anyway" visible for the first time. The
+    original note follows, for the reasoning:
+  - **[historical] Eval run records carried no tool trace, so no question about tool *choice* could
+    be answered from a run file.** `EvalQuestionResult` has `retrieved_doc_ids` but not the tool sequence. Two
     separate questions have now hit this — "how often does the agent reach for `vector_search`?"
     (while explaining why `both` beats `vector` alone) and "how often does it reach for
     `get_chunk`?" — and both were answered from a handful of hand-captured traces instead of the
@@ -137,9 +214,58 @@ mid-stream.
     change, swept in by a `git add -A`. Harmless to the code, but that file is the author's and the
     commit message does not mention it. Worth un-mixing before the branch merges; `git add <path>`
     rather than `-A` is the habit that prevents it.
+  - **A question about the agent's own scope has no natural citation, and nothing pins what
+    happens.** `_SELF_DESCRIPTION` deliberately does not say "no citations needed" — that would
+    fight `_validate_grounding` and lose. Reading the validator, three outcomes are possible and
+    only one is bad: `abstained=true` with no citations passes cleanly (the empty-citations check
+    is an `elif` under `abstained`), citing a real corpus chunk passes, and answering confidently
+    with no citations costs one retry whose message names both escapes. The bad-ish middle case is
+    the first: a perfectly good capability answer flagged as an **abstention**, which the UI renders
+    as a distinct state and the eval harness scores false-abstention rate on. No test covers it and
+    no trace of a live scope question exists. One `make smoke --question "what kinds of questions
+    can you answer?"` settles it for a single model call.
+  - **`WebSearchClient.search`'s blanket `except Exception` will report our own bugs as an
+    outage.** A `TypeError` from a badly-constructed call to the SDK degrades to *"the search
+    service is temporarily unavailable"* exactly like a 5xx. Deliberate (the `noqa` says so) and
+    correct for the failure it targets, but it is a place where a real mistake would look like
+    weather. Narrowing it, or logging the exception type before degrading, is cheap if a web-lane
+    bug ever proves hard to find.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
+
+### Phase 2 checklist
+
+Backend (plan.md, Phase 2):
+
+- [x] Web-search tool (Tavily) registered on the existing agent, key read server-side from `.env`
+- [x] Tool-choice behaviour — a system-prompt and tool-description problem, not a router component
+- [x] Source-type tagging: `source_type="web"` citations, built from the result, never the model
+- [x] Routing correctness extended from two lanes to three — `routing_grader` needed **no change**,
+      exactly as its docstring predicted; what grew is the question set
+- [x] Basic web-result hygiene — URL dedupe, per-domain cap, domain surfaced on every citation
+- [x] UI: the `web` badge goes live; `CitationCard.isRow` fixed so a web citation is not rendered
+      as a table of invented columns
+- [x] **Measured** (2026-08-20). Routing 1.000 across three lanes; recall 0.667 vs 0.633
+      without the lane; `abs-03` is the one regression — see agent.md §6
+
+Beyond the plan.md list, because implementation made them necessary:
+
+- [x] Per-run search budget, request timeout, and a single `retry-after`-honouring 429 retry — the
+      first lane where one agent run can spend real money
+- [x] Third no-provider test guard (`_no_live_web_search`), and the whole client tested through a
+      real `AsyncTavilyClient` over `httpx.MockTransport`
+- [x] `tvly-` added to `make scan`'s vendor-secret-key detector
+- [x] `EvalQuestionResult.tools_used` — closes the "no run file can answer a tool-choice question"
+      gap that had been open since 1b
+- [x] `TokenEvent.reset` — the abandoned-draft fix (a Phase 1a bug, found by `make smoke-web`)
+- [x] An *"if you are asked what you can do"* prompt section, composed from the same lane booleans
+      as everything else — a three-lane run had been describing the corpus and the tables and
+      never mentioning the web (2026-08-21)
+- [x] `make smoke` honours `agent.web_tools`, so the default smoke drives the three-lane agent the
+      app actually serves rather than a two-lane one no user gets (2026-08-21)
+- [x] `highlights/tool-retries.md` — the fifth highlight, on `ModelRetry` as the tool boundary's
+      correction channel and the failures deliberately excluded from it (2026-08-22)
 
 ### Phase 0 checklist
 
@@ -243,6 +369,72 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-22 — a walkthrough of Phase 2, and three highlight pages caught up to the code
+
+**Did:** walked the whole `phase-2-step-1` branch step by step (read-only, seven steps), then three
+documentation follow-ups it surfaced: a web-lane chat screenshot in the README, an extension of the
+grounding highlight, and a **new fifth highlight on `ModelRetry`**
+([tool-retries.md](highlights/tool-retries.md)). No source changed.
+
+**Decided:** the grounding highlight was extended only where the *code* had a mechanism the *page*
+did not describe, rather than restating the web-URL argument that was already there. Three such
+gaps: `seen_results` stores a `WebResult` **whole** where `seen_chunks` stores a resolvable id (a
+web page cannot be re-read after the run, so the citable set has to *be* the evidence); `web#s1.2`
+is unforgeable because validity is membership in a dictionary rather than a property of the string;
+and the domain-and-date-in-title construction is provenance the reader can act on, which is the
+deliberate alternative to an allowlist.
+
+**Decided:** the owning docs were *not* touched, and the reason is worth recording as the
+CLAUDE.md rule working. [web_search_tool.md](web_search_tool.md) §6 already documented all three
+mechanisms correctly — the highlight pages were simply behind it. Highlights being derived means a
+gap like this gets fixed downstream, never by editing the design doc to match a presentation page.
+
+**Decided: the `ModelRetry` highlight claims no measured improvement**, because none exists. The
+obvious line — *"retries improve success rate"* — would need a build with the mechanism removed to
+A/B against, and it is load-bearing for the grounding guarantee, so that build cannot exist. The
+Evidence section says so explicitly and cites what is demonstrable instead: four per-tool tests that
+script a wrong call followed by a good one and assert a **cited answer** comes out, plus the
+recorded run that lost 17 of 35 questions when the retry budget was exhausted. An unfalsifiable
+claim in the one document written to persuade people would undercut every number beside it.
+
+**Decided:** the same page carries the *negative* half — a spent search budget, a Tavily outage and
+a missing credential are deliberately **not** retries. Without that section it is a tip rather than
+a design, and `test_the_search_budget_is_enforced_and_is_not_a_retry` is what stops the distinction
+eroding into "retry everything".
+
+**Rejected:** answering the walkthrough's follow-up about scope questions from the prompt's
+intent. `_SELF_DESCRIPTION` deliberately does not tell the model "no citations needed", and the
+question was whether `_validate_grounding` therefore always rejects. Reading the validator settles
+it — the empty-citations check is an `elif` under `abstained`, so there are three landing spots and
+only one costs a retry. Recorded as an open question below rather than guessed at.
+
+**Stopped at:** clean. Two things noticed while reading and not chased, both now open questions.
+
+**Commits:** `6a545dd`, `72f8a62`, `ee000ca`, `bbf889c`.
+
+### 2026-08-21 — the lane the agent would not mention, and the smoke that never smoked it
+
+**Did:** two Phase 2 corrections found by using the thing rather than by testing it — the prompt
+gained an *"if you are asked what you can do"* section, and `make smoke` started honouring
+`agent.web_tools`. Logged here from the code's own contemporaneous comments; this session was not
+present for the work.
+
+**Decided:** a lane described **only in the negative** is a lane the model drops. Every mention of
+web search in the prompt was a hedge (*"the last place to look"*, *"does not mean every question is
+answerable"*) — correct for routing, and the observed consequence was that a three-lane run asked
+what it could answer described the corpus and the tables and never mentioned the web at all. So
+`_SOURCES_WEB` leads with the capability and `_SELF_DESCRIPTION` names the lanes from the same
+booleans as everything else, rather than trusting the model to inventory its own tools. **A
+capability the agent never mentions is the cheapest possible way to waste one.**
+
+**Decided:** `make smoke` runs the lanes `config.yaml` turns on. Before this, `agent.web_tools:
+true` was ignored unless `--web` was passed, so the default smoke exercised a two-lane agent **no
+user ever gets** — and because registering a lane changes the system prompt, that was a different
+agent rather than the shipped one with a tool held back. `--web` now selects the *question and the
+checks*, not the lane.
+
+**Commits:** `bf5df79`, `991d2d0`.
 
 ### 2026-08-19 — Connection ownership, and the highlights doc split
 
