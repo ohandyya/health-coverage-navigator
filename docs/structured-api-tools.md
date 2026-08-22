@@ -22,14 +22,17 @@ Right now, **access**: which of the three sources need a credential, how to obta
 properties of those credentials that constrain the design rather than merely the setup, and the one
 key that was available and deliberately declined.
 
-Also the **Marketplace contract** (§7) and the **fixture strategy** (§8), both established by
-exercising the live API rather than by reading about it. Still to come as the phase is built: the
-tool surface and its descriptions, the typed models themselves, the mirror-vs-live reconciliation
-rule, caching, provenance for a live-API citation, and the eval slice. Sections are numbered so
-those can be added without renumbering what is here.
+Then the **contracts** — Marketplace in §7, openFDA and NPPES in §10 — every one of them
+established by exercising the live API rather than by reading about it. Then, from §9 on, the
+**implementation plan**: the tool surface, the module layout, failure and budgets, provenance,
+mirror-vs-live reconciliation, the eval slice, the tests, and the build order.
+
+**§1–§8 are findings; §9–§18 are intent.** Nothing below §8 is built. Where the build contradicts a
+decision recorded here, the decision changes here first and [progress.md](progress.md) records why —
+that is the same rule every design document in this repo follows.
 
 **Verified 2026-08-22** — the access facts in §3–§5 against the live CMS and FDA pages, and every
-claim in §7 against the running API. All of it is someone else's operational policy or someone
+claim in §7 and §10 against the running APIs. All of it is someone else's operational policy or someone
 else's deployment; re-check before blaming the code.
 
 ## 2. The three sources at a glance
@@ -307,31 +310,491 @@ re-fetched identically.
 Fixture content is CMS public data and does not depend on which key fetched it, so recording with
 the demo key of §3a is fine — with one exception, which is not.
 
-### 8a. The provider endpoints return real people, and this repo has promised they will not
+### 8a. Provider fixtures are synthesised — decided
 
 `/providers/autocomplete` and `/providers/search` return **real practitioners: real names, real
-NPIs.** That collides directly with two commitments already written down:
+NPIs**, and NPPES (§10a) adds street addresses and telephone numbers to the same problem. That
+collides with two commitments already written down:
 
 - CLAUDE.md: *"no provider-level data is ever vendored here"*, stated as a consequence of never
   bulk-downloading NPPES.
 - [glossary.md](glossary.md) under **FOIA**: `scripts/scan_sensitive.py`'s `pii:npi` count *"is
   expected to stay at zero permanently"*.
 
-Both were written when the only provider source was NPPES, which is queried live and never stored.
-The Marketplace API reopens the question from a direction neither anticipated — a provider fixture
-is a *recorded response*, and recording it is vendoring. **A fixture from either endpoint would put
-real clinician names and real NPIs into a public repo and break a baseline the scanner enforces.**
+Both were written when the only provider source was NPPES, which is queried live and never stored. A
+recorded fixture is a stored response, so this phase reopens the question from a direction neither
+anticipated.
 
-The drug and plan endpoints have no such problem; this is specifically about `/providers/*`.
+**Decided 2026-08-22: provider fixtures are synthesised. The invariant stands.** No real clinician's
+name, NPI, address, or telephone number enters this repo. Drug and plan fixtures are unaffected —
+this is specifically about provider-shaped responses, from either upstream.
 
-**Recommended: synthesise provider fixtures rather than relax the invariant.** The invariant is
-cheap to keep and expensive to re-establish once broken, and `pii:npi == 0` is a genuinely useful
-tripwire precisely because it has no legitimate exceptions. The cost is real but small: an NPI
-carries a Luhn check over the prefix `80840` plus its first nine digits, so a synthetic NPI must be
-*constructed* to pass — and a fixture whose NPIs fail the check would be caught by the very
-validation the wrappers exist to perform. **This is an open decision, not a settled one**; it is
-recorded in [progress.md](progress.md) as such, and it must be resolved before the first
-`/providers/*` fixture is written, not after.
+The invariant is cheap to keep and expensive to re-establish once broken, and `pii:npi` is a useful
+tripwire precisely because it has no legitimate exceptions. Recording a handful of real practitioners
+would also be the one place this repo published information about **private individuals** who never
+chose to appear in it — FOIA-disclosable is not the same as *published by us*.
+
+#### What synthesising actually costs, which is more than it first appears
+
+An NPI is Luhn-checked over the prefix `80840` plus its first nine digits, so a synthetic NPI has to
+be **constructed** rather than typed. That much was obvious. The part that was not:
+
+**A Luhn-valid synthetic NPI still trips `pii:npi`.** The marker is two filters — Luhn *and* the
+literal word "NPI" within 40 characters — and a fixture whose field is named `npi` supplies the
+second. Verified against the live marker:
+
+| Fixture shape | Luhn-valid synthetic NPI | Flagged? |
+|---|---|---|
+| Marketplace `{"npi": …}` | yes | **yes** |
+| NPPES `{"number": …}` | yes | no — NPPES names the field `number` |
+| any shape | no (invalid check digit) | no |
+
+So the naive reading of "synthesise and the count stays at zero" is **wrong**, and the NPPES case
+passes only by the accident that NPPES calls the field `number`. The moment a wrapper model, a test,
+or a docstring names it `npi` next to the digits — which `ProviderRecord.npi` naturally will — the
+marker fires.
+
+**The escape is not to use invalid NPIs.** A fixture whose check digits fail would be rejected by
+the very validation the wrappers exist to perform, so the fixtures could never exercise the happy
+path. Synthetic identifiers must be *structurally real*.
+
+#### Therefore, three concrete requirements on the build
+
+1. **Synthetic NPIs are Luhn-valid**, generated by a helper rather than hand-picked, so a fixture
+   exercises real validation.
+2. **`scripts/sensitive_baseline.toml` gains an allowlist entry** naming the synthetic provider
+   fixtures and saying why they are not PII. There is direct precedent: the scanner already
+   allowlists its own canary as *"Synthetic canary inside the scanner's own detector definitions,
+   not a real identifier."* This is the same argument for the same kind of value.
+3. **The glossary's `pii:npi` claim is restated** — not weakened. The invariant that matters is
+   *no real provider identity is vendored*; "the count is zero" was a proxy for it that this phase
+   outgrows. The precise form becomes: **zero unallowlisted hits, and every allowlisted hit is
+   synthetic by construction.**
+
+**Do not write an example NPI into any tracked file, including this one.** A Luhn-valid ten-digit
+run beside the word "NPI" is exactly what the marker catches, and prose is not exempt — the same
+convention the glossary already states for SSNs: *write the pattern, never a specimen.* The helper
+generates them; no document quotes one.
+
+## 9. What this phase adds, and what it must not
+
+**Adds:** six tools over three live APIs, registered beside the three relational tools **in the same
+lane**, under the same `source_type: structured_api`. Plus the eval questions that make live-vs-mirror
+routing measurable, and the fixtures that keep all of it offline in `make check-all`.
+
+**Must not:**
+
+- **Must not open a fourth lane.** Phase 1-c opened the structured lane; this extends it. The badge
+  exists, `CitationCard` renders row-shaped evidence, and [frontend_plan.md](frontend_plan.md) F2
+  already says this phase adds "live-API citations rendering beside mirror ones". A `source_type` of
+  `"live_api"` would be a contract change to express something the contract already expresses.
+- **Must not let an outage look like an answer** — [web_search_tool.md](web_search_tool.md) §8's
+  rule, inherited unchanged and now applying to three upstreams instead of one. §13.
+- **Must not let an *answer* look like an outage** — the inverse, and new this phase. openFDA
+  returns **HTTP 404 with `{"error": {"code": "NOT_FOUND"}}` when a search matches nothing**, and
+  for *"has drug X been recalled"* that 404 **is the answer: no recalls.** Treating it as a failure
+  would abstain on the one question the tool exists to answer. §10b.
+- **Must not vendor provider PII.** Settled in §8a: provider fixtures are **synthesised**, and no
+  real clinician's name, NPI, address, or telephone number enters this repo.
+- **Must not reshape `AnswerDeps`' citable-set pattern.** A live record joins `seen_rows` rather
+  than growing a fourth dictionary — §14.
+
+### The one risk worth naming up front
+
+The agent currently sees **nine** tools (five reference, three relational, one web). Six more makes
+fifteen, and Phase 2's measured success — `web_search` called on 0 of 30 reference questions — was
+achieved with *one* new tool whose over-use the prompt explicitly warned against. **Tool-count
+inflation is this phase's characteristic failure mode**, and it will show up as routing accuracy
+falling on the *reference* slice, not the new one. The eval slice in §16 is designed to catch that
+specifically, and §11 spends its budget justifying why six and not nine.
+
+## 10. The other two contracts, verified live
+
+§7 established Marketplace. openFDA and NPPES were verified the same way, on 2026-08-22.
+
+### 10a. NPPES — one endpoint, and it is all PII
+
+`GET https://npiregistry.cms.hhs.gov/api/?version=2.1&number={npi}` → `200` with:
+
+```
+{result_count: 1, results: [{number, enumeration_type, basic{...}, addresses[], taxonomies[],
+                             identifiers[], other_names[], practiceLocations[], endpoints[],
+                             created_epoch, last_updated_epoch}]}
+```
+
+`basic` carries `first_name`, `last_name`, `credential`, `enumeration_date`, `certification_date`;
+`taxonomies[]` carries the specialty (`desc`, `primary`, `state`, `license`); `addresses[]` carries
+**street address and telephone number** per location.
+
+Three consequences:
+
+1. **`result_count: 0` is the "no such NPI" answer**, returned with `200` — unlike openFDA, which
+   uses a 404 for the same meaning. Two upstreams, two conventions, and neither is an outage. Each
+   client owns its own mapping; there is no shared "is this empty" helper that could be right for
+   both.
+2. **The specialty question is answered from `taxonomies[]`, not `basic`** — and a provider can hold
+   several, exactly one flagged `primary: true`. A wrapper that takes `taxonomies[0]` will
+   occasionally report a secondary specialty as *the* specialty.
+3. **This response is more PII-dense than the Marketplace's.** §8a was framed around names and
+   NPIs; NPPES adds street addresses and telephone numbers to the same fixture problem — so the
+   synthetic-identity helper §8a requires has to cover four field families, not one. Note the one
+   piece of luck: NPPES names the NPI field `number`, which is why an NPPES-shaped fixture does not
+   trip `pii:npi` on its own. Do not rely on it — §8a's table says where it stops being true.
+
+### 10b. openFDA — an envelope, a disclaimer, and everything in lists
+
+`GET https://api.fda.gov/drug/label.json?search=openfda.brand_name:"Lipitor"&limit=1` → `200` with
+`{meta, results}`. Two endpoints are in scope: `/drug/label.json` (indications, warnings,
+interactions) and `/drug/enforcement.json` (recalls).
+
+Four properties that shape the wrappers:
+
+1. **No match is HTTP 404**, body `{"error": {"code": "NOT_FOUND", "message": "No matches found!"}}`.
+   Verified on both endpoints. Per §9 this is an *answer* for recalls and an *absence* for labels,
+   and the client must distinguish that 404 from a transport failure before anything else.
+2. **Nearly every field is a list, including scalar-looking ones.** `openfda.brand_name` is
+   `["Lipitor"]`; `openfda.generic_name` is `["ATORVASTATIN CALCIUM"]`; `indications_and_usage` is a
+   one-element list holding the entire section as one string. `effective_time` and `id` are bare
+   strings. This is an SPL artefact, not an accident, and it is the single most likely source of a
+   silent `str`-vs-`list[str]` bug in the phase. **Model them as lists and unwrap explicitly**,
+   never with a `[0]` that a one-element assumption makes invisible.
+3. **A label result has 38 top-level fields, most of them multi-paragraph prose.** Returning one
+   whole would blow a large fraction of the context window on a single tool call. §11 makes section
+   selection a parameter rather than an afterthought.
+4. **`meta.disclaimer` says "Do not rely on openFDA to make decisions regarding medical care."**
+   This repo cites its sources; a source that disclaims its own reliability is worth carrying into
+   the citation rather than dropping at the boundary. §14.
+
+### 10c. The join that makes the two drug sources one lane
+
+openFDA's `openfda.rxcui` is a **list of every RxCUI on the label** — for Lipitor it contains both
+`262095` (the branded 80 mg tablet) and `259255`. Marketplace's `/drugs/covered` on that same plan
+returned `coverage: "GenericCovered", generic_rxcui: "259255"`.
+
+**The two APIs agree, in the same identifier space, without a mapping table.** That is what lets a
+compound question — *"is Lipitor covered, and has it been recalled"* — resolve to one drug rather
+than to two coincidentally-similar names, and it is the concrete reason RxCUI is the drug key
+throughout this phase rather than a brand-name string. It is also a real Phase 4 multi-hop, arriving
+early enough to design for.
+
+**Plan IDs join the same way.** Marketplace returned `77264NC0010049` — a 14-character HIOS
+**Standard Component ID**, the same key space as the Exchange PUF's `StandardComponentId` that the
+Phase 1-c mirror is already keyed by. Verify against the mirror on first contact, but if it holds,
+the live and vendored halves of the structured lane share a primary key, and §15's reconciliation
+rule has something to reconcile *on*.
+
+## 11. The tool surface — six tools, named for questions
+
+Tool descriptions are prompt surface ([relational-tool.md](relational-tool.md) §3,
+[web_search_tool.md](web_search_tool.md) §3). These are named for the **user question** they answer,
+not the endpoint they wrap, because the model routes on the description.
+
+| Tool | Source | Signature | Answers |
+|---|---|---|---|
+| `find_drug` | Marketplace | `(name: str) -> DrugMatches` | resolves a drug name to RxCUIs |
+| `check_drug_coverage` | Marketplace | `(rxcuis, plan_ids, year=None) -> CoverageResult` | *"is drug X covered under plan Y"* |
+| `find_plans` | Marketplace | `(zipcode, people, income, year=None) -> PlanMatches` | *"find plans in ZIP 30076 for a family of 3"* |
+| `drug_label` | openFDA | `(name, section: LabelSection) -> LabelSection` | *"what is drug X indicated for"* |
+| `drug_recalls` | openFDA | `(name) -> RecallResult` | *"has drug X been recalled"* |
+| `lookup_provider` | NPPES | `(npi) -> ProviderRecord` | *"what's this NPI's specialty"* |
+
+### Why six, and not the nine the endpoints suggest
+
+Three endpoints are deliberately **not** tools, and each absence is a decision:
+
+- **`GET /counties/by/zip/{zip}` is folded into `find_plans`.** `/plans/search` requires a
+  `countyfips`, and no user knows theirs. Exposing the resolution as a tool would make the model
+  perform a mechanical lookup it cannot get wrong in an interesting way, and would spend a routing
+  decision on plumbing. **The tool takes what a person says (a ZIP); the wrapper does what the API
+  needs.** One user-visible call, two HTTP requests.
+- **`GET /market-years` is folded into every year-taking tool** as the default, per §7c. A `year`
+  the caller omits resolves to `current` once per run and is cached on `AnswerDeps`, not re-fetched
+  per call.
+- **`/providers/covered` and `/providers/search` are deferred to Phase 5**, not built here.
+  [plan.md](plan.md) Phase 5 owns network checks; Phase 3's acceptance test asks only *"what's this
+  NPI's specialty"*, which NPPES answers. Deferring them also halves the provider-fixture surface
+  §8a has to synthesise. Recorded in §18b.
+
+Two more shaping decisions:
+
+- **`find_drug` stays separate from `check_drug_coverage`** even though every coverage question
+  needs both (§7b). Merging them would hide the resolution step from the trace, and the resolution
+  is exactly where an ambiguous drug name goes wrong — *"Lipitor"* returns four strengths, and which
+  one the user meant is a question the model should be seen to answer, not one a wrapper should
+  silently pick.
+- **`drug_label` takes a `section` argument** — `Literal["indications", "warnings", "interactions",
+  "adverse_reactions", "dosage"]` — because §10b.3's 38 prose fields cannot all reach the model.
+  Selection at the boundary, not truncation after it: a truncated warnings section in a health tool
+  is worse than an absent one.
+
+## 12. Module layout
+
+Follows the shape both prior lanes already established — a `client` module per upstream that imports
+nothing from `agent/`, and one `agent/` module that adds the trace and the run-scoped bookkeeping.
+
+```
+src/health_coverage_navigator/
+  live/                     # NEW — the read side, no PydanticAI import anywhere in it
+    __init__.py
+    models.py               # ApiRecord + per-source typed models
+    _http.py                # shared: httpx client factory, timeout, retry/backoff transport
+    marketplace.py          # MarketplaceClient
+    openfda.py              # OpenFdaClient
+    nppes.py                # NppesClient
+  agent/
+    live_tools.py           # NEW — the six tools; mirrors web_tools.py
+    deps.py                 # + three optional clients, + resolved market year
+    tools.py                # select_tools grows a `live: bool` axis
+tests/
+  test_live_clients.py      # NEW — per-client, offline, fixture-driven
+  test_live_agent.py        # NEW — tool behaviour through the agent, mirrors test_web_agent.py
+tests/fixtures/live/        # NEW — recorded responses, §8
+```
+
+**`live/` rather than extending `structured/`.** The lane is shared; the *machinery* is not.
+`structured/` is DuckDB over local Parquet — no network, no key, no rate limit, and its `store.py`
+holds a connection whose lifetime is the process. Putting an HTTP client beside it would give one
+package two failure models and force `structured/` to import `httpx`. The lane is expressed by
+`source_type` and by both toolsets registering together, not by sharing a directory.
+
+**One `_http.py`, three clients, no base class.** The shared part is genuinely shared — timeout
+policy, a `Retry-After`-honouring transport (Phase 2 already learned that this belongs in a
+transport, not in a client), a `User-Agent`. The *non*-shared part is everything that matters: three
+different auth mechanisms (`apikey` query param / none / none), three different empty-result
+conventions (§10a.1 vs §10b.1), three different envelopes. An abstract base class would have to
+declare all three as overridable, which is a base class in name only.
+
+## 13. Failure, budgets, and caching
+
+### 13a. The failure table
+
+Every case below returns a **typed result with `unavailable` set**, never an exception escaping into
+the agent loop — `WebSearchResults.unavailable` is the precedent and the pattern is copied whole.
+
+| Condition | Marketplace | openFDA | NPPES |
+|---|---|---|---|
+| No match | `{coverage: []}` → empty result | **404 `NOT_FOUND` → answer, not failure** | `result_count: 0` → answer |
+| Missing/blank key | tool not registered (§15) | n/a | n/a |
+| Expired key (§3) | 401 → `unavailable="credential"` | n/a | n/a |
+| Rate limited | 429 → honour `Retry-After`, then `unavailable="rate_limit"` | 429 → same | 429 → same |
+| Timeout / 5xx | `unavailable="upstream"` | `unavailable="upstream"` | `unavailable="upstream"` |
+| Malformed body | `ValidationError` → `unavailable="upstream"`, logged with `request-id` | same | same |
+
+**The 401 case deserves its own value rather than folding into `upstream`.** §3's 60-day expiry
+makes it the *likely* Marketplace failure in month three, and it is the one an operator can fix in a
+minute — but only if the message says "the key" rather than "the API". An expired key is an outage
+with a due date, and the answer must say so.
+
+### 13b. Budgets
+
+`WebConfig` bounds a lane that costs money; this lane costs someone else's capacity. Same mechanism,
+different justification. Per **run**, not per process:
+
+- `max_calls` across all six tools — the ceiling that stops a loop, mirroring the web lane's search
+  budget. A spent budget is **not** a `ModelRetry` (Phase 2 has a test asserting exactly this
+  distinction); it is a terminal, honest "I have used my lookups for this question".
+- `timeout_s` per call.
+- Concurrency via `asyncio.Semaphore`, never a thread pool — CLAUDE.md's async rule, and the case
+  where it bites is `check_drug_coverage` fanning out over several RxCUIs.
+
+### 13c. Caching
+
+Phase 3's checklist calls for a response cache, and §4 makes it load-bearing for openFDA
+specifically (a per-**IP** daily limit that a restart does not reset).
+
+**Recommended: a run-scoped in-memory cache in the first increment, keyed by (source, endpoint,
+normalised params) — and nothing persistent.** The argument is that the value is almost entirely
+*within* a run: `find_drug` then `check_drug_coverage` then `drug_recalls` on the same drug is the
+common shape, and the eval sweep's repetition is across questions, not within them. A cross-run disk
+cache buys the openFDA daily limit real headroom, but it introduces staleness into a lane whose
+entire selling point is being current — *"is this covered now"* answered from yesterday's cache is
+the exact failure the lane exists to avoid.
+
+**So: persistent caching is deferred, with a stated tripwire** — if an eval sweep is observed
+approaching openFDA's 1,000/day, add a disk cache with a TTL measured in hours and a
+`--no-cache` escape for smoke runs, not before. §18b.
+
+**The cache key trap, for the fourth time.** [web_search_tool.md](web_search_tool.md) §11 records it
+twice and [relational-tool.md](relational-tool.md) once: any cache key that omits a dimension the
+result depends on returns another dimension's answer. Here the dimensions are `year` and, for
+`find_plans`, the whole household — two people in the same ZIP with different incomes get different
+plans. **The key includes the resolved `year`, never the caller's `None`.**
+
+## 14. Provenance: what a citable live-API record is
+
+### 14a. It is a row, and that is not a shortcut
+
+A live record joins **`seen_rows`**, the dictionary Phase 1-c already built, and is cited with the
+existing `row_id` + `cells` shape. No fourth citation shape, no fourth dictionary, no change to
+`AgentCitation`'s validator.
+
+The reason is not economy — it is that the claim being made is the same claim. A mirror row says
+*"this exact record exists in this source"*; so does an NPPES result. Both are exact, both are
+per-record, both carry `source_type: structured_api`, and `CitationCard` already renders the shape.
+[web_search_tool.md](web_search_tool.md) §6 had to add a third shape because a web page's evidence
+genuinely differs — it is a quotation from prose that may vanish. A record is not prose.
+
+**Id namespacing carries the live/mirror distinction**, since that is the one thing a reader must
+not lose: mirror rows keep `#q{n}.{m}`; live records take a source-tagged form —
+`mkt#1.1`, `fda#2.1`, `npi#3.1`. Same forgery property as every other id in this repo: validity is
+membership in a dictionary the tools alone write, not a well-formed string.
+
+### 14b. Live records have a URL, and mirror rows do not
+
+`Citation.url` is `None` for a mirror row — there is no public address for row 41,922 of a Parquet
+file. **A live-API record has one: the query URL that produced it.** `GET /drug/label.json?search=…`
+is re-fetchable by anyone, and NPPES's is too.
+
+So this phase populates `Citation.url` for structured-lane citations for the first time, **with no
+contract change** — the field has existed since Phase 0 and `CitationCard` already renders both
+branches. It is the most user-visible improvement in the phase and it costs nothing.
+
+**One exception, and it is not optional: the Marketplace URL carries the API key as a query
+parameter.** A citation URL is rendered in the browser and serialised into eval run files. **Strip
+`apikey` before the URL is stored**, and add a test asserting no citation URL contains it — this is
+the one place in the phase where a plumbing mistake leaks a credential into a tracked artefact.
+
+### 14c. openFDA's disclaimer travels with the citation
+
+§10b.4: openFDA disclaims its own accuracy in every response. The honest handling is to carry it —
+the citation's `title` names the source and its recency (`openFDA · label effective 2024-04-15`),
+and the tool's own description tells the model that openFDA is a labelling record, not clinical
+advice. This is the same instinct as Phase 2's domain-and-date citation titles: provenance the
+reader can act on, rather than a bare source name.
+
+## 15. Mirror-vs-live reconciliation
+
+Phase 3's checklist asks *"which source is authoritative for a given question, and what the agent
+does when they disagree"*. §10c makes it answerable: the two halves share a key space.
+
+**The rule, by question rather than by source:**
+
+| Question shape | Authoritative | Why |
+|---|---|---|
+| *"What did plan X file for plan year Y"* | **mirror** | The PUF *is* the filing, versioned by year and stable. The live API has no notion of "as filed". |
+| *"Is drug X covered right now"* | **live** | Formularies change mid-year. A mirror answer is a claim about a snapshot, stated as if about today. |
+| *"What plans can I buy in ZIP Z"* | **live** | Availability and price are current-state by definition. |
+| *"What is this NPI's specialty"* | **live (only)** | No provider data is vendored, ever (CLAUDE.md). |
+
+**When they disagree on the same question, the agent says so and cites both.** It does not pick.
+A silent preference is indistinguishable from a wrong answer to the person reading it, and this repo
+has a citation mechanism precisely so a conflict can be shown rather than resolved by fiat. Two
+citations with the same claim and different values is a *good* answer to a question where the
+sources genuinely differ — and it is also a bug report, since a systematic disagreement means one of
+the two is being queried wrong.
+
+**The `plan_year` field already on `AnswerDeps` is the coordination point.** It exists so the
+relational tools pick a partition; the live tools read the same value so both halves answer about
+the same year rather than each assuming. Where the request pins no year, §7c's `current` fills it —
+once per run.
+
+## 16. Evals
+
+Phase 3's slice is **tri-modal routing**: reference vs. structured vs. web, with structured now
+split into mirror and live. Each phase adds exactly one thing to grade, and this is it.
+
+### 16a. What the gold set grows
+
+`expected_source_type` already carries `structured_api`. Three additions:
+
+- **~6 live-API questions** — two per source, covering the acceptance tests in
+  [plan.md](plan.md) Phase 3: a drug-coverage question, a plan-search question, an NPI-specialty
+  question, a recall question.
+- **A `expected_lane_detail: mirror | live` field** on structured questions, additive, so
+  "routed to the structured lane" and "routed to the *right half* of it" score separately. Without
+  it the phase's two named failure modes are invisible: reaching for the live API when the mirror
+  answers offline, and trusting the mirror where only live is current (§15).
+- **One abstention that turns answerable.** `abs-01` — the provider-directory question the glossary
+  records as *"the canonical thing the Phase 1a agent abstains on, which turns answerable at Phase
+  3"* — moves from the abstention slice to the live slice. **That is the phase's headline metric
+  and it was written down two phases early;** it should be reported as such.
+
+### 16b. The metric that must not move
+
+The existing 30 reference questions and their recall@5. §9's tool-count risk shows up here or
+nowhere. **Report reference-slice routing accuracy with and without the live toolset registered**,
+exactly as Phase 2 reported `web_search` called on 0 of 30 reference questions. If it falls, the fix
+is tool descriptions and prompt, not more tools.
+
+### 16c. What is *not* graded, and why
+
+**Answer correctness on live-API questions is not scored against a fixed expected string.** A
+premium changes, a formulary changes, a provider retires. This is Phase 2's reasoning
+([web_search_tool.md](web_search_tool.md) §12) applied to a second volatile lane: grade **routing**
+(did it use the right tool) and **groundedness** (is every claim backed by a record the tool
+actually returned), and let correctness be asserted by the offline fixture tests, where the answer
+*is* fixed because the response is.
+
+## 17. Tests
+
+**All offline, all inside `make check-all`, no key required** — the suite sets
+`ALLOW_MODEL_REQUESTS = False` and reaching a live API in a unit test would break the property that
+`check-all` costs nothing.
+
+- `test_live_clients.py` — per client, against recorded fixtures: envelope parsing, the
+  list-vs-scalar unwrapping of §10b.2, and **one test per row of §13a's failure table**. The
+  highest-value tests in the phase are the two that assert *no match is not an outage*: openFDA's
+  404 and NPPES's `result_count: 0` must both produce a confident negative answer, not
+  `unavailable`.
+- `test_live_agent.py` — tools through the agent with a stubbed model, mirroring
+  `test_web_agent.py`: a tool returning `unavailable` produces an honest failure not a fabrication;
+  a spent budget is terminal and **not** a `ModelRetry`; a citation to a record no tool returned
+  fails the grounding validator.
+- **`test_no_apikey_in_citation_urls`** — §14b's leak guard. Small, and the only test here whose
+  failure would be a security finding rather than a bug.
+- **A fixture-freshness test**, following the `x-version` stamp of §8: assert every fixture carries
+  its provenance headers, so a fixture recorded without them cannot land.
+
+## 18. Build order
+
+Ordered by **risk retired per step**, not by source. Each step ends green.
+
+### 18a. The steps
+
+**Step 0 — the synthetic-identity helper, and its allowlist entry.** §8a is **decided**, so this is
+a build task rather than a question: a generator for Luhn-valid synthetic NPIs plus synthetic names,
+addresses and phone numbers, and the `sensitive_baseline.toml` entry that declares them. First
+because it is small, because it unblocks step 4, and because the scanner conversation is better had
+now than in the diff that also adds a tool. Ends with `make scan` green and no fixture yet existing.
+
+**Step 1 — `live/_http.py` + `OpenFdaClient` + `drug_label` / `drug_recalls`.** openFDA first, and
+deliberately not the source Phase 3's headline is about: it needs **no key and has no PII**, so it
+carries none of the phase's blocked decisions — while forcing both of its hardest *shape* problems
+immediately. The 38-field response makes section selection real in step 1 rather than a retrofit,
+and the 404-is-an-answer case builds the failure table's most interesting row first. Ends with two
+tools registered, fixtures recorded, `make check-all` green.
+
+**Step 2 — `MarketplaceClient` + `find_drug` + `check_drug_coverage`.** The demo key (§3a) suffices.
+This is where §10c's RxCUI join gets exercised and where the `generic_rxcui` conditional (§7b) gets
+its test — the single most consequential correctness detail in the phase.
+
+**Step 3 — `find_plans`.** The ZIP→FIPS fold (§11), the household request model, and the largest
+response in the phase. Last of the Marketplace tools because it is the only one whose *request* is
+non-trivial.
+
+**Step 4 — `NppesClient` + `lookup_provider`**, on whatever step 0 decided. The `taxonomies[]`
+primary-flag trap (§10a.2) is the correctness detail here.
+
+**Step 5 — reconciliation + evals.** §15's rule, the gold-set additions, and `abs-01`'s promotion.
+Eval work lands with the phase, not after it — but it lands *last* because it grades routing across
+tools that must all exist first.
+
+**Step 6 — the demo-key guard** (§3a): the eval runner refuses to start on CMS's published key.
+Three lines, and it belongs after step 5 because that is when a runner exists to guard.
+
+### 18b. Deferred deliberately
+
+- **`/providers/covered` and `/providers/search`** → Phase 5, which owns network checks (§11).
+- **`POST /households/eligibility/estimates`** — APTC/CSR subsidy estimates. A genuinely useful
+  answer and squarely a Phase 5 "plan comparison" capability; Phase 3's acceptance tests do not ask
+  for it, and it is the one Marketplace endpoint whose output is a *calculation* rather than a
+  record, which makes citing it a different problem.
+- **A persistent response cache** — §13c, with its tripwire.
+- **openFDA's other endpoints** (NDC directory, Orange Book, Drugs@FDA, adverse events). Label and
+  enforcement answer the questions [plan.md](plan.md) names; the rest is scope.
+- **Automatic key-rotation handling** (§3). The 60-day expiry is real, but the fix — re-reading
+  `.env` without a restart — means unfreezing `Secrets`, and a clear 401 message is most of the
+  value for none of the risk.
 
 ## References
 

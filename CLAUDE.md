@@ -27,7 +27,8 @@ structured lane's design — tools, SQL guard, row citations) ·
 [web_search_tool.md](docs/web_search_tool.md) (Phase 2: the web lane's design — Tavily client,
 budgets, web citations, three-lane routing evals) ·
 [structured-api-tools.md](docs/structured-api-tools.md) (Phase 3: the live half of the structured
-lane — API-key access and, as it is built, endpoint contracts) · per-source data guides
+lane — API-key access, the three verified contracts, and the implementation plan) ·
+per-source data guides
 (`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
 **Presentation, not reference:** [technical_highlights.md](docs/technical_highlights.md) indexes
@@ -96,7 +97,11 @@ Full list, links, and rationale: [docs/plan.md](docs/plan.md) → *Data sources*
   mirror that Phase 1-c's relational tools query in place — read, never reshaped.
 - **NPPES and openFDA are used live via their APIs and never vendored.** Both publish bulk
   downloads; both are per-record lookups, so a mirror buys staleness and storage for nothing. **Do
-  not add a bulk downloader for either.** Consequence: no provider-level data is ever vendored here.
+  not add a bulk downloader for either.** Consequence: **no real provider-level data is ever vendored
+  here** — which from Phase 3 also governs *fixtures*, since a recorded response is stored data.
+  Provider fixtures are **synthesised** (Luhn-valid synthetic NPIs, synthetic names/addresses/phones,
+  allowlisted in `sensitive_baseline.toml`); never record a real one. See
+  [structured-api-tools.md](docs/structured-api-tools.md) §8a.
 
 ## Glossary — KEEP CURRENT (a standing rule, not a one-time task)
 
