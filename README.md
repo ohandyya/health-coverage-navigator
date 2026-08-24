@@ -397,6 +397,29 @@ The answer is also a good illustration of the grounding rule under a *negative* 
 declines to let an E. coli and Salmonella investigation stand in for a virus. Both citations quote
 their page verbatim — the output validator would have rejected them otherwise.
 
+### Chat — the live lane, and two upstreams in one answer
+
+![The chat page answering "Is atorvastatin covered under plan 77264NC0010049, and what does the FDA say it treats?" with a green structured API badge, three row-shaped citation cards — a Marketplace formulary row showing rxcui / plan_id / coverage Covered, and two openFDA label rows quoting indications_and_usage — each with an "Open source" link, and the agent trace panel showing find_drug, drug_label and check_drug_coverage with their arguments and results](docs/img/chat-page-live-api.png)
+
+One question, **two live upstreams, three tools**. The trace shows the chain: `find_drug` turns the
+word *"atorvastatin"* into RxCUIs (*"10 match(es), e.g. atorvastatin 80 MG Oral …"*),
+`drug_label` asks openFDA for that drug's `indications` section, and `check_drug_coverage` takes
+one of the RxCUIs (`259255`) against the plan id and the year, coming back
+*"1 drug/plan pair(s): Covered"*. **Name → identifier translation is the hop that makes this lane
+usable at all**, and the trace makes it legible: each step shows the arguments the model wrote,
+so the RxCUI moving from one tool's result into the next tool's call is visible rather than implied.
+
+The badge is the **same green `structured_api`** a vendored row gets — deliberately, because a live
+record makes the same kind of claim a mirror row does. That is exactly why Phase 3 needed its own
+metric: `routing` cannot see the mirror-vs-live split, so a second one reads `tools_used`.
+
+The citations are the same shape too: a **row**, cell by cell, through the same validator and the
+same card. What a live row adds is the `Open source` link under each — the openFDA query itself, or
+the Marketplace lookup — which a mirror row cannot have, and which is the difference between
+citing a record and citing a database. The CMS key rides in that query string, so it is stripped
+before any citation URL is stored; the test that checks it is one whose failure would be a security
+finding.
+
 ### Abstention — the answer that is worth the most
 
 ![The chat page showing an abstention: a distinct dashed panel headed "NOT IN MY REFERENCE MATERIAL" explaining that live provider directories are not available, citing HealthCare.gov on how to check a plan's directory](docs/img/abstention.png)

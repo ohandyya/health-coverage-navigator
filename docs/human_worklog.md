@@ -41,9 +41,11 @@ AI (e.g., Claude) should **NOT** read this document.
 
 - [Done] Use real openFDA API key
 
-- Manual UI walkthrough
+- [Done] Manual UI walkthrough
 
 - Code walkthrough
+
+    - What is the cache mechnism for external live APIs?
 
 #### Questions
 
@@ -55,7 +57,7 @@ AI (e.g., Claude) should **NOT** read this document.
         - structured API
         - web tools
 
-- How does the citation work for structured API? by id? by url? Verify this in UI manually.
+- [Done] How does the citation work for structured API? by id? by url? Verify this in UI manually.
 
 #### API Requesat status
 
