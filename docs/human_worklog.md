@@ -31,15 +31,14 @@ AI (e.g., Claude) should **NOT** read this document.
     - Fix test errors
     - Summarize the change
 
-## Work Log
 
-### Aug 25, 2026
-
-#### To Dos
+## Known Bugs
 
 - Fix citation bug
 
     - See for description at docs/negative-finding-gaps.md
+
+## Work Log
 
 
 ### Aug 22, 2026

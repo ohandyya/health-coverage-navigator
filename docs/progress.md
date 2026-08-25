@@ -17,7 +17,7 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-22.*
+*Updated 2026-08-25.*
 
 - **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
   Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
@@ -45,8 +45,15 @@ mid-stream.
   one case the agent held CMS's own answer and cited a **web page** for it. (2) *A name the model can
   see but cannot cite* — `record_id` vs `row_id`, a result-level id that was not the citable one,
   `field` vs cell key `section`, a recorded row whose id appeared nowhere on the result, and a
-  reformatted number (`344.50` where the model was shown `344.5`). Both now have structural tests
-  rather than per-instance fixes.
+  reformatted number (`344.50` where the model was shown `344.5`).
+- **Family 2 has a structural test; Family 1 does not, and is still open** — corrected 2026-08-25,
+  having been overstated above. Family 1's four instances were each fixed individually and the rule
+  was never made an invariant, so the same shape survives in **three more paths**: `drug_label` with
+  no matching label, `drug_label` with no such section, and `find_plans` with an empty result. It
+  has been quiet because those usually sit beside reference citations that satisfy the validator —
+  so the answer is *served* with one clause silently unevidenced, rather than failing loudly the way
+  an empty recall search did. Anchors, blast radius and two fix options:
+  [negative-finding-gaps.md](negative-finding-gaps.md).
 - **A third lesson, separate from those: a stale instruction must be deleted, not counter-argued.**
   `_WEB_STEPS` still told the model to search the web "for a recent recall" after `drug_recalls`
   existed; the first fix *added* a step saying the web was wrong for recalls, and the model resolved
@@ -110,11 +117,18 @@ mid-stream.
   defects this repo has had were both found in a browser and neither by a test.
 - **[technical_highlights.md](technical_highlights.md) is an index over
   [highlights/](highlights/)** — the mechanisms worth *presenting*, which is deliberately not a job
-  any of the four canonical docs has. **Five entries** (grounding · the test-suite provider guard ·
-  missing-vs-stale · `ModelRetry` as a correction channel · model-written SQL), one page each, and
+  any of the four canonical docs has. **Seven entries** (grounding · the test-suite provider guard ·
+  missing-vs-stale · `ModelRetry` as a correction channel · model-written SQL · live-API edge cases ·
+  the composed prompt), one page each, and
   the README links them from above the status section. **CLAUDE.md now names it**, deliberately outside the four-docs table and labelled
   *presentation, not reference*: it is derived from the docs that own each design, so a change
   updates the owning doc first and the highlight page second.
+- **The derived-doc rule got its first real test at Phase 3, and it bound.** The composed-prompt
+  highlight had no owning section to derive from — the rationale lived only in `#:` comments in
+  `prompt.py` — so [agent.md](agent.md) gained **§3a**, which now owns prompt composition, and §3
+  was corrected for the two axes Phase 3 added. The alternative (declare the code comments the
+  owning source) was rejected: with no doc to update, the next change would be made to the highlight,
+  making a presentation page the source of truth for a design.
 - **Next up: Phase 4 — planning, decomposition and per-claim provenance**
   ([plan.md](plan.md) → Phase 4). The tri-modal core is complete, so what is missing is no longer a
   lane but a *behaviour*: the agent routes and loops but does not split a compound question into
@@ -320,8 +334,9 @@ Beyond the plan.md list, because implementation made them necessary:
       above a threshold a cell is quoted from rather than reproduced
 - [x] `--allow-demo-key` — an explicit, logged override for CMS's shared demo key, and the guard
       scoped so it stops refusing runs that could not reach CMS at all
-- [x] Structural tests for the two defect families: cell keys must be names the model was shown,
-      and every recorded row's id must be readable off its result
+- [x] Structural test for defect **Family 2**: cell keys must be names the model was shown, and
+      every recorded row's id must be readable off its result. **Family 1 has no equivalent** — see
+      the unticked row below
 - [x] `parseCells` in `CitationCard.tsx` — a multi-line label passage was being parsed one
       `column: value` pair per line; the first fix would have broken every **mirror** citation,
       whose PUF columns are CamelCase
@@ -332,6 +347,17 @@ Not done:
 
 - [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
       Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
+- [ ] **Close defect Family 1 structurally** — three negative-finding paths still emit no citable
+      row. Recommended shape and anchors: [negative-finding-gaps.md](negative-finding-gaps.md)
+- [ ] `AgentKit._agent` accepts `marketplace` and drops it at all three call sites; `AgentKit.stream`
+      does not forward it to `stream_answer`. The `_build_agent` cache-key trap armed a sixth time,
+      latent only until a test drives a Marketplace client through the kit
+- [ ] `test_the_live_tools_come_last`'s five-name comparison can never be true — the test passes
+      entirely on its `or names[-1] == "find_plans"` fallback
+- [ ] A `ModelRetry` in `runtime._validate_row_citation` reads "word word" for "word for word".
+      Text the model reads
+- [ ] [glossary.md](glossary.md)'s **openFDA** entry still says the repo "deliberately does not
+      request" a key, which `Secrets.openfda_api_key` and §4a contradict on the same branch
 
 ### Phase 2 checklist
 
@@ -468,6 +494,63 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
+
+**Did:** walked the whole `phase3-step-1` branch step by step (read-only), which turned up four
+defects nobody had looked for and one wrong claim in the README. Wrote
+[negative-finding-gaps.md](negative-finding-gaps.md) and two new highlight pages
+(live-API edge cases, composed prompt), and gave prompt composition an owning section in
+[agent.md](agent.md) §3a. No source changed except a duplicated `OPENFDA_API_KEY` block in
+`.env.example`.
+
+**The finding that matters: defect Family 1 was fixed four times, never closed.**
+[structured-api-tools.md](structured-api-tools.md) §18c states the rule — *if a tool can establish
+something it must emit a row for it, including when what it established is an absence* — and lists
+four instances. All four were fixed individually and **the rule was never turned into an
+invariant**, so the same shape survives in three more places: `drug_label` when no label matches,
+`drug_label` when the label lacks the requested section, and `find_plans` when the search returns
+nothing (plus `find_drug` and an empty `check_drug_coverage`, lower priority). This is *not* what
+the previous entry's "both now have structural tests rather than per-instance fixes" implied —
+that was true of Family 2 and only aspirationally true of Family 1.
+
+**Why it has been quiet, which is the interesting half.** Blast radius depends on whether the
+negative finding is the *whole* answer or one clause of a compound one. *"Has atorvastatin been
+recalled"* has nothing else to cite, so it failed loudly. A drug-label miss usually sits beside
+reference citations that satisfy the validator, so the answer is **served with one clause silently
+unevidenced** — quieter than a retry, and arguably worse.
+
+**Decided: document it, do not fix it.** The author's call, and the right one — a fix mid-walkthrough
+is a fix nobody reviewed. The write-up carries the anchors and two options rather than a patch.
+
+**Decided: `agent.md` owns prompt composition, not the code comments.** The new composed-prompt
+highlight needed a reference doc to derive from, and `agent.md` §3 carried five lines about the
+Phase 1b toolset case while the real rationale — affirmative-first phrasing, replace-don't-rebut,
+intersection fragments, the guardrail boundary — lived only in `#:` comments in `prompt.py`. §3a
+now holds it.
+
+**Rejected: declaring `prompt.py`'s comments the owning source and noting the exception.** Tempting,
+since those comments are unusually thorough. It loses because CLAUDE.md's rule is *update the owning
+doc first, then the page* — with no owning section, the next person to change composition edits the
+highlight, and the highlight becomes the source of truth for a design, which is the one thing that
+file must never be. The failure shape the prompt module itself is built around: a rule that cannot
+be followed gets resolved by whoever hits it.
+
+**Recommended, not decided:** close Family 1 structurally rather than with three more point fixes —
+one `_search_row` helper plus a parametrised test asserting *every live result with
+`unavailable is None` produces at least one row*. That single test would have caught all seven
+instances at once, and it sits beside the equivalent Family 2 guard. Recorded in the gap doc; the
+choice is open.
+
+**Stopped at:** four defects found and left unfixed, all now checklist rows —
+`test_the_live_tools_come_last`'s five-name comparison can never be true so the test passes on its
+`or` fallback; a `ModelRetry` in `runtime.py` reads "word word" where it means "word for word";
+`glossary.md`'s **openFDA** entry still says the repo "deliberately does not request" a key, which
+`Secrets.openfda_api_key` and §4a contradict on the same branch; and `AgentKit._agent` accepts
+`marketplace` but drops it at all three call sites, which is the `_build_agent` cache-key trap
+armed for a sixth time and harmless only until a test drives a Marketplace client through the kit.
+
+**Commits:** `75f26bf`, `e4b255a`, `8b1119a`, `6a72d26`, `7d67ab4`.
 
 ### 2026-08-22 (measured) — Phase 3 measured: 6/6 live, and eight defects that were all ours
 
