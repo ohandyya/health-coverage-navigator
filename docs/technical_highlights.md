@@ -145,3 +145,30 @@ first-class field, phrased as an instruction the model reads before deciding whe
 absence**, because a true finding with nothing to cite forces a false abstention or a worse source.
 Measured: it once had CMS's own answer in hand, had nothing to point at, and cited a web page
 instead.
+
+---
+
+## 7. [The system prompt is composed per configuration, because a stale sentence is an instruction](highlights/composed-prompt.md)
+
+The agent ships in **48 shapes** — three retrieval toolsets × four independent lane booleans — and
+the eval sweep runs paired arms across them deliberately. One hardcoded prompt is wrong in 47, and
+the ways it is wrong escalate. It **corrupts the measurement** first: describe a tool a run does not
+have and an A/B between configurations partly measures how well each copes with a misleading prompt.
+Then it gets expensive, because **stale text is an instruction to abstain** — every pre-Phase-2
+variant listed "anything needing current news" as out of reach, and Phase 3 measured the agent
+declining *"what plans can a 40-year-old buy in ZIP 27360"* **without calling a single tool.** It had
+been told it could not.
+
+So every lane-dependent region composes from per-lane fragments — sources, search guidance, steps,
+citation forms, self-description, and the abstention list, where **each landed lane removes a reason
+to abstain**. Three rules came out of the failures: state capabilities **affirmatively** and generate
+the absences from the same booleans (a lane described only in the negative is one the model drops
+when asked what it can do — observed); **replace** superseded text rather than rebutting it (keeping
+the old sentence and adding a correction produced an agent that called `drug_recalls`, got 44
+recalls, and cited the web anyway — *a prompt that argues with itself is resolved by the model, not
+by the author*); and let some paragraphs exist only at an **intersection**, since "which source wins,
+the vendored table or the live API" cannot be asked unless both are registered.
+
+The other half is what the prompt deliberately does *not* say. Everything a validator or a usage
+limit can enforce is enforced in code, leaving only the judgement calls — and one appealing
+instruction is omitted because a guardrail would have overruled it and spent the retry budget losing.

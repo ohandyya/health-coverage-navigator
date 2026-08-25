@@ -33,6 +33,15 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Work Log
 
+### Aug 25, 2026
+
+#### To Dos
+
+- Fix citation bug
+
+    - See for description at docs/negative-finding-gaps.md
+
+
 ### Aug 22, 2026
 
 #### TO Dos
@@ -43,13 +52,9 @@ AI (e.g., Claude) should **NOT** read this document.
 
 - [Done] Manual UI walkthrough
 
-- Code walkthrough
+- [Done] Code walkthrough
 
     - What is the cache mechnism for external live APIs?
-
-- Fix citation bug
-
-    - See for description at docs/negative-finding-gaps.md
 
 #### Worthy of adding to highlight
 
@@ -57,7 +62,7 @@ AI (e.g., Claude) should **NOT** read this document.
     - Three upstreams, three auth mechanisms, three envelopes — and, critically, three different ways of saying "nothing matched". openFDA says it with an HTTP 404, CMS says it with a 400 carrying prose, NPPES says it with result_count: 0 inside a 200. 
     - describe_status
 
-- Dynamic systme prompt based the selected tools
+- [Done] Dynamic systme prompt based the selected tools
 
     - `system_prompt`
 
