@@ -53,20 +53,21 @@ that it works:
 
 ---
 
-## Status — Phase 2 of 5 complete
+## Status — Phase 3 of 5 complete
 
-> **Where this actually is: all three lanes are live, and routing across them measures 1.000.**
+> **Where this actually is: three lanes, four sources, and the tri-modal core is complete.**
 > Ask a health-coverage question in the browser and a PydanticAI agent searches the indexed
 > reference corpus — by keyword *and* by meaning, choosing between the two itself — or, for a
 > question about a **specific plan or drug**, writes SQL against the vendored CMS plan data and
-> cites the **row** it read, cell by cell — or, for something its own library cannot know, searches
-> the open web and cites the page. It says *"not in my reference material"* when the question falls
-> outside all three.
+> cites the **row** it read, cell by cell — or **calls a live API** and cites the record: the FDA's
+> drug labelling and recall database, the national NPI registry, and HealthCare.gov's own plan
+> prices and formularies — or, for something none of them can know, searches the open web and cites
+> the page. It says *"not in my reference material"* when the question falls outside all four.
 >
-> What is *not* finished is the structured lane's live half: no Marketplace, openFDA or NPPES tools
-> yet (Phase 3), so a provider question is still correctly declined. **The routing this project is
-> about is now real across three lanes** — measured 1.000, with the web tool called on 0 of 30
-> reference questions and 4 of 4 web questions.
+> **Phase 3's own metric is 6/6** — every live question reached the right tool — and the six new
+> tools cost the reference slice nothing measurable. What is *not* built is **network** data: the
+> NPI registry says what a provider *is*, never which plans pay them, so *"which dermatologists take
+> Aetna"* is still correctly declined and is now dated to Phase 5 rather than this one.
 
 The build order is deliberate. The eval harness was built before the agent so the agent had
 something to be measured against on the day it arrived, and the API contract was frozen before
@@ -83,27 +84,29 @@ a *pre-existing* streaming bug the web lane happened to expose.
 
 | | |
 |---|---|
-| **The agent** | One PydanticAI agent, nine tools it composes itself across three lanes. Reference: `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Relational: `list_tables` / `describe_table` / `query_structured`. Web: `web_search`. *What it may search* and *whether each of the two later lanes exists* are three independent per-run flags, so every comparison is one code path measured two ways |
+| **The agent** | One PydanticAI agent, **fifteen** tools it composes itself across three lanes and four sources. Reference: `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Relational: `list_tables` / `describe_table` / `query_structured`. Web: `web_search`. Live: `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` / `check_drug_coverage` / `find_plans` (CMS Marketplace). *What it may search* and *whether each later lane exists* are independent per-run flags, so every comparison is one code path measured two ways |
 | **The relational lane** | DuckDB queries the vendored CMS plan mirrors **in place** — no load step, 53 ms to open and verify 10 tables, 3–16 ms a lookup. Model-written SQL is guarded twice: one `SELECT` only (statement-type checked before execution), on a connection sandboxed to `data/processed/` with external access off and configuration locked. Escape attempts are a test, not a claim |
 | **The web lane** | `web_search` over Tavily, and the provenance problem it creates is the interesting part: a model can write a *plausible URL it never retrieved*, and unlike an invented chunk id nobody could tell by looking. So a web citation names a `result_id` only a search can assign. A rate limit or outage returns an `unavailable` result the model must report — never an empty list, so an outage cannot be served as "the web does not cover this" |
+| **The live lane** | Three upstreams behind six typed tools, and the rule that shaped all of them: **an empty result is an answer.** openFDA says "nothing matched" with a 404 and NPPES with `result_count: 0` — so *"no recalls on record"* has to arrive as a confident finding, not an outage. The inverse of Phase 2's rule, and it needed the same care: a negative finding has to emit a **citable row**, because a true finding with nothing to cite forces a false abstention or a worse source — measured once as the agent holding CMS's own answer and citing a web page for it. Four such paths emit one today; [three still do not](docs/negative-finding-gaps.md) |
+| **Live-API provenance** | A live record is cited as a **row** — same shape, same validator, same card as a vendored one, because it makes the same kind of claim. What it adds is a `url` the reader can re-fetch, which a mirror row cannot have. The CMS key rides in the query string, so it is **stripped before any citation URL is stored**, with a test whose failure would be a security finding |
 | **Grounding** | Enforced in code, not asked for in the prompt. A passage or web citation must name evidence a tool returned and quote it verbatim; a **row** citation must name a row a query returned and reproduce its cells **byte for byte** — `'$4,500 '` keeps its trailing space, because tidying the evidence is editing it. Citations are rebuilt from the real chunk, row or result, so an invented title cannot reach the browser |
 | **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
 | **Streaming** | The answer streams token by token *and* the tool trace fills in live, over SSE |
 | **Ingestion** | 5 bulk sources fetched, normalized, and committed — idempotent and re-runnable |
 | **Corpus** | 2,056 documents across 3 text corpora → **6,722 chunks** with verified provenance |
 | **Structured mirrors** | Exchange PUFs (3 tables, PY2026) + Medicare Part D SPUF (7 files, 2026Q2) as lossless columnar mirrors — *deliberately not chunked*, and since Phase 1c queried where they lie: 2.96M rows the agent can read but nothing reshapes |
-| **Eval harness** | 43 gold questions in **four** shapes (30 reference + 4 structured + 4 web + 5 abstention), four runners (`agent` / `bm25` / `vector` / `stub`) through one scorer, retrieval + groundedness + **three-lane routing** + **exact-cell** metrics, runs persisted as JSON and triggerable from the browser. Web questions deliberately carry **no expected answer** — a gold answer about what is true this month is wrong next month, and a set that rots silently is worse than one that admits its scope |
+| **Eval harness** | 49 gold questions in **five** shapes (30 reference + 4 structured-mirror + **6 structured-live** + 4 web + 5 abstention), four runners (`agent` / `bm25` / `vector` / `stub`) through one scorer, retrieval + groundedness + **three-lane routing** + **mirror-vs-live lane detail** + **exact-cell** metrics, runs persisted as JSON and triggerable from the browser. Web questions deliberately carry **no expected answer** — a gold answer about what is true this month is wrong next month, and a set that rots silently is worse than one that admits its scope |
 | **API** | FastAPI with a frozen contract: `POST /api/chat`, SSE streaming, eval endpoints, citation drill-down |
 | **Frontend** | React 19 + Vite 8 + TS + Tailwind 4 + shadcn — chat page with source badges, expandable citation cards, collapsible agent-trace panel, abstention state, and an eval dashboard |
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 374 Python tests + 15 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
+| **Gates** | 454 Python tests + 20 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
 All on the same chunk snapshots, through one scorer. **The gold set grew with the lanes** — 40
-questions through Phase 1c, 43 since Phase 2 — so rows from different phases share a scorer but not
+questions through Phase 1c, 43 at Phase 2, 49 since Phase 3 — so rows from different phases share a scorer but not
 always a denominator, and the `measured` column says which phase produced each. The two
 retrieval-only runners retrieve and stop, no model in the loop, so the gap between them and the
 agent rows is what the agent's query reformulation is worth, and the gap between *them* is what the
@@ -119,13 +122,30 @@ embeddings are worth.
 | `agent` — both, reference lane only | 1c | 0.767 | 0.711 | 1.000 | — | — | 1.000 |
 | `agent` — both + relational lane | 1c | 0.800 | 0.733 | 0.833 | 1.000 | 0.875 | 1.000 |
 | `agent` — both + relational, web **off** (control) | 2 | 0.633 | 0.633 | **1.000** | 1.000 | 1.000 | 1.000 |
-| **`agent` — all three lanes (shipped)** | **2** | **0.667** | **0.650** | 0.800 | **1.000** | **1.000** | **1.000** |
+| `agent` — all three lanes, live APIs **off** (control) | 3 | 0.733 | 0.683 | 0.800 | **1.000** | 1.000 | 1.000 |
+| **`agent` — three lanes, four sources (shipped)** | **3** | **0.700** | **0.642** | **0.800** | 0.977 | **1.000** | **1.000** |
 
-Plus `web_reach_rate` **1.000** on the shipped row — all four web questions reached the web lane —
-which has no column because it is meaningless for every other row.
+Plus `web_reach_rate` **1.000** at Phase 2 and `lane_detail_correct` **1.000** at Phase 3 — the
+latter is Phase 3's own metric, and the reason it had to exist: **both halves of the structured lane
+carry the same `source_type`**, deliberately, because a live record makes the same kind of claim a
+vendored row does. So `routing` cannot see the split the phase is about — mirror-vs-live — and a
+second metric reads `tools_used` instead. It is 6/6: every live question reached the right tool.
 
-**The bottom two rows are Phase 2's comparison**: two runs differing *only* in whether the agent
-could see the web. The result that mattered is that **the third lane costs the first two nothing**
+**The bottom two rows are Phase 3's comparison**, and the pair above them is Phase 2's — each is two
+runs differing *only* in whether one lane was registered.
+
+**Phase 3's result: six more tools cost the reference slice nothing measurable.** The risk the phase
+carried was tool-count inflation — nine tools became fifteen, where Phase 2's clean result came from
+adding *one*. It did not materialise: seven questions changed state between the arms, three lost and
+**two gained**, and **none of the losers touched a live tool**. Over-reach onto pre-existing
+questions across all 43 was exactly one (`abs-02` called `find_drug`). recall@5 moved 0.733 → 0.700,
+well inside the spread described below. Read that as **no evidence of harm**, not as "no harm" — the
+distinction is the whole point of the caveat two paragraphs down.
+
+Routing 0.977 rather than 1.000 is **two live questions on a 43-question denominator**, not a
+reference-lane regression: reference routing never moved.
+
+**Phase 2's comparison**: two runs differing *only* in whether the agent could see the web. The result that mattered is that **the third lane costs the first two nothing**
 — 0.667 against 0.633 is one question against a known 0.200 spread — because the risk of adding a
 lane is that the agent starts reaching for it on questions the corpus already answers. It did not:
 `tools_used` (added this phase so the question could be answered from a run file at all) records
@@ -194,10 +214,23 @@ current `config.yaml` reproduces.
 
 ### What does not work yet
 
-- **The structured lane is half built.** All three *lanes* are live, but the structured one reads
-  only vendored mirrors — no live APIs yet (Marketplace, openFDA, NPPES; Phase 3). Ask about a
-  **provider or a network** and it will correctly decline; nothing here holds provider data by
-  design.
+- **There is no network data, and that is a design boundary rather than a gap to fill.** The NPI
+  registry says what a provider *is* — identity, specialty, status — never which plans pay them.
+  So *"which dermatologists near 30076 take Aetna"* is still declined; it needs the Marketplace's
+  provider-coverage endpoint, which is **Phase 5**, where plan.md puts network checks. That
+  question was mis-dated to Phase 3 in the gold set for two phases and is now corrected.
+- **Live-API answers are graded on routing and groundedness, not correctness.** Six live gold
+  questions carry no expected answer, for the same reason the web questions do not: a formulary, a
+  premium and a recall list all move underneath a stable question. Correctness for those is asserted
+  in offline fixture tests, where the response is pinned. So this repo measures that the agent
+  *reaches* the right source and quotes it honestly — **not that its live answers are good.**
+- **Three negative findings are still not citable.** *"The FDA holds no recall for this drug"* emits
+  a row the answer can point at; *"the FDA holds no label under that name"*, *"the label has no such
+  section"*, and an empty plan search do not. The rule was applied four times and never made an
+  invariant. It stays quiet because those findings usually sit beside reference citations that
+  satisfy the validator — so the answer is served with one clause silently unevidenced, which is
+  quieter than the failure that prompted the original fix and arguably worse. Written up rather than
+  patched mid-review: [negative-finding-gaps.md](docs/negative-finding-gaps.md).
 - **The web lane can be fooled about authority.** `abs-03` above is the demonstration: finding
   writing *about* an unpublished figure is not the same as the figure existing, and neither the
   grounding guardrail nor the routing metric catches it — the answer is grounded and the lane is
@@ -210,17 +243,20 @@ current `config.yaml` reproduces.
   pinned answer about this month is wrong next month), so this repo measures that the agent *goes*
   to the web and quotes it honestly — **not whether its web answers are any good.** That is the
   honest boundary of what a static gold set can assert about a live source.
-- **The relational lane answers in the data's own vocabulary.** The Part D formulary carries NDC and
-  RxCUI and *no drug names*, so *"is metformin on this plan's formulary"* still needs a name → NDC
-  lookup, which is openFDA (Phase 3). Ask with an NDC and it answers today. That boundary — the
-  tables know identifiers, translating a human's words into them is the next lane's job — is the
-  honest shape of what is built.
+- **Name → identifier translation is live, but only on the Marketplace side.** `find_drug` resolves
+  a drug name to RxCUIs and `check_drug_coverage` takes them, so *"is atorvastatin covered under
+  plan Y"* is answerable today. The **vendored** Part D formulary still carries NDC and RxCUI and no
+  drug names, so the same question against a mirror partition still needs an identifier.
 - **Retrieval is still the bottleneck of the reference lane.** recall@5 0.800 means the agent never
   saw the right document for about 2 of 10 in-corpus questions. Six of the thirty defeat *both*
   retrieval methods, so the remaining gap is not one more index — it is chunking, the gold set's
   phrasing, or query reformulation.
-- **Four structured and four web gold questions is thin.** Both slices are unambiguous by
-  construction, so a routing score of 1.000 is the first number to distrust as they grow.
+- **Four mirror, six live and four web gold questions is thin.** Every one is unambiguous by
+  construction, so a routing score near 1.000 is the first number to distrust as they grow — and the
+  live slice is thinner than it looks, since two of its six questions were **reworded after they
+  failed**. Both rewordings are argued in the questions' notes (one tested state coverage through a
+  pricing tool; one required a four-hop chain that Phase 4 owns), but changing a test after watching
+  it fail deserves a reader's scepticism.
 - **No plan comparison.** The relational lane answers about *one* plan at a time; comparing plans,
   breaking a cost down, and checking a pharmacy network are Phase 5, and the row cap is sized for
   lookups accordingly.
@@ -244,13 +280,13 @@ flowchart TD
     AG -->|Phase 1b| V["vector_search()<br/>reference lane"]
     AG -->|Phase 1c| D["relational tools<br/>list · describe · guarded SQL<br/>structured lane"]
     AG -->|Phase 2| W["web_search()<br/>web lane"]
-    AG -.->|Phase 3| S["typed API tools<br/>structured lane"]
+    AG -->|Phase 3| S["typed API tools<br/>structured lane"]
 
     R --> C1["HealthCare.gov · Medicare &amp; You · NCDs<br/>6,722 chunks"]
     V --> C1
     D --> C4["Exchange PUFs · Part D SPUF<br/>vendored Parquet mirrors"]
     W --> C2["Live web"]
-    S -.-> C3["Marketplace API · openFDA · NPPES"]
+    S --> C3["Marketplace API · openFDA · NPPES"]
 
     R --> SY["Synthesize<br/>every claim tagged with its lane + source"]
     V --> SY
@@ -259,13 +295,10 @@ flowchart TD
     S --> SY
     SY --> RESP["ChatResponse<br/>answer · citations · claims · trace · abstained"]
 
-    style S stroke-dasharray: 5 5
-    style C3 stroke-dasharray: 5 5
 ```
 
-*Dashed = not built yet. **All three lanes are live and routing across them measures 1.000** — the
-agent chooses between prose, rows and the open web. What remains dashed is the structured lane's
-live half (Phase 3), so routing is tri-modal but the structured lane is not yet complete. Each phase
+***Nothing is dashed any more.* All three lanes are live and the structured lane has both halves** —
+the agent chooses between prose, vendored rows, live records and the open web. Each phase
 label is a set of tools added to the same agent; the box marked `Agent` is never rebuilt after Phase
 1a. Note that 1a and 1b both point at the reference lane — they are two ways of searching one
 corpus, and 1b's vector tool joins the lexical ones rather than replacing them. 1c and 3 both feed
@@ -282,14 +315,14 @@ flowchart LR
     end
     subgraph api["uvicorn :8000 (127.0.0.1)"]
         FA["FastAPI"]
-        AGT["agent/<br/>9 tools · BM25 · vectors · guarded SQL · web<br/>grounding validator"]
+        AGT["agent/<br/>15 tools · BM25 · vectors · guarded SQL · web · live APIs<br/>grounding validator"]
         EV["evals/runner.py<br/>pluggable answerer"]
     end
     subgraph disk["data/"]
         CORP["corpus.jsonl<br/>2,056 docs"]
         CHUNK["chunks.jsonl<br/>6,722 chunks"]
         MIR["processed/*.parquet<br/>10 tables · 2.96M rows"]
-        GOLD["questions.yaml<br/>43 gold questions"]
+        GOLD["questions.yaml<br/>49 gold questions"]
         RUNS["eval_runs/"]
     end
 
@@ -301,6 +334,8 @@ flowchart LR
     FA -->|"GET /api/corpus/:doc_id"| CORP
     AGT -->|DuckDB, read-only| MIR
     AGT -->|"HTTPS, key from .env"| TAV["Tavily /search"]
+    AGT -->|"HTTPS, keyless"| FDA["openFDA · NPPES"]
+    AGT -->|"HTTPS, key from .env"| MKT["CMS Marketplace API"]
     CORP -.->|make chunk| CHUNK
 
     FA -.->|"openapi.json → schema.d.ts"| UI
@@ -369,6 +404,29 @@ The answer is also a good illustration of the grounding rule under a *negative* 
 declines to let an E. coli and Salmonella investigation stand in for a virus. Both citations quote
 their page verbatim — the output validator would have rejected them otherwise.
 
+### Chat — the live lane, and two upstreams in one answer
+
+![The chat page answering "Is atorvastatin covered under plan 77264NC0010049, and what does the FDA say it treats?" with a green structured API badge, three row-shaped citation cards — a Marketplace formulary row showing rxcui / plan_id / coverage Covered, and two openFDA label rows quoting indications_and_usage — each with an "Open source" link, and the agent trace panel showing find_drug, drug_label and check_drug_coverage with their arguments and results](docs/img/chat-page-live-api.png)
+
+One question, **two live upstreams, three tools**. The trace shows the chain: `find_drug` turns the
+word *"atorvastatin"* into RxCUIs (*"10 match(es), e.g. atorvastatin 80 MG Oral …"*),
+`drug_label` asks openFDA for that drug's `indications` section, and `check_drug_coverage` takes
+one of the RxCUIs (`259255`) against the plan id and the year, coming back
+*"1 drug/plan pair(s): Covered"*. **Name → identifier translation is the hop that makes this lane
+usable at all**, and the trace makes it legible: each step shows the arguments the model wrote,
+so the RxCUI moving from one tool's result into the next tool's call is visible rather than implied.
+
+The badge is the **same green `structured_api`** a vendored row gets — deliberately, because a live
+record makes the same kind of claim a mirror row does. That is exactly why Phase 3 needed its own
+metric: `routing` cannot see the mirror-vs-live split, so a second one reads `tools_used`.
+
+The citations are the same shape too: a **row**, cell by cell, through the same validator and the
+same card. What a live row adds is the `Open source` link under each — the openFDA query itself, or
+the Marketplace lookup — which a mirror row cannot have, and which is the difference between
+citing a record and citing a database. The CMS key rides in that query string, so it is stripped
+before any citation URL is stored; the test that checks it is one whose failure would be a security
+finding.
+
 ### Abstention — the answer that is worth the most
 
 ![The chat page showing an abstention: a distinct dashed panel headed "NOT IN MY REFERENCE MATERIAL" explaining that live provider directories are not available, citing HealthCare.gov on how to check a plan's directory](docs/img/abstention.png)
@@ -406,31 +464,41 @@ uv sync                 # Python deps into .venv
 make ui-install         # frontend deps (needs node >= 22.12)
 make chunk              # build chunks.jsonl — git-ignored, ~1s, required by the agent
 make puf                # download the plan-data mirrors — git-ignored, ~24 MB, required too
-cp .env.example .env    # then add OPENAI_API_KEY, and TAVILY_API_KEY for the web lane
+cp .env.example .env    # then add OPENAI_API_KEY; TAVILY_API_KEY for the web lane,
+                        # CMS_MARKETPLACE_API_KEY for live plan prices (both optional)
 make dev                # both servers → open http://127.0.0.1:5173
 ```
 
 The text corpus is committed, so there is nothing to download for it — but `chunks.jsonl` is not,
-the Parquet plan mirrors are not, and the Tavily key is yours. Skip any of them and the app still
-boots, reports that lane unconfigured on `/api/health`, and returns a 503 naming the fix rather than
+the Parquet plan mirrors are not, and the keys are yours. Skip any of them and the app still boots,
+reports that lane unconfigured on `/api/health`, and returns a 503 naming the fix rather than
 quietly answering worse — `make chunk`, `make puf`, or `.env` respectively. (To run without a lane
-at all, set `agent.structured_tools: false` or `agent.web_tools: false`.)
+at all, set `agent.structured_tools: false`, `agent.web_tools: false` or `agent.live_tools: false`.)
+
+**The live lane degrades in pieces rather than all at once**, which is the one asymmetry worth
+knowing: openFDA and the NPI registry need no credential, so they work on a fresh clone. Only the
+three Marketplace tools go unregistered without `CMS_MARKETPLACE_API_KEY` — and the agent is *told*
+it cannot price plans rather than the app refusing to start, because two thirds of a lane still
+working is not the same failure as none of it.
 
 Try *"what exactly is a deductible?"* for the reference lane, *"what is the individual medical
 deductible on marketplace plan 38344AK1060002 for 2026?"* for the relational one — it answers with
 six rows, one per cost-sharing variant, because that plan has six — and something out of reach like
 *"which dermatologists near 30076 take Aetna?"* to see it abstain. For the web lane, ask something
 the corpus cannot know — *"what is the deadline to enroll in a 2027 Marketplace plan?"* — and watch
-the trace show `web_search` and the domains it reached.
+the trace show `web_search` and the domains it reached. For the live lane, try *"has atorvastatin
+been recalled?"* — the FDA holds 44 — or *"what is Lipitor approved to treat?"*, and note the
+citation card links to the openFDA query itself.
 
 Everything else:
 
 ```bash
 make eval-retrieval     # score BM25 retrieval alone — free, instant, no API key
-make eval               # run the gold set through the agent (43 model calls; run it sequentially)
+make eval               # run the gold set through the agent (49 model calls; run it sequentially)
 make eval-no-web        # the same with the web lane off — the control for what the lane costs
 make eval-judge         # + grade answer correctness with an LLM judge (86 model calls)
 make smoke-web          # one live question that only the web can answer (1 model call + 1 credit)
+make eval-no-live       # the control for what the six live tools cost the other lanes
 make check-all          # ruff · pyright · pytest · tsc · oxlint · vitest — never calls a model
 make types              # regenerate frontend/src/api/schema.d.ts from OpenAPI
 make scan               # secrets / PII / licensing scan — run before publishing
@@ -582,9 +650,10 @@ health_coverage_navigator/
 ├── config.yaml                   # ⭐ every non-secret tunable — committed, never env-overridable
 ├── .env.example                  # secrets template; the real .env is git-ignored
 ├── src/health_coverage_navigator/
-│   ├── agent/                    # ⭐ the agent: bm25 · index · tools · structured_tools · web_tools · prompt · runtime
+│   ├── agent/                    # ⭐ the agent: bm25 · index · tools · structured_tools · web_tools · live_tools · prompt · runtime
 │   ├── structured/               # ⭐ the relational lane: catalog · store (DuckDB + the SQL guard)
 │   ├── web/                      # ⭐ the web lane: client (Tavily + hygiene + degradation) · models
+│   ├── live/                     # ⭐ the live half of the structured lane: openfda · nppes · marketplace · _http
 │   ├── api/
 │   │   ├── models.py             # ⭐ the frozen HTTP contract
 │   │   ├── app.py                # app factory, static mount, SPA fallback
@@ -599,7 +668,7 @@ health_coverage_navigator/
 │   ├── routes/{ChatPage,EvalsPage}.tsx
 │   └── components/               # SourceBadge · CitationCard · TracePanel · …
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
-├── evals/gold/questions.yaml     # 43 hand-authored questions in four shapes
+├── evals/gold/questions.yaml     # 49 hand-authored questions in five shapes
 ├── data/{raw,processed}/         # committed — see the licensing rules
 └── docs/                         # plan · frontend_plan · progress · glossary
                                   #   + agent · chunking · development · configuration
@@ -639,12 +708,12 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | **1b** | `vector_search` (LanceDB) added alongside the lexical tools | Eval run-comparison view | ✅ **Done** |
 | **1c** | Relational tools over the vendored PUF mirrors — DuckDB querying Parquet in place | `structured_api` badge, row-shaped citations | ✅ **Done** |
 | **2** | `web_search` over Tavily + three-lane routing eval | `web` badge, routing accuracy | ✅ **Done** |
-| **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge | ⬜ |
+| **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge, live-API citation links | ✅ **Done** |
 | **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |
 | **5** | Plan comparison, drug costs, network checks, "what changed" monitor — built on the Phase 1-c tools | Tables + monitor view | ⬜ |
 
-Routing is tri-modal as of Phase 2; the tri-modal *core* completes at Phase 3, when the structured
-lane gains its live half. Everything after is additive. Each phase
+Routing went tri-modal at Phase 2; **the tri-modal core completed at Phase 3**, when the structured
+lane gained its live half. Everything after is additive. Each phase
 pairs new capability with a new **eval slice** — retrieval quality → answer correctness and
 groundedness → structured-lookup correctness and lane routing → routing across all three lanes →
 multi-hop correctness and citation accuracy → regression.

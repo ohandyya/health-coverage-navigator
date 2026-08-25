@@ -706,12 +706,135 @@ questions:
     expected_abstain: true
     expected_source_type: null
     expected_doc_ids: []
-    becomes_answerable_at_phase: "3"
+    becomes_answerable_at_phase: "5"
     notes: >
       Provider directory data is per-record and deliberately never vendored into this repo (see
       CLAUDE.md's "Data sources" section — NPPES is queried live, not bulk-downloaded). None of
       the three reference corpora carry provider-level data, so the reference lane must abstain.
-      Answerable once NPPES + a plan-network source are wired up as structured_api tools.
+
+      RE-DATED FROM 3 TO 5 AT PHASE 3, and the reason is worth keeping: this asks who ACCEPTS
+      AETNA, which is a network question. Phase 3 wired NPPES, and NPPES answers what a provider
+      IS — identity, specialty, status — never which plans pay for them. The plan-network source
+      this needs is the Marketplace API's /providers/covered, which docs/structured-api-tools.md
+      §11 defers to Phase 5 because plan.md gives Phase 5 network checks. The original note said
+      "NPPES + a plan-network source" and only the first half landed.
+
+      Second, independent reason: ZIP 30076 is in Georgia, and Georgia runs its own exchange rather
+      than using HealthCare.gov — the Marketplace API returns "state is not a valid marketplace
+      state" for it (verified 2026-08-22, §10d). Even with /providers/covered built, this exact
+      question could not be answered from CMS's API for this ZIP.
+
+  # ---------------------------------------------------------------- Phase 3: the live half
+  #
+  # Answered by an API call rather than by a vendored row, and graded on ROUTING and GROUNDEDNESS
+  # rather than on a fixed expected answer (docs/structured-api-tools.md §16c): a formulary, a
+  # premium and a recall list all change under a stable question, so an expected string here would
+  # measure the calendar. `expected_lane_detail: live` is what makes "reached the right half of the
+  # structured lane" scorable separately from "reached the structured lane".
+
+  - id: live-01
+    question: "What is Lipitor approved to treat?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [drug_label]
+    volatile: true
+    notes: >
+      The FDA label's indications section. Deliberately a question the reference corpus cannot
+      answer — none of the three text corpora carry drug labelling — so a reference-lane answer
+      here is a routing error rather than a near miss.
+
+  - id: live-02
+    question: "Has atorvastatin been recalled?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [drug_recalls]
+    volatile: true
+    notes: >
+      THE INVERSE-RULE QUESTION. openFDA answers "nothing matched" with an HTTP 404, and for this
+      question that 404 IS the answer (§10b.1). Grades whether an empty result reaches the reader
+      as a confident "no recalls on record" rather than as a hedge or an abstention. The FDA holds
+      44 recalls for atorvastatin as of 2026-08-22, so the current expected shape is a non-empty
+      list — but the question is kept phrased so that either outcome is answerable.
+
+  - id: live-03
+    question: "What health plans can a 40-year-old earning $50,000 buy in ZIP code 27360?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [find_plans]
+    volatile: true
+    notes: >
+      Plan search with real pricing. ZIP 27360 is in North Carolina, which USES HealthCare.gov —
+      chosen deliberately over plan.md's ZIP 30076 (Georgia), which runs its own exchange and which
+      the Marketplace API refuses. Grades that both the full premium and the subsidised premium
+      reach the answer, since the gap between them is the useful number.
+
+  - id: live-04
+    question: "What health plans can a 45-year-old earning $60,000 buy in ZIP code 30076?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [find_plans]
+    volatile: true
+    notes: >
+      THE STATE-NOT-SERVED CASE, and the reason it is a gold question rather than only a unit test:
+      a 400 from CMS here is an ANSWER ("Georgia runs its own marketplace"), not an outage and not
+      "no plans available". Grades whether the agent tells the reader they are in the wrong place
+      instead of reporting a failure.
+
+      REWORDED after the first Phase 3 sweeps, and the reason is a flaw in the original question
+      rather than in the agent. It used to ask "which state exchange serves ZIP 30076, and can
+      HealthCare.gov price plans there?" — a question about coverage that has to be answered
+      through a PRICING tool, since find_plans requires ages and income. The agent could only
+      either invent a household to ask about or stop and request one, and it did each on
+      consecutive runs. Phrased as an ordinary plan search it exercises the identical code path
+      without making fabrication a precondition for asking.
+
+      Deliberately a different household from live-03's, so a pass here cannot come from live-03's
+      cached result — the run cache keys on the whole household (docs/structured-api-tools.md §13c).
+
+  - id: live-05
+    question: "What is NPI 1000000000 registered to?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [lookup_provider]
+    volatile: true
+    notes: >
+      Routes to the NPI registry, and grades the INVALID-NUMBER branch: 1000000000 fails the NPI
+      check digit, so the registry rejects it and the useful answer is "that is not a well-formed
+      NPI" — a fact about the input, distinct from "no such provider" and from "the registry could
+      not be reached". A real user error, since an NPI is usually copied by hand.
+
+      THE NUMBER IS DELIBERATELY CHECK-DIGIT-INVALID, and not only because that is the branch under
+      test. §8a forbids writing a Luhn-VALID NPI into any tracked file, prose included — and the
+      first draft of this question did exactly that and was caught by `make scan` reporting
+      `pii:npi` above its permanently-zero baseline. Fixing it here rather than allowlisting the
+      file was the point: a path-scoped exemption on the gold set would forgive a REAL NPI landing
+      here later, which is the one thing the tripwire exists to prevent. The not-found branch
+      (a well-formed NPI nobody holds) is graded in tests/test_live_clients.py instead, where the
+      identifier is generated rather than written down.
+
+  - id: live-06
+    question: "Is atorvastatin covered under plan 77264NC0010049, and what does the FDA say it treats?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [find_drug, check_drug_coverage, drug_label]
+    volatile: true
+    notes: >
+      A COMPOUND question spanning two live sources, and the reason RxCUI is the drug key
+      throughout the phase (§10c): openFDA's label carries the same RxCUIs the Marketplace
+      formulary is asked about, so both halves resolve to one drug rather than to two
+      similarly-named ones.
+
+      NOW NAMES A PLAN, and the reason is a scoping error in the original. It used to ask about "a
+      plan sold in ZIP 27360", which has no answer until a plan is chosen — so the agent had to
+      chain find_plans -> pick one -> check_drug_coverage -> drug_label, a four-hop plan that
+      plan.md assigns to PHASE 4 ("Planning and decomposition"). It passed on one run of three and
+      errored on the others, which is what unreliable multi-hop looks like rather than a defect in
+      any tool. Supplying the plan id makes this Phase 3's own acceptance test — plan.md's exact
+      wording is "is drug X covered under plan Y" — while keeping the RxCUI join that is the point.
+
+      The plan id is a real 2026 North Carolina plan observed on 2026-08-22. It is CMS public data,
+      not a person, so unlike a provider identifier it is safe to write down (§8a governs the other
+      case).
 
   - id: abs-02
     question: "Is metformin covered under the Humana Gold Plus HMO plan's drug formulary this year?"

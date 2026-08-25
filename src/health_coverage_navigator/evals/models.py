@@ -44,6 +44,24 @@ class GoldQuestion(BaseModel):
     Phase 1-c, because the phases are not integers: `abs-02` ("is metformin on this plan's
     formulary") was labelled `3` and is in fact answered by 1-c's vendored Part D data."""
 
+    expected_lane_detail: Literal["mirror", "live"] | None = None
+    """Structured questions only: **which half of the structured lane** should answer.
+
+    Additive at Phase 3, and it exists because "routed to the structured lane" stopped being a
+    precise enough claim once the lane had two halves. The phase's two named failure modes are
+    invisible without it — reaching a rate-limited endpoint for something the vendored mirror
+    answers offline, and trusting the mirror where only the live source is current
+    (docs/structured-api-tools.md §15). `None` on an older structured question means the split was
+    never asserted for it, which scores as "either half is acceptable" rather than as a failure.
+    """
+
+    expected_tools: list[str] = Field(default_factory=list)
+    """Tool names a correct run must have called. Empty means unasserted.
+
+    The live half needs this where the mirror half did not: `structured_api` no longer identifies a
+    tool, so "did it route correctly" is only answerable from `tools_used`.
+    """
+
     expected_table: str | None = None
     """Structured questions only: the `<source>.<table>` the answer must come from."""
 
@@ -61,6 +79,17 @@ class GoldQuestion(BaseModel):
         to *is* the thing the routing metric grades, so a second field could disagree with it.
         """
         return self.expected_source_type == "structured_api"
+
+    @property
+    def is_live(self) -> bool:
+        """Whether this question is answered by a live API call rather than a vendored row.
+
+        Both halves carry `source_type: structured_api` — that is §14a's whole point — so the split
+        is carried by `expected_lane_detail` instead. Keyed off it for the same reason
+        `is_structured` is keyed off the lane: a second flag could disagree with the thing being
+        graded.
+        """
+        return self.expected_source_type == "structured_api" and self.expected_lane_detail == "live"
 
     @property
     def is_web(self) -> bool:
@@ -107,6 +136,34 @@ class GoldQuestion(BaseModel):
                 )
             if self.difficulty is None:
                 raise ValueError(f"{self.id}: non-abstention needs a difficulty")
+        elif self.is_live:
+            # A FOURTH shape, split out of the structured one at Phase 3. It shares the lane and
+            # the `source_type` with a mirror question and almost nothing else: there is no table,
+            # no partition and no fixed cell to assert, because the answer comes from somebody
+            # else's server and changes underneath a stable question. So this branch asserts what
+            # *is* stable — which tool should have been reached — and leaves correctness to the
+            # offline fixture tests, where the response is pinned (§16c).
+            if self.expected_table or self.expected_cells:
+                raise ValueError(
+                    f"{self.id}: a live structured_api question has no vendored table, so it must "
+                    f"not carry expected_table or expected_cells"
+                )
+            if self.expected_doc_ids or self.expected_snippet or self.corpus:
+                raise ValueError(
+                    f"{self.id}: a live structured_api question is answered from an API call, so "
+                    f"it must not carry corpus, expected_doc_ids or expected_snippet"
+                )
+            if not self.expected_tools:
+                raise ValueError(
+                    f"{self.id}: a live structured_api question needs expected_tools — "
+                    f"`structured_api` no longer names one lane half, so routing is only scorable "
+                    f"from the tools a run actually called"
+                )
+            if not self.volatile:
+                raise ValueError(
+                    f"{self.id}: a live structured_api question must be marked volatile — a "
+                    f"formulary, a premium and a recall list all change under a stable question"
+                )
         elif self.is_structured:
             # A third shape, and it shares almost nothing with the reference one: a row has no
             # document, no chunk and no snippet, so requiring those here would force a structured
@@ -180,7 +237,18 @@ class GoldSet(BaseModel):
         return [q for q in self.questions if q.expected_source_type == "reference"]
 
     def structured(self) -> list[GoldQuestion]:
-        return [q for q in self.questions if q.is_structured]
+        """The **mirror** half of the structured lane — the vendored-table questions.
+
+        Narrowed at Phase 3 to exclude the live half, and the narrowing is the safe direction: this
+        accessor feeds assertions about `expected_table` and `expected_cells`, which a live question
+        has none of by construction. Widening it silently would have run a table assertion against a
+        question that answers from an API call — a guaranteed failure that says nothing.
+        """
+        return [q for q in self.questions if q.is_structured and not q.is_live]
+
+    def live(self) -> list[GoldQuestion]:
+        """The **live** half of the structured lane — the API-call questions (Phase 3)."""
+        return [q for q in self.questions if q.is_live]
 
     def web(self) -> list[GoldQuestion]:
         return [q for q in self.questions if q.is_web]

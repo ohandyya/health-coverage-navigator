@@ -73,7 +73,12 @@ def test_secrets_holds_only_credentials() -> None:
     so an eval run configured by one could not be reproduced from the repo. Non-secrets belong in
     `config.yaml`. `agent_model` used to live here; that is exactly the mistake this catches.
     """
-    assert set(Secrets.model_fields) == {"openai_api_key", "tavily_api_key"}
+    assert set(Secrets.model_fields) == {
+        "openai_api_key",
+        "tavily_api_key",
+        "cms_marketplace_api_key",
+        "openfda_api_key",
+    }
 
 
 # ---------------------------------------------------------------- the web key ----------------

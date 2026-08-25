@@ -625,8 +625,14 @@ are worse, because the wrong query still returns rows:
 **One limit that holds whether or not either is built:** `ZipCodes` is populated in **23 of 8,820
 rows**, only for partial counties, and `County` is a FIPS code (`02170`), not a name. This source
 answers *county* coverage, not ZIP coverage — so `plan.md`'s recurring example, *"find plans in ZIP
-30076"*, is **not answerable from the vendored data**. It needs a ZIP → county crosswalk this repo
-does not have, and stays a Phase 3 Marketplace-API question.
+27360"*, is **not answerable from the vendored data**. It needs a ZIP → county crosswalk this repo
+does not have, and stayed a Marketplace-API question.
+
+**Phase 3 built exactly that**, and the crosswalk turned out to be an endpoint rather than a file:
+`GET /counties/by/zip/{zip}` is folded into `find_plans` so the tool takes a ZIP and the wrapper
+resolves the FIPS. It also proved the limit above is not merely a gap in the vendored data — a ZIP
+can span **two** counties with different premiums, so ZIP-level plan pricing is ambiguous at the
+source and not only unindexed here. See [structured-api-tools.md](structured-api-tools.md) §10e.
 
 ---
 

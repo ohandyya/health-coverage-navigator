@@ -497,12 +497,16 @@ export interface components {
             expected_cells?: string[];
             /** Expected Doc Ids */
             expected_doc_ids?: string[];
+            /** Expected Lane Detail */
+            expected_lane_detail?: ("mirror" | "live") | null;
             /** Expected Snippet */
             expected_snippet?: string | null;
             /** Expected Source Type */
             expected_source_type?: ("reference" | "structured_api" | "web") | null;
             /** Expected Table */
             expected_table?: string | null;
+            /** Expected Tools */
+            expected_tools?: string[];
             /** Id */
             id: string;
             /**

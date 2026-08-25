@@ -61,16 +61,35 @@ def routing_grader() -> Grader:
     perfectly on routing.
 
     Phase 2 widens this to three lanes by adding questions, not by changing this function.
+
+    **Phase 3 is the first widening that could not be done by adding questions alone**, and the
+    reason is §14a: a live-API answer and a vendored-row answer carry the *same* `source_type`, on
+    purpose, because they make the same kind of claim. So `routing_correct` cannot see the split
+    that the phase exists to measure — reaching a rate-limited endpoint for something the mirror
+    answers offline, or trusting the mirror where only the live source is current. A second metric
+    reads `tools_used` instead, and only for questions that assert one.
     """
 
     async def grade(question: GoldQuestion, response: ChatResponse) -> dict[str, float]:
         if question.expected_source_type is None or response.abstained:
             return {}
+        scores: dict[str, float] = {}
         lanes = collections.Counter(c.source_type for c in response.citations)
         if not lanes:
-            return {"routing_correct": 0.0}
-        chosen, _ = lanes.most_common(1)[0]
-        return {"routing_correct": float(chosen == question.expected_source_type)}
+            scores["routing_correct"] = 0.0
+        else:
+            chosen, _ = lanes.most_common(1)[0]
+            scores["routing_correct"] = float(chosen == question.expected_source_type)
+
+        if question.expected_tools:
+            # Graded on the *trace* rather than on the citations, which is the opposite of the rule
+            # above and deliberately so. `routing_correct` asks what the answer rests on; this asks
+            # what the agent reached for — and the live-vs-mirror failure is a reaching failure. A
+            # run that called the right tool and cited nothing has still routed correctly and is
+            # failing something else, which `groundedness` already measures.
+            used = {step.tool for step in response.trace if step.tool}
+            scores["lane_detail_correct"] = float(set(question.expected_tools) <= used)
+        return scores
 
     return grade
 

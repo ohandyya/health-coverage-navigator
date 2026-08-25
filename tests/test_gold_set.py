@@ -252,3 +252,54 @@ def test_answers_are_gradeable(gold: GoldSet):
     for q in gold.in_corpus():
         assert q.expected_answer, f"{q.id}: missing expected_answer"
         assert q.answer_key_facts, f"{q.id}: missing answer_key_facts"
+
+
+def test_six_live_questions(gold: GoldSet):
+    """Phase 3's slice. Deliberately outside `in_corpus()`, like the mirror and web slices."""
+    live = gold.live()
+    assert len(live) == 6
+    assert all(q.expected_tools for q in live), (
+        "`structured_api` no longer names one lane half, so routing is only scorable from tools"
+    )
+    assert all(q.volatile for q in live), (
+        "a formulary, a premium and a recall list all change under a stable question"
+    )
+    assert not any(q.expected_table or q.expected_cells for q in live)
+    assert not any(q.corpus or q.expected_doc_ids or q.expected_snippet for q in live)
+
+
+def test_live_questions_name_tools_that_exist(gold: GoldSet):
+    """A gold question asserting a tool nobody registers can never pass, and would look like a
+    routing failure rather than a typo."""
+    from health_coverage_navigator.agent.tools import select_tools
+
+    registered = {
+        t.__name__
+        for t in select_tools("both", structured=True, web=True, live=True, marketplace=True)
+    }
+    for question in gold.live():
+        unknown = set(question.expected_tools) - registered
+        assert not unknown, f"{question.id} expects unregistered tool(s): {sorted(unknown)}"
+
+
+def test_the_gold_set_carries_no_valid_npi(gold: GoldSet):
+    """§8a's rule, enforced where it was actually broken.
+
+    The first draft of `live-05` embedded a Luhn-valid NPI in its question text and `make scan`
+    caught it. This keeps that from coming back without waiting for the scanner — and it asserts the
+    *invariant* (no real-shaped provider identifier) rather than the incident.
+    """
+    import re
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import scan_sensitive
+
+    npi_luhn = scan_sensitive.VALIDATORS["npi_luhn"]
+    for question in gold.questions:
+        for run in re.findall(r"(?<!\d)(\d{10})(?!\d)", question.question + question.notes):
+            assert not npi_luhn(run), (
+                f"{question.id} contains a structurally valid NPI. Use a check-digit-invalid "
+                f"number: a valid one is indistinguishable from a real provider's."
+            )

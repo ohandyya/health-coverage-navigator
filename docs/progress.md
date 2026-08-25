@@ -17,31 +17,72 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-22.*
+*Updated 2026-08-25.*
 
-- **Phase:** **Phase 2 is complete and measured; the agent has three lanes.**
+- **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
+  Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
+  source type — `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` /
+  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (454 Python
+  tests, pyright clean, 20 frontend tests) and `make scan` is clean. Design, contract, the two
+  defect families, and what building it changed:
+  [structured-api-tools.md](structured-api-tools.md).
+- **The headline: all six live questions pass, and the live lane costs the reference slice nothing
+  measurable.** `run_2026-08-22_8` — 38/49, **live 6/6**, `lane_detail_correct` 1.000,
+  `structured_exact_match` 1.000, groundedness 1.000, abstention 0.800, recall@5 0.700. §16b was
+  measured against a `--no-live` control: seven questions changed state between the arms, three lost
+  and two *gained*, and **none of the losers touched a live tool**. Over-reach onto pre-existing
+  questions across all 43 was **exactly one** (`abs-02` called `find_drug`). recall@5 moved
+  0.733 → 0.667 across arms, inside the 0.200 spread this set already has at fixed config. Read that
+  as **no evidence of harm**, not as "no harm".
+- **§9 predicted the wrong failure, and that is the most useful thing the phase measured.** Fifteen
+  tools were expected to degrade routing on the *reference* slice; routing there never moved. What
+  actually broke was the **live questions themselves**, and almost entirely for reasons in this
+  repo's own code rather than in the model's judgement — eight defects, six of them instances of two
+  families ([structured-api-tools.md](structured-api-tools.md) §18c).
+- **The two families are the reusable output of this phase.** (1) *A finding with nothing to cite* —
+  an empty recall search, an unknown NPI, a malformed NPI, and a state CMS does not serve all
+  produced true findings with no citable row, which forces a false abstention or a worse source; in
+  one case the agent held CMS's own answer and cited a **web page** for it. (2) *A name the model can
+  see but cannot cite* — `record_id` vs `row_id`, a result-level id that was not the citable one,
+  `field` vs cell key `section`, a recorded row whose id appeared nowhere on the result, and a
+  reformatted number (`344.50` where the model was shown `344.5`).
+- **Family 2 has a structural test; Family 1 does not, and is still open** — corrected 2026-08-25,
+  having been overstated above. Family 1's four instances were each fixed individually and the rule
+  was never made an invariant, so the same shape survives in **three more paths**: `drug_label` with
+  no matching label, `drug_label` with no such section, and `find_plans` with an empty result. It
+  has been quiet because those usually sit beside reference citations that satisfy the validator —
+  so the answer is *served* with one clause silently unevidenced, rather than failing loudly the way
+  an empty recall search did. Anchors, blast radius and two fix options:
+  [negative-finding-gaps.md](negative-finding-gaps.md).
+- **A third lesson, separate from those: a stale instruction must be deleted, not counter-argued.**
+  `_WEB_STEPS` still told the model to search the web "for a recent recall" after `drug_recalls`
+  existed; the first fix *added* a step saying the web was wrong for recalls, and the model resolved
+  the contradiction by ignoring the new one. The same shape in `_out_of_reach` ("no source you have
+  names doctors", after NPPES landed) made the agent **abstain without calling a single tool** on a
+  question it could answer. `prompt.py`'s own docstring warned about exactly this.
+- **`abs-01` does not turn answerable at Phase 3, and the plan contradicted itself about it.** It
+  asks which dermatologists *accept Aetna* — a **network** question. NPPES says what a provider is,
+  never who pays for them, and the plan-network endpoint was deferred to Phase 5. Re-dated to `"5"`.
+  Independently, its ZIP is in Georgia, which CMS's API refuses outright. **So the phase has no
+  headline abstention-to-answer flip** — worth saying plainly rather than substituting one.
+- **Two contract facts the published spec could not have told us.** SPL section names differ between
+  prescription and OTC labels, so a single field name per section would have returned a confident
+  nothing for half the drug catalogue. And the Marketplace API serves **only the states that use
+  HealthCare.gov** — CA, GA and NY are refused — which invalidates `plan.md`'s own acceptance test
+  (ZIP 30076 is in Georgia). A 400 there is an *answer*: that state runs its own exchange.
+- **The "new frontend surfaces ship unviewed" streak is back, and only half-broken.** Phase 3
+  populates `Citation.url` for structured citations for the first time, and a **real UI defect was
+  found by reading `CitationCard.tsx`** — a multi-line label passage was parsed as one
+  `column: value` pair per line, inventing a column out of any sentence with a colon. Fixed and
+  tested. But **nobody has opened the app**, so this was caught by reading rather than by looking,
+  which is not the same thing and is not what Phase 2's habit was.
+- **Phase 2, still true:** **complete and measured; the agent has three lanes.**
   `web_search` over Tavily is registered beside the reference and relational tools, cites web
   results by a `result_id` only a search can assign, and degrades to an honest *"I could not check
-  the web"* on a rate limit or an outage. `make check-all` is green (374 tests, pyright clean) and
-  `make smoke-web` passes **12/12 against live Tavily**; a reference question still routes to
+  the web"* on a rate limit or an outage. `make smoke-web` passed **12/12 against live Tavily**; a reference question still routes to
   `search_corpus` alone with the web tool registered (`make smoke`, 9/9), so no over-reaching on the
   one live sample there is. Design: [web_search_tool.md](web_search_tool.md); §17 there records what
   building it changed about the design; numbers and caveats: [agent.md](agent.md) §6.
-- **The headline: routing is 1.000 across three lanes, and the third lane costs the first two
-  nothing measurable.** Recall@5 0.667 with the web lane against 0.633 without — one question, well
-  inside the 0.200 spread, so "no evidence of harm" rather than an improvement. `web_reach_rate`
-  1.000 (4/4). **The agent never over-reached: `web_search` was called on 0 of 30 reference
-  questions and 4 of 4 web questions** — answerable from a run file for the first time, because
-  `tools_used` landed this phase.
-- **The one real cost is `abs-03`, and it is the most interesting result of the phase.** *"What will
-  the standard Part B premium be in 2027?"* is a figure CMS has not published. Without the web lane
-  the agent abstains; with it, it finds projections written *about* the figure and answers anyway,
-  taking abstention accuracy from 1.000 to 0.800. **This is not a routing error** — the web was the
-  right lane to try — and the grounding guardrail cannot catch it, because the answer *is* grounded:
-  the quoted words really are on the page. What is missing is a check that the source is
-  *authoritative for that claim*, which nothing in this repo does yet. Phase 4's per-claim
-  provenance is where it belongs. The question was deliberately kept as an abstention to expose
-  exactly this, and it did.
 - **Phase 1-c, still true:** **complete and measured; the agent had two lanes.** Alongside the reference
   corpus it now queries the vendored CMS plan data — `list_tables` / `describe_table` /
   `query_structured`, DuckDB over the Parquet mirrors — and cites **rows**, byte-for-byte, with the
@@ -76,22 +117,34 @@ mid-stream.
   defects this repo has had were both found in a browser and neither by a test.
 - **[technical_highlights.md](technical_highlights.md) is an index over
   [highlights/](highlights/)** — the mechanisms worth *presenting*, which is deliberately not a job
-  any of the four canonical docs has. **Five entries** (grounding · the test-suite provider guard ·
-  missing-vs-stale · `ModelRetry` as a correction channel · model-written SQL), one page each, and
+  any of the four canonical docs has. **Seven entries** (grounding · the test-suite provider guard ·
+  missing-vs-stale · `ModelRetry` as a correction channel · model-written SQL · live-API edge cases ·
+  the composed prompt), one page each, and
   the README links them from above the status section. **CLAUDE.md now names it**, deliberately outside the four-docs table and labelled
   *presentation, not reference*: it is derived from the docs that own each design, so a change
   updates the owning doc first and the highlight page second.
-- **Next up: Phase 3 — the structured lane's live half** ([plan.md](plan.md) → Phase 3): typed
-  tools for the CMS Marketplace API, openFDA and NPPES, with rate limits, caching and fixtures.
-  Phase 2 is done, measured and merged, so nothing blocks starting. Two things to carry in rather
-  than rediscover. **The `_build_agent` cache-key trap will be taken a fifth time** unless the new
-  lane's flag is resolved before the cache lookup — there is now a test asserting the property, so
-  it should fail red rather than bill. And **openFDA gives Phase 3 a claim on `web-01`** (the drug
-  recall question), which today expects `web`: the routing metric will have to say which lane is
-  correct when two could be, and that is a gold-set decision to take deliberately rather than
-  discover from a score. The lane boundary Phase 1-c left open is the concrete first win — the Part
-  D formulary holds NDC and RxCUI and **no drug names**, so *"is metformin on this formulary"* needs
-  the openFDA name→NDC lookup before it can be answered at all.
+- **The derived-doc rule got its first real test at Phase 3, and it bound.** The composed-prompt
+  highlight had no owning section to derive from — the rationale lived only in `#:` comments in
+  `prompt.py` — so [agent.md](agent.md) gained **§3a**, which now owns prompt composition, and §3
+  was corrected for the two axes Phase 3 added. The alternative (declare the code comments the
+  owning source) was rejected: with no doc to update, the next change would be made to the highlight,
+  making a presentation page the source of truth for a design.
+- **Next up: Phase 4 — planning, decomposition and per-claim provenance**
+  ([plan.md](plan.md) → Phase 4). The tri-modal core is complete, so what is missing is no longer a
+  lane but a *behaviour*: the agent routes and loops but does not split a compound question into
+  sub-questions and route each. Two things to carry in rather than rediscover.
+
+  **Phase 3 supplied the concrete motivating case.** `live-06` originally asked "is atorvastatin
+  covered under a plan sold in ZIP 27360" — which needs `find_plans` → pick a plan →
+  `check_drug_coverage` → `drug_label`, a four-hop chain. It passed on one run of three and errored
+  on the others. **It was re-scoped to name a plan rather than fixed**, precisely because reliable
+  multi-hop is Phase 4's job; the un-scoped version is the natural first Phase 4 gold question and
+  its original wording is preserved in the question's notes.
+
+  **And `abs-03` is still the standing argument for per-claim provenance.** The agent answers a
+  question about an unpublished 2027 figure from writing *about* it. Grounded, correctly routed,
+  and wrong — nothing here yet checks that a source is *authoritative for a given claim*.
+
 - **Phase 2 decisions worth outliving the code.** **Tavily, decided rather than measured** —
   `plan.md` had called for a Tavily-vs-Exa A/B, and that paragraph is now amended rather than left
   standing: this phase grades routing, not answer quality, so the comparison would have measured
@@ -140,6 +193,19 @@ mid-stream.
   from an agent A/B. It worked — see the result above. No `--repeat` mode was built, so the
   "a single agent run is not evidence" open question below is *unchanged*, not closed.
 - **Open questions:**
+  - **`web-01` is now claimed by two lanes, and the score found it before a decision did.** The
+    previous session predicted exactly this — *"openFDA gives Phase 3 a claim on `web-01`… the
+    routing metric will have to say which lane is correct when two could be, and that is a gold-set
+    decision to take deliberately rather than discover from a score"* — and it was then discovered
+    from a score. Asked *"was there a recall of a blood pressure medication announced recently?"*
+    the agent called **both** `web_search` and `drug_recalls` and cited the FDA record, so a
+    question expecting `web` fails routing and `web_reach_rate` reads 0.750.
+
+    **The agent is arguably right and the gold set arguably wrong**: the FDA's own enforcement
+    database beats a news article about it. But two live questions were already reworded this
+    session after failing, and a third would be a habit rather than a correction — **this one is
+    left for a human to decide.** Options are to re-label it `structured_api`, to keep it as a web
+    question and accept that "recently" is genuinely a web word, or to split it in two.
   - **A single eval run is not evidence, and the repo still quotes single runs.** Unchanged by
     Phase 1b, and now load-bearing in a new place: the three agent toolset rows (0.667 / 0.733 /
     0.800) are one run each, against a known spread of 0.200. Phase 1b routed *around* this by
@@ -233,6 +299,65 @@ mid-stream.
   - `part_d_spuf` is a Phase 5 source that landed during Phase 0, on request. Nothing consumes
     it yet and nothing should until Phase 3/5 — but it now exists, so a later phase should not
     re-plan the ingestion, only the modelling layer on top of the mirror.
+
+### Phase 3 checklist
+
+Backend (plan.md, Phase 3):
+
+- [x] Typed tool wrappers for Marketplace API, openFDA and NPPES, registered beside the Phase 1-c
+      mirror tools **in the same lane** — six tools, one `source_type`
+- [x] Mirror-vs-live reconciliation — the rule by *question shape*, not by source, and "cite both
+      when they disagree". **Written in the design doc a phase before anything carried it to the
+      model**; caught only by auditing against plan.md's own checklist
+- [x] API-key / secrets management — one new credential (`CMS_MARKETPLACE_API_KEY`), plus
+      `OPENFDA_API_KEY` after §4's decision reversed
+- [x] Rate-limit handling, retries, and a response cache — the cache also written late, and
+      deliberately **run-scoped**: a cross-run disk cache buys headroom at the cost of staleness in
+      the one lane whose selling point is being current
+- [x] Synthetic fixtures — provider identities *generated*, never recorded (§8a)
+- [x] Tri-modal routing with an eval slice — six live questions plus `lane_detail_correct`, which
+      had to exist because both halves of the lane share a `source_type`
+- [x] Schema validation on every API response
+- [x] UI: live-API citations render beside mirror ones — and `Citation.url` is populated for a
+      structured citation for the first time
+- [x] **Measured** (2026-08-22). `run_2026-08-22_8`: 38/49, live **6/6**, `lane_detail_correct`
+      1.000, and the live toolset costs the reference slice nothing measurable
+
+Beyond the plan.md list, because implementation made them necessary:
+
+- [x] `--live` / `--no-live` on the eval runner, and `eval-live` / `eval-no-live` targets — **the
+      runner had never wired the live lane at all**, so `make eval` silently dropped all six live
+      questions
+- [x] `is_live` checked before `is_structured` in the scorer — live questions were being scored on
+      `expected_cells` they are forbidden to carry, reporting 0.444 where the mirror scored 1.000
+- [x] A prose-cell escape in the row validator — a label section is a passage, not a value, so
+      above a threshold a cell is quoted from rather than reproduced
+- [x] `--allow-demo-key` — an explicit, logged override for CMS's shared demo key, and the guard
+      scoped so it stops refusing runs that could not reach CMS at all
+- [x] Structural test for defect **Family 2**: cell keys must be names the model was shown, and
+      every recorded row's id must be readable off its result. **Family 1 has no equivalent** — see
+      the unticked row below
+- [x] `parseCells` in `CitationCard.tsx` — a multi-line label passage was being parsed one
+      `column: value` pair per line; the first fix would have broken every **mirror** citation,
+      whose PUF columns are CamelCase
+- [x] `tests/synthetic.py` and its test against the scanner's own `npi_luhn` — two independent
+      implementations that must agree
+
+Not done:
+
+- [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
+      Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
+- [ ] **Close defect Family 1 structurally** — three negative-finding paths still emit no citable
+      row. Recommended shape and anchors: [negative-finding-gaps.md](negative-finding-gaps.md)
+- [ ] `AgentKit._agent` accepts `marketplace` and drops it at all three call sites; `AgentKit.stream`
+      does not forward it to `stream_answer`. The `_build_agent` cache-key trap armed a sixth time,
+      latent only until a test drives a Marketplace client through the kit
+- [ ] `test_the_live_tools_come_last`'s five-name comparison can never be true — the test passes
+      entirely on its `or names[-1] == "find_plans"` fallback
+- [ ] A `ModelRetry` in `runtime._validate_row_citation` reads "word word" for "word for word".
+      Text the model reads
+- [ ] [glossary.md](glossary.md)'s **openFDA** entry still says the repo "deliberately does not
+      request" a key, which `Secrets.openfda_api_key` and §4a contradict on the same branch
 
 ### Phase 2 checklist
 
@@ -369,6 +494,432 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
+
+**Did:** walked the whole `phase3-step-1` branch step by step (read-only), which turned up four
+defects nobody had looked for and one wrong claim in the README. Wrote
+[negative-finding-gaps.md](negative-finding-gaps.md) and two new highlight pages
+(live-API edge cases, composed prompt), and gave prompt composition an owning section in
+[agent.md](agent.md) §3a. No source changed except a duplicated `OPENFDA_API_KEY` block in
+`.env.example`.
+
+**The finding that matters: defect Family 1 was fixed four times, never closed.**
+[structured-api-tools.md](structured-api-tools.md) §18c states the rule — *if a tool can establish
+something it must emit a row for it, including when what it established is an absence* — and lists
+four instances. All four were fixed individually and **the rule was never turned into an
+invariant**, so the same shape survives in three more places: `drug_label` when no label matches,
+`drug_label` when the label lacks the requested section, and `find_plans` when the search returns
+nothing (plus `find_drug` and an empty `check_drug_coverage`, lower priority). This is *not* what
+the previous entry's "both now have structural tests rather than per-instance fixes" implied —
+that was true of Family 2 and only aspirationally true of Family 1.
+
+**Why it has been quiet, which is the interesting half.** Blast radius depends on whether the
+negative finding is the *whole* answer or one clause of a compound one. *"Has atorvastatin been
+recalled"* has nothing else to cite, so it failed loudly. A drug-label miss usually sits beside
+reference citations that satisfy the validator, so the answer is **served with one clause silently
+unevidenced** — quieter than a retry, and arguably worse.
+
+**Decided: document it, do not fix it.** The author's call, and the right one — a fix mid-walkthrough
+is a fix nobody reviewed. The write-up carries the anchors and two options rather than a patch.
+
+**Decided: `agent.md` owns prompt composition, not the code comments.** The new composed-prompt
+highlight needed a reference doc to derive from, and `agent.md` §3 carried five lines about the
+Phase 1b toolset case while the real rationale — affirmative-first phrasing, replace-don't-rebut,
+intersection fragments, the guardrail boundary — lived only in `#:` comments in `prompt.py`. §3a
+now holds it.
+
+**Rejected: declaring `prompt.py`'s comments the owning source and noting the exception.** Tempting,
+since those comments are unusually thorough. It loses because CLAUDE.md's rule is *update the owning
+doc first, then the page* — with no owning section, the next person to change composition edits the
+highlight, and the highlight becomes the source of truth for a design, which is the one thing that
+file must never be. The failure shape the prompt module itself is built around: a rule that cannot
+be followed gets resolved by whoever hits it.
+
+**Recommended, not decided:** close Family 1 structurally rather than with three more point fixes —
+one `_search_row` helper plus a parametrised test asserting *every live result with
+`unavailable is None` produces at least one row*. That single test would have caught all seven
+instances at once, and it sits beside the equivalent Family 2 guard. Recorded in the gap doc; the
+choice is open.
+
+**Stopped at:** four defects found and left unfixed, all now checklist rows —
+`test_the_live_tools_come_last`'s five-name comparison can never be true so the test passes on its
+`or` fallback; a `ModelRetry` in `runtime.py` reads "word word" where it means "word for word";
+`glossary.md`'s **openFDA** entry still says the repo "deliberately does not request" a key, which
+`Secrets.openfda_api_key` and §4a contradict on the same branch; and `AgentKit._agent` accepts
+`marketplace` but drops it at all three call sites, which is the `_build_agent` cache-key trap
+armed for a sixth time and harmless only until a test drives a Marketplace client through the kit.
+
+**Commits:** `75f26bf`, `e4b255a`, `8b1119a`, `6a72d26`, `7d67ab4`.
+
+### 2026-08-22 (measured) — Phase 3 measured: 6/6 live, and eight defects that were all ours
+
+**Did:** finished Phase 3's unbuilt checklist items, ran four eval sweeps, fixed eight defects found
+by them, and synced the design doc. `run_2026-08-22_8`: **38/49, live 6/6**, `lane_detail_correct`
+1.000, `structured_exact_match` 1.000, groundedness 1.000. Progression across sweeps 34 → 36 → 37 →
+38, live questions 3/6 → 5/6 → 6/6.
+
+**Found first: two plan.md checklist items were never built.** The **response cache** (§13c) and the
+**mirror-vs-live reconciliation rule** (§15) were both listed and both absent — §15 in particular was
+written down a phase early and nothing ever carried it to the model. A capability is not a paragraph.
+The cache proved itself by *breaking* a test: `test_a_spent_budget_is_terminal` repeated one drug
+name to exhaust the budget, which is now served from cache and never reaches the ceiling. The old
+test could not distinguish "cache working" from "budget broken".
+
+**Found: the eval runner never wired the live lane at all.** `_build` composed its question list
+from reference + abstentions + `structured()` + `web()`, and since `structured()` had been narrowed
+to exclude the live half, **`make eval` silently dropped all six live questions**. A second harness
+bug scored them on `expected_cells` they are *forbidden* to carry, reporting
+`structured_exact_match` 0.444 while all four mirror questions scored 1.000 — five guaranteed misses
+in a denominator, which is the "report a certainty as a finding" mistake `_build` avoids one layer
+up. Both fixed; `is_live` is now checked before `is_structured`, since both halves share a
+`source_type`.
+
+**The worst single defect: `drug_recalls` returned false negatives on a drug-safety question.** The
+query used a literal `+OR+`; openFDA writes disjunction that way because `+` *is* the encoding of a
+space, so the literal double-encoded to `%2B`, matched nothing, returned 404, and the client
+reported **"no recalls on record" for a drug with 44 of them**. The one endpoint whose entire purpose
+is that an empty result can be trusted was manufacturing false empties. **Every unit test was blind
+to it**: a `MockTransport` returns its canned body however nonsensical the request, so 36 passing
+tests asserted the client *parses* correctly while never asking whether it *asks* correctly. The new
+test pins the outgoing query — the one thing a mock cannot fake.
+
+**Six of the eight defects were instances of two families**, now written up as rules in
+[structured-api-tools.md](structured-api-tools.md) §18c because each one recurred after being fixed
+once. Family 1, *a finding with nothing to cite*: four instances, each forcing a false abstention or
+a worse source — including the agent holding CMS's own "Georgia is not served" answer and citing a
+**web page** for it. Family 2, *a name the model can see but cannot cite*: five instances, ending
+with a number formatted `344.50` where the model had been shown `344.5`.
+
+**Decided: a prose cell is quoted from, not reproduced.** §14a's "a record is not prose" is right
+about a recall and a premium and wrong about a label section — 2,199 characters for indications,
+11,000 for warnings. Above `_PROSE_CELL_CHARS` the row test becomes verbatim **containment**, the
+same guarantee the chunk path gives passages. Weaker only in *how much* must match, never in whether
+the words are real.
+
+**Decided: openFDA now uses a key, reversing §4.** Not because traffic reached the limit — measured
+usage was two calls per sweep — but because the *worst case* is 784 requests, 78% of a day's per-IP
+allowance, and a ceiling that close should not be left to luck across repeated sweeps. It stays
+optional and the client degrades to keyless: a missing openFDA key costs headroom, a missing CMS key
+costs tools.
+
+**Decided: `--allow-demo-key`, an explicit override rather than a deleted rule.** The CMS key had
+not arrived, the author asked for the sweep anyway, and the §3a guard blocked it. A logged, flagged
+exception survives; a guard people route around does not. The guard was also **scoped**, having
+originally refused `--no-live` runs that could not have sent CMS a single request.
+
+**Two gold questions were reworded after failing, and that deserves a reader's judgement rather than
+only mine.** `live-04` asked about state coverage through a *pricing* tool that requires ages and
+income, so the agent had to invent a household or stop and ask — it did each on consecutive runs.
+`live-06` asked about "a plan sold in ZIP 27360", which has no answer until a plan is chosen, forcing
+a four-hop chain plan.md assigns to **Phase 4**; it now names a plan, which is plan.md's own Phase 3
+acceptance test. Both reasons are recorded in the questions' notes. Changing a test after watching it
+fail is a real hazard even when the test was wrong.
+
+**A UI defect found by reading, not by running.** A live label citation carries a multi-line prose
+cell, and `RowCells` parsed one `column: value` pair per line — so `LIPITOR is indicated: • To
+reduce...` rendered as a column named "LIPITOR is indicated". Fixed, with `whitespace-pre-wrap` so a
+passage wraps rather than leaving the card. **The first version of the fix would have broken the
+mirror lane**: it anchored on snake_case, which is what the live lane emits, while the Exchange PUF's
+columns are CamelCase (`TEHBDedInnTier1Individual`). The test caught it.
+
+**The scanner caught its author twice more.** A Luhn-valid NPI in gold question `live-05`'s text, and
+a test literal `fda-test-key` that read as a credential-shaped assignment. Both fixed at the source
+rather than allowlisted — an allowlist on either would have disarmed the tripwire for the real case.
+
+**The previous entry's two predictions both came true, one usefully and one not.** The
+`_build_agent` cache-key trap was predicted to be taken "a fifth time" — it was taken a **fifth and
+a sixth**, because `live` derives from *either* live client while `marketplace` derives from one,
+and `conftest._agent` spelled them differently from `stream_answer`. `ALLOW_MODEL_REQUESTS = False`
+caught it as eight errored tests rather than a provider bill, which is the prediction working. The
+other prediction — that openFDA would give Phase 3 a claim on `web-01`, and that the lane question
+should be *decided rather than discovered from a score* — came true and was then **discovered from
+a score**. Recorded as an open question rather than fixed, because two live questions were already
+reworded this session and a third would be a habit.
+
+**Stopped at:** green and measured, uncommitted. **Not done: nobody has opened the app.** The UI bug
+above was caught by reading `CitationCard.tsx`, which is not the habit Phase 2 established and not a
+substitute for it.
+
+### 2026-08-22 (build) — Phase 3 built: six live tools, and five things the plan got wrong
+
+**Did:** built Phase 3 steps 0-6 from [structured-api-tools.md](structured-api-tools.md) §18 —
+`live/` (three clients + shared HTTP), `agent/live_tools.py` (six tools), a `live` and a
+`marketplace` axis through `select_tools` / `build_agent` / `system_prompt` / `AnswerDeps` /
+`AppContext` / the chat route, `LiveConfig`, the synthetic-identity helper, six gold questions, a
+`lane_detail_correct` metric, and the demo-key guard. `make check-all` green, `make scan` clean.
+**Nothing measured** — see the current-state block.
+
+**Both open questions were approved and are recorded in the design doc**: a negative finding is
+citable (§14a-bis), and §8a's allowlist requirement was dropped in favour of computed identifiers.
+
+**The §8a rule caught its own author, which is the best evidence it works.** The first draft of gold
+question `live-05` put a **Luhn-valid NPI in its question text**, and `make scan` reported `pii:npi`
+above its permanently-zero baseline. Fixed by switching to a check-digit-invalid number — which
+grades a real branch, "that is not a well-formed NPI" — rather than by allowlisting the gold set. A
+path-scoped exemption there would forgive a *real* NPI landing in the file later, which is the one
+thing the tripwire exists to prevent. `test_the_gold_set_carries_no_valid_npi` keeps it from coming
+back.
+
+**Found: `abs-01` does not turn answerable, and two sections of my own plan disagreed.** §16a called
+it the phase's headline metric; §11 deferred the endpoint that would answer it. §11 was right — the
+question is about a **network**, and NPPES answers identity. Re-dated to Phase 5 with the reasoning
+in the question's notes. Recorded as a struck-through §16a rather than a silent rewrite.
+
+**Found: SPL section names differ by drug type.** A prescription label carries
+`warnings_and_cautions` and sometimes `boxed_warning`; an over-the-counter label carries plain
+`warnings` and no `drug_interactions` at all. **One field name per section would have returned a
+confident nothing for half the drug catalogue** — the worst failure shape available, since it looks
+like an answer. `SECTION_FIELDS` is one-to-many, and `warnings` returns every candidate present
+rather than the first: dropping a boxed warning because a general one also existed is not a trade a
+health tool gets to make.
+
+**Found: CMS serves only the states that use HealthCare.gov.** CA, GA and NY return
+`400 "state is not a valid marketplace state"`; NC and TX work. Two consequences: a 400 here is an
+**answer** (that state runs its own exchange, which is what the reader needs to hear), so
+`PlanMatches.state_not_served` is a first-class field beside `unavailable`; and **`plan.md`'s own
+acceptance test is unsatisfiable** — *"find plans in ZIP 30076"* is Georgia. The gold set uses NC's
+27360 for plan search and keeps 30076 as the state-not-served question.
+
+**Found: a ZIP can span two counties** (30341 covers DeKalb and Fulton) and premiums differ between
+them. `find_plans` raises a `ModelRetry` naming the options rather than picking — recoverable inside
+the run, unlike a spent budget, which is the distinction that decides whether a retry is wasted.
+
+**Decided: the Marketplace tools register separately from the rest of the lane.** They are the only
+Phase 3 source with a credential, so a deployment with no `CMS_MARKETPLACE_API_KEY` keeps the
+keyless two-thirds — openFDA and NPPES — and the prompt stops claiming what it cannot do. **This is
+the asymmetry with the web lane**: a missing Tavily key makes the app return a 503, because there is
+no partial web lane; there is very much a partial live lane.
+
+**Took the cache-key bug for the sixth time, and the guard caught it.** `live` is derived from
+*either* live client while `marketplace` is derived from one, and `conftest._agent` derived them
+differently from `stream_answer`. Eight tests errored on `ALLOW_MODEL_REQUESTS is False` instead of
+reaching a provider.
+
+**Stopped at:** green, unmeasured, uncommitted. **Next: run the evals** — §16b (does the reference
+slice move with fifteen tools registered?) is the number that decides whether this phase cost
+anything, and it is the one thing "green" does not tell you.
+
+### 2026-08-22 (end of day) — the provider-PII decision, and the trap inside it
+
+**Decided: provider fixtures are synthesised rather than recorded. The invariant stands** — no real
+clinician's name, NPI, address, or telephone number enters this repo. Drug and plan fixtures are
+unaffected. The reasoning that carried it: the invariant is cheap to keep and expensive to
+re-establish, and recorded practitioners would be the one place this repo published information
+about **private individuals who never chose to appear in it** — FOIA-disclosable is not the same as
+published by us.
+
+**Found, by testing the marker rather than reasoning about it: "synthesise and the count stays at
+zero" is false.** `pii:npi` is two filters — Luhn *and* the literal word "NPI" within 40 characters.
+A Luhn-valid synthetic NPI in a Marketplace-shaped fixture (`{"npi": ...}`) **is flagged**. The same
+value in an NPPES-shaped fixture is not — but only by the accident that **NPPES names the field
+`number`**, and that accident evaporates the moment a wrapper model, test, or docstring calls it
+`npi`, which `ProviderRecord.npi` naturally will.
+
+**And the obvious escape is closed:** using check-digit-invalid NPIs would keep the scanner quiet,
+but the wrappers' own validation would then reject their own fixtures, so the happy path could never
+be exercised. **Synthetic identifiers have to be structurally real.**
+
+**So the decision costs three concrete things**, now written into §8a as requirements rather than
+left to the build to rediscover: a generator for Luhn-valid synthetic NPIs (plus synthetic names,
+addresses, phone numbers — NPPES needs four field families, not one); an allowlist entry in
+`sensitive_baseline.toml`, on the precedent of the scanner's own canary exemption; and a restatement
+of the glossary's invariant.
+
+**The invariant was restated, not weakened.** "The `pii:npi` count stays at zero" was always a proxy
+for *no real provider identity is vendored*. Phase 3 outgrows the proxy. The precise form is now
+**zero unallowlisted hits, every allowlisted hit synthetic by construction** — which is the thing
+actually worth guaranteeing, and is checkable.
+
+**A convention that already existed turned out to apply:** the glossary's SSN entry says *write the
+pattern, never a specimen*, because a literal in prose trips the scanner exactly as it should. The
+same is now true of NPIs — a Luhn-valid ten-digit run beside the word "NPI" in **any** tracked file,
+this documentation included, is a hit. No document quotes one; the helper generates them.
+
+**Consequence for the build order:** §18a's Step 0 changes from *settle §8a* to *build the
+synthetic-identity helper and its allowlist entry* — a task, not a question. Still first: it is
+small, it unblocks Step 4, and the scanner conversation is better had in its own diff than in the
+one that also adds a tool.
+
+**Stopped at:** decision recorded, nothing built. `make scan` green.
+
+### 2026-08-22 (last) — the other two contracts, and a Phase 3 implementation plan
+
+**Did:** verified the openFDA and NPPES contracts against their live APIs, then wrote the Phase 3
+implementation plan into [structured-api-tools.md](structured-api-tools.md) §9–§18. Docs only; no
+source changed, by request.
+
+**Found: an answer can look like an outage, which is the inverse of the rule Phase 2 established.**
+openFDA returns **HTTP 404** with `{"error":{"code":"NOT_FOUND"}}` when a search matches nothing —
+and for *"has drug X been recalled"*, that 404 **is the answer: no recalls**. NPPES expresses the
+same meaning as `result_count: 0` with a **200**. Two upstreams, two conventions, neither an outage.
+Handling either as a failure would abstain on precisely the question the tool exists to answer. This
+is now a *must not* in §9 beside Phase 2's original, and the two highest-value tests in §17.
+
+**Found: nearly every openFDA field is a list, including the scalar-looking ones** —
+`brand_name: ["Lipitor"]`, and `indications_and_usage` a one-element list holding an entire
+multi-paragraph section. An SPL artefact. Called out as the likeliest silent `str`-vs-`list[str]`
+bug in the phase, because a `[0]` makes the assumption invisible.
+
+**Found: the two drug sources share an identifier space.** openFDA's `openfda.rxcui` for Lipitor
+contains both `262095` and `259255` — exactly the branded RxCUI and the `generic_rxcui` the
+Marketplace API returned for the same plan. **The two APIs agree without a mapping table**, which is
+what lets a compound drug question resolve to one drug, and the reason RxCUI is the drug key
+throughout the phase. Marketplace plan IDs look like the same 14-character HIOS Standard Component
+IDs the Phase 1-c mirror is keyed by — to be confirmed against the mirror on first contact, and if
+it holds, the live and vendored halves of the structured lane share a primary key.
+
+**Decided: six tools, named for questions rather than endpoints**, and three endpoints deliberately
+left out — ZIP→FIPS folded into `find_plans` (the tool takes what a person says, the wrapper does
+what the API needs), `/market-years` folded into every year-taking tool, and `/providers/covered`
+deferred to Phase 5, which also removes one of the two §8a-blocked surfaces from the critical path.
+
+**Decided: a live-API record is cited as a row**, joining `seen_rows` with a source-tagged id
+(`mkt#1.1`, `fda#2.1`, `npi#3.1`). No fourth citation shape. The claim is the same claim a mirror
+row makes — exact, per-record, `structured_api` — and frontend_plan.md F2 already said this phase
+adds "live-API citations rendering beside mirror ones". Phase 2 needed a third shape because a web
+quotation genuinely differs; a record does not.
+
+**Noticed, and it is a security detail not a plumbing one:** the Marketplace query URL carries the
+API key as a query parameter, and §14b has live records populating `Citation.url` for the first time
+— a field rendered in the browser and serialised into eval run files. **Strip `apikey` before
+storing**, with a test asserting no citation URL contains it. §17 names it as the one test whose
+failure would be a security finding.
+
+**Decided: the persistent response cache is deferred**, run-scoped only, with a tripwire. The value
+of caching is mostly *within* a run (`find_drug` → `check_drug_coverage` → `drug_recalls` on one
+drug); a cross-run disk cache buys openFDA daily headroom at the cost of staleness in the one lane
+whose selling point is being current. Revisit if a sweep approaches 1,000/day.
+
+**Noticed — the phase's characteristic risk, recorded before it bites:** the agent sees nine tools
+today and would see fifteen. Phase 2's clean routing result came from adding *one*. §16b makes the
+reference slice the metric that must not move, measured with and without the live toolset, because
+tool-count inflation will show up there rather than on the new questions.
+
+**Worth remembering:** `abs-01` — the provider-directory abstention the glossary has described since
+Phase 1a as *"the canonical thing the agent abstains on, which turns answerable at Phase 3"* — is
+this phase's headline metric, and it was written down two phases early.
+
+**Stopped at:** plan written, nothing built. `make scan` green.
+
+### 2026-08-22 (later still) — the Marketplace contract, read off the live API
+
+**Did:** established the full Marketplace API contract without holding a key, and wrote it into
+[structured-api-tools.md](structured-api-tools.md) §7–§8. Docs only; no source changed.
+
+**Found: CMS publishes its complete OpenAPI 2.0 spec** — 38 endpoints, 91 model definitions,
+schemas and enums — embedded as inline YAML in the
+[spec page](https://developer.cms.gov/marketplace-api/api-spec), **readable without a key**. It is
+not offered as a download; it comes out of the page's `swaggerUIOptions.spec` string.
+
+**Found: CMS also publishes a shared, rate-limited demo key** in that page's Quickstart. It works.
+**This corrects the previous entry's framing** — Phase 3 was recorded as gated on the key request,
+and it is not: the lane can be built and fixtured today. The key request still matters for anything
+sustained, because the demo key is shared with every other reader of the quickstart.
+**The value is written nowhere in this repo** — it lives only in the author's gitignored `.env`,
+referenced in tracked files by location. `make scan` never sees it (`.gitignore:16`, and the scanner
+enumerates with `git ls-files --others --exclude-standard`).
+
+**Decided: the spec is authoritative for requests and not for responses.** Established by comparing
+declared schemas against live calls. Requests held on every call. Responses were wrong on **four of
+five** endpoints checked — `/drugs/autocomplete` and `/providers/autocomplete` declare an object
+envelope and return a bare array; `/drugs/covered` and `/providers/covered` declare a property
+literally named `"Provider & Drug Coverage"` (the Swagger *tag* leaking into the schema) where the
+server sends `coverage`. Only `POST /plans/search` matched. The pattern — **POST accurate, every GET
+wrong** — is what makes it a rule rather than a list of exceptions. Field level is far better: the
+`Coverage` enum and `ProviderCoverage` match exactly; `Plan` is stale in both directions by three
+fields each; `Provider.type` is really `provider_type`.
+
+**Consequence:** response models are derived from recorded fixtures, never generated from the spec.
+A fixture built from a wrong schema asserts the wrong shape *and passes* — green and false, the one
+failure mode worse than a red test.
+
+**Decided: record fixtures against the current market year, not the quickstart's.** CMS's own
+quickstart uses `year=2019` and its prose claims "the API confirms that ibuprofen is covered"; that
+no longer reproduces — 2019 returns `DataNotProvided` for both drug and provider coverage. The same
+call against a 2026 plan returns real answers including `GenericCovered` with `generic_rxcui`
+populated. **Fixtures from 2019 would have been near-empty and would have taught the wrappers that
+`generic_rxcui` is merely optional** — when it is in fact conditional on `coverage ==
+"GenericCovered"` and carries a materially different answer to the user's question ("not as branded;
+the generic is" rather than "not covered"). A real trap, avoided by one comparison.
+
+**Noticed:** `GET /market-years` returns the supported years and which is current, so plan year is
+asked for rather than hardcoded — the live counterpart to
+[relational-tool.md](relational-tool.md) §7, and what lets the two halves of the structured lane
+agree on which year they mean.
+
+**Measured:** Marketplace rate limits, which exist only in response headers — **200/second,
+1000/minute**, no daily-limit header. Recorded in §3 so the budget is not guessed.
+
+**Open — must be settled before any `/providers/*` fixture:** those endpoints return real
+practitioners. See the *Current state* bullet above; the recommendation is to synthesise, and NPIs
+carry a Luhn check over the `80840` prefix, so a synthetic NPI has to be constructed rather than
+invented.
+
+**Also:** fixed [plan.md](plan.md)'s Marketplace endpoint list, which conflated `POST /plans/search`
+with `POST /households/eligibility/estimates` — different endpoints returning plans and subsidy
+eligibility respectively. Anyone implementing from that line would have called the wrong one. Added
+four glossary entries the contract work introduced (**market year**, **FIPS county code**, **rate
+area**, **APTC**), and `.env.example` now carries the live `CMS_MARKETPLACE_API_KEY` placeholder with
+the 60-day expiry and the demo-key instruction as comments.
+
+**Stopped at:** clean, nothing built. `make scan` green, demo key absent from every scannable file.
+
+### 2026-08-22 (later) — Phase 3 access: one key requested, one declined
+
+**Did:** opened [structured-api-tools.md](structured-api-tools.md) as Phase 3's design document and
+established what the phase needs to reach its three live sources. Docs only; no source changed.
+Verified every access fact against the live CMS and FDA pages the same day, because all of it is
+someone else's operational policy and will rot.
+
+**Did: requested a CMS Marketplace API key on 2026-08-22**, via
+[developer.cms.gov/marketplace-api/key-request.html](https://developer.cms.gov/marketplace-api/key-request.html).
+**Awaiting delivery — CMS publishes no turnaround time.** This is the phase's one gating item: it is
+the only credential Phase 3 needs, and the only one of the three lanes that cannot be built without
+waiting on someone else. The reason it was submitted before any code was written.
+
+**Consequence for build order:** NPPES needs no credential at all, so it is the tool to build first
+— it proves the typed-wrapper and fixture patterns while the key is in flight, and it is unblocked
+today. openFDA is unblocked too, per the decision below.
+
+**Decided: openFDA runs keyless. The free key was available and was not requested.** Keyless is
+1,000 requests/day per **IP**; a key would make it 120,000. The questions this project asks openFDA
+are per-drug lookups — *has drug X been recalled*, *what are its indications* — a handful per user
+question against a gold set of tens, and nothing here scans openFDA whole (plan.md rules out its
+bulk files for the same reason). 120× headroom over a limit that is not approached buys nothing, and
+costs a secret to rotate, a `Secrets` field to validate, and one more way for a stock `cp
+.env.example .env` to produce a live 401. **So Phase 3 introduces exactly one credential, not two.**
+
+**The consequence that decision creates, recorded so it is not learned from a 429:** the daily limit
+is per *IP*, not per process, so it is shared with anything else on that address and is not reset by
+restarting a run. That promotes the response cache from Phase 3's checklist item to something
+load-bearing for openFDA specifically. [structured-api-tools.md](structured-api-tools.md) §4 carries
+the tripwire that would reverse the decision — a sustained loop issuing hundreds of openFDA calls
+per run, or use from a shared/CI IP where the 1,000 is not this project's alone.
+
+**Decided:** no `OPENFDA_API_KEY` placeholder goes in `.env.example`. A commented placeholder for a
+credential nobody holds is an invitation to request one without re-reading why it was declined; if
+the tripwire fires, the placeholder and the `Secrets` field are added in the same change that
+reverses it.
+
+**Decided:** the **Finder API** — CMS's companion for private plans sold outside the Marketplace,
+separate key and separate 60-day expiry — is **not** requested. plan.md mentions it under *Live Web
+/ API tools*, but Phase 3's scope names only Marketplace, openFDA, and NPPES, so off-exchange plans
+are out of scope. Recorded so the omission reads as a decision rather than an oversight.
+
+**Noticed, not yet handled:** the Marketplace key **expires every 60 days** with a replacement
+emailed automatically — so the first rotation is due around **2026-10-21**. `Secrets` is
+`frozen=True` and `get_secrets()` is `@lru_cache(maxsize=1)`, so a rotation needs `.env` edited
+*and* the process restarted; a running server will not pick up the new key. The failure mode is a
+401 that looks like a code bug and is really a calendar. Whatever Phase 3 does about it, the
+constraint it must meet is Phase 2's: an expired key is an outage with a due date, and an outage
+must never reach the user as a confident answer.
+
+**Also:** the glossary's openFDA entry said "Keyless, no registration" — true but incomplete once
+the per-IP ceiling matters. It and the Marketplace entry now carry the limits and the 60-day expiry.
+Every other Phase 3 term (RxCUI, NPI, SPL, NDC, Window Shop) was already there and correct.
+
+**Stopped at:** clean, nothing built. Phase 3 code starts with NPPES.
 
 ### 2026-08-22 — a walkthrough of Phase 2, and three highlight pages caught up to the code
 

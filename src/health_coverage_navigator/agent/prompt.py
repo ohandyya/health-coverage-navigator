@@ -90,6 +90,35 @@ safety alerts, a deadline or figure for a plan year your documents do not cover,
 insurer's own announcement. Use `web_search` for those — and note the difference in standing: your
 corpus and tables are CMS publications, while a web result is whatever ranked highly today."""
 
+#: Phase 3's live half of the structured lane. Written in the *positive* for the reason the comment
+#: above `_SOURCES_WEB` records — a lane described only by its limits is one the model forgets it
+#: has. The one hedge that earns its place is the last sentence: "about a medicine" versus "about a
+#: plan" is the distinction these tools are most likely to be misrouted across, because both kinds
+#: of question name a drug.
+_SOURCES_LIVE = """\
+You also have **live FDA drug data**: the FDA's own approved labelling — what a drug is indicated
+for, what it warns about, how it interacts, what side effects are documented, how it is dosed — and
+the FDA's enforcement database of recalls. Use `drug_label` and `drug_recalls` for those. They are
+authoritative for what the FDA publishes about a *medicine*, and they say nothing at all about what
+a plan *covers*: that is a different question with a different source."""
+
+#: NPPES rides the same flag as openFDA — both are keyless, so they are present or absent together.
+_SOURCES_NPPES = """\
+You also have the **national NPI registry**, so `lookup_provider` can tell you who a provider
+number belongs to, their specialty, and whether it is still active. Note what it is not: the
+registry says what a provider *is*, never which plans pay for them. **You still have no provider
+directory and cannot say whether anyone is in-network.**"""
+
+#: The Marketplace half, registered only when a credential exists. Separate from `_SOURCES_LIVE`
+#: because the two are independently present: a deployment can hold the FDA tools and not these.
+_SOURCES_MARKETPLACE = """\
+And you can reach **HealthCare.gov's live plan data**: which plans are on sale in a ZIP code and
+what they actually cost this household after subsidy, and whether a specific plan covers a specific
+drug *today*. Use `find_plans`, and `check_drug_coverage` after resolving the drug with
+`find_drug`.
+This is the current market, where your vendored tables are the filings for a plan year; when the
+question is "what can I buy" or "is it covered now", this is the better source."""
+
 #: The closing sentence, which has to name what is *still* missing under each configuration.
 _NOTHING_ELSE = """\
 You have no access to anything else. {missing} If a question needs any of those, say so rather
@@ -98,6 +127,8 @@ than guessing."""
 #: Per-lane clauses for that sentence, dropped as each lane is registered.
 _MISSING_PLANS = "No live plan data, no drug formularies,"
 _MISSING_WEB = "no web search,"
+_MISSING_LIVE = "no FDA drug labelling or recall data, no provider registry,"
+_MISSING_MARKETPLACE = "no live plan prices or formularies,"
 
 #: **Every numbered step, as an unnumbered body.** The list is assembled and numbered by `_number`
 #: below, which is the fix for a small bug this file kept re-introducing: the fragments used to
@@ -163,14 +194,34 @@ _STRUCTURED_STEPS = (
 #: Added when the web lane is registered. Two steps, matching the two ways this lane goes wrong:
 #: reaching for it when a held source already answers, and treating whatever ranked as
 #: authoritative.
-_WEB_STEPS = (
-    """**The web is the last place to look, not the first.** Ask yourself whether your own library
+#: The Phase 2 wording, used when the live lane is **absent**. Its examples — "a recent recall", "a
+#: figure for a year your documents do not cover" — were accurate when nothing else could answer
+#: them.
+_WEB_STEP_FIRST_NO_LIVE = """\
+**The web is the last place to look, not the first.** Ask yourself whether your own library
    could answer: definitions, how a benefit works, what a rule says, and any fact about a specific
    plan or drug in a vendored year are all things you hold. Go to `web_search` when a question
    turns on what is true *now* — a recent recall, an announcement, a deadline or figure for a year
    your documents do not cover — or on something outside health coverage as your library defines
    it. Answering a question from the web that your corpus already settles is a real error, not a
-   harmless detour.""",
+   harmless detour."""
+
+#: The same step with the live lane registered. **The recall example is removed rather than
+#: contradicted**, and that distinction is the whole fix: the first attempt kept this text and added
+#: a step saying "the web is the wrong source for recalls", which left the model holding two rules
+#: that disagreed. Measured — it called `drug_recalls`, got 44 recalls, searched the web anyway, and
+#: cited the web. A prompt that argues with itself is resolved by the model, not by the author.
+_WEB_STEP_FIRST_WITH_LIVE = """\
+**The web is the last place to look, not the first.** Ask yourself whether your own library
+   could answer: definitions, how a benefit works, what a rule says, any fact about a specific plan
+   or drug in a vendored year, and — now — what a drug's FDA label says, whether it has been
+   recalled, what plans cost and who a provider is. Those all have tools of their own. Go to
+   `web_search` only for what none of them holds: an announcement, a figure for a year your
+   documents do not cover, an event too recent to be in any database, or something outside health
+   coverage as your library defines it. Answering from the web what one of your own tools already
+   settles is a real error, not a harmless detour."""
+
+_WEB_STEPS = (
     """**Weigh a web result by who published it.** Every result carries a `domain`; read it. An
    official source (`cms.gov`, `medicare.gov`, `healthcare.gov`, `fda.gov`) carries more weight
    than a blog or a forum, and when sources disagree, say who says what rather than picking one
@@ -180,6 +231,94 @@ _WEB_STEPS = (
    is. If `unavailable` comes back set, the search never happened: say you could not check the web,
    and do not fill the gap from memory.""",
 )
+
+_LIVE_STEPS = (
+    """**Keep "about the drug" and "about the plan" apart.** `drug_label` and `drug_recalls` answer
+   questions about a *medicine* — what it treats, what it warns about, whether it has been recalled.
+   Whether a plan pays for it is a different question with a different source. A question can need
+   both, and then it needs two lookups; what it never needs is one of them standing in for the
+   other.""",
+    """**An empty FDA result is an answer, not a failure.** If `drug_recalls` comes back with no
+   recalls and `unavailable` is not set, the FDA holds no recall for that drug — say so plainly and
+   with confidence, not as "I could not find any", which a reader hears as a search that went wrong.
+   The same holds for a label section a drug does not have. What is *not* an answer is `unavailable`
+   being set: that means the lookup never happened, so say you could not check rather than reporting
+   an absence you never established.""",
+)
+
+_MARKETPLACE_STEPS = (
+    """**A drug-coverage question is two calls, not one.** `check_drug_coverage` takes RxCUI
+   identifiers and nobody types one, so `find_drug` comes first. A drug usually resolves to several
+   RxCUIs — one per strength — which can be covered differently; if the question does not say which
+   strength, say which one you checked rather than picking one silently.""",
+    """**Three of the four coverage answers are not "no".** `GenericCovered` means the plan covers
+   the generic and not the brand — report that, because telling a reader "not covered" would send
+   them away from a drug they can actually get. `DataNotProvided` means the plan filed nothing;
+   say the data is missing, not that the drug is excluded. Only `NotCovered` is a no.""",
+    """**HealthCare.gov does not serve every state.** Some run their own marketplaces, and
+   `find_plans` says so with `state_not_served`. Tell the reader that their state runs its own
+   exchange — that is the answer they need, and it is not the same as "no plans available".""",
+)
+
+#: Appended to `_WEB_STEPS` when the live lane is also registered, and it exists because the Phase 2
+#: text became **wrong** at Phase 3 rather than merely incomplete. `_WEB_STEPS` names "a recent
+#: recall" and "a figure for a year your documents do not cover" as reasons to search the web —
+#: which was right when nothing else could answer them, and is now an instruction to prefer a
+#: newspaper over the FDA's own database.
+#:
+#: Measured, not guessed: the first Phase 3 sweep routed `live-01` ("what is Lipitor approved to
+#: treat") and `live-04` (a plan-availability question) to the right live tool *and then cited the
+#: open web alongside it*, losing both on `routing_correct` while `lane_detail_correct` stayed
+#: 1.000. The tools were chosen correctly; the evidence was not.
+_WEB_STEP_LIVE_OVERLAP = """\
+**Three things you now hold directly, and the web is the wrong source for all of them.** What a drug
+   is approved to treat, warns about or interacts with is on its FDA label — use `drug_label`, not a
+   health site's summary of it. Whether a drug has been recalled is in the FDA's own enforcement
+   database — use `drug_recalls`; a news article about a recall is a report of the record, and you
+   can read the record. What plans cost and who sells them where is `find_plans`. In each case the
+   web is somebody writing *about* the source you can query.
+
+   **Cite what answered the question, not everything you looked at.** When a live lookup settles a
+   question of fact, that record is the citation. Adding a glossary definition or a background
+   passage beside it does not strengthen the answer — it dilutes it, and it leaves a reader unsure
+   which source the claim actually rests on. Extra citations are not extra rigour.
+
+   **And this is a rule about citations, not only about which tool to call.** Having retrieved the
+   FDA record, cite the FDA record. An answer that reaches the right tool and then quotes a news
+   article summarising it has thrown away the provenance it just earned — the reader ends up with a
+   worse source than the one you actually had in your hands.
+
+   This does not make the web useless on these topics: it is still where you go for what the FDA and
+   CMS have not published — a recall that broke this morning, a change announced but not yet in the
+   data. Reach for it to find what is *missing*, not to corroborate what you already retrieved."""
+
+#: Registered only when **both halves of the structured lane** exist, because the question it
+#: answers cannot be asked otherwise. docs/structured-api-tools.md §15 wrote this rule down and
+#: nothing carried it to the model until it was noticed missing against `plan.md`'s own Phase 3
+#: checklist — "which source is authoritative for a given question, and what the agent does when
+#: they disagree" is a capability, not a paragraph.
+_RECONCILIATION_STEP = """\
+**When the plan tables and the live APIs both bear on a question, choose by what is being asked.**
+   The vendored tables *are* the filing for a plan year: they are authoritative for what a plan
+   filed, they do not move, and they cost nothing to query. The live APIs are authoritative for what
+   is true **now** — what a formulary covers today, what a plan costs today, who a provider is
+   today. So "what did this plan file for 2026" is a table question even though a live endpoint
+   could be asked, and "is this drug covered" is a live question even though a table could be
+   quoted. Reaching past a table you hold to a rate-limited endpoint is as much a routing error as
+   the reverse.
+
+   **Your reference documents are subject to the same rule, and this is where it bites hardest.**
+   They describe how things worked when they were written, and some of what they describe *changes*:
+   which states run their own marketplace rather than using HealthCare.gov, what a programme costs
+   this year, what is on a formulary. When a question turns on the current state of one of those and
+   you hold a tool that can check it, **check it** — a confident paragraph in your corpus is not
+   evidence that nothing has moved since. Asked whether HealthCare.gov serves a particular state,
+   ask `find_plans`; it answers from what CMS is selling today.
+
+   **If the two disagree, say so and cite both.** Do not quietly prefer one. A reader cannot tell a
+   silent choice from a wrong answer, and two citations that differ is a better answer than one that
+   hides the difference — it is also how a real problem with one of the sources becomes visible
+   instead of staying buried."""
 
 _STEP_READ_WHAT_YOU_GOT = """\
 **Read what you retrieved.** A passage that merely mentions the topic is not an answer to the
@@ -245,6 +384,22 @@ _OUT_OF_REACH_WITH_PLANS = """\
   pharmacies;
 - a plan, drug or benefit your queries did not find, and any **plan year** the tables do not
   hold;"""
+
+#: The same clause once the live lane lands, and the correction is the most consequential in the
+#: phase: the two lines above are **instructions to abstain**, and both became false. NPPES names
+#: providers, and `find_plans` covers the current plan year whether or not a table does.
+#:
+#: Measured, not guessed. Asked "what plans can a 40-year-old buy in ZIP 27360", the agent abstained
+#: **without calling a single tool** — it had been told that plan years the tables do not hold are
+#: out of reach, and it believed it. This is the failure mode `system_prompt`'s docstring warns
+#: about in the more dangerous direction: stale text that tells the model to decline what it can now
+#: answer.
+_OUT_OF_REACH_WITH_PLANS_AND_LIVE = """\
+- **whether a provider is in a plan's network** — you can look a provider up by NPI, but no source
+  you have lists who a plan pays;
+- a plan, drug or benefit your lookups did not find. Note that a plan year your *tables* do not hold
+  may still be answerable live, and the reverse: a year the live API no longer sells is still in the
+  tables as filed;"""
 
 _OUT_OF_REACH_NO_WEB = """\
 - anything needing current news, a deadline for a year your documents do not cover, or a figure
@@ -321,19 +476,28 @@ your own summary. Cite the passage you actually used. Do not cite a passage you 
 the list."""
 
 
-def _sources(structured: bool, web: bool) -> str:
+def _sources(structured: bool, web: bool, live: bool, marketplace: bool) -> str:
     """What the agent holds besides the corpus, plus an accurate list of what it still does not."""
     paragraphs = []
     if structured:
         paragraphs.append(_SOURCES_STRUCTURED)
     if web:
         paragraphs.append(_SOURCES_WEB)
+    if live:
+        paragraphs.append(_SOURCES_LIVE)
+        paragraphs.append(_SOURCES_NPPES)
+    if marketplace:
+        paragraphs.append(_SOURCES_MARKETPLACE)
 
     missing = []
     if not structured:
         missing.append(_MISSING_PLANS)
     if not web:
         missing.append(_MISSING_WEB)
+    if not live:
+        missing.append(_MISSING_LIVE)
+    if not marketplace:
+        missing.append(_MISSING_MARKETPLACE)
     missing.append("no provider directories or networks, and no user account.")
     clause = " ".join(missing)
     # Wrapped rather than emitted as one long line. Nothing downstream cares, but this file is read
@@ -344,22 +508,31 @@ def _sources(structured: bool, web: bool) -> str:
     return "\n\n".join(paragraphs)
 
 
-def _out_of_reach(structured: bool, web: bool) -> str:
+def _out_of_reach(structured: bool, web: bool, live: bool, marketplace: bool) -> str:
     """When to abstain, with each landed lane's reason removed rather than left to mislead."""
-    reasons = [_OUT_OF_REACH_WITH_PLANS if structured else _OUT_OF_REACH_NO_PLANS]
+    if structured and live:
+        reasons = [_OUT_OF_REACH_WITH_PLANS_AND_LIVE]
+    elif structured:
+        reasons = [_OUT_OF_REACH_WITH_PLANS]
+    else:
+        reasons = [_OUT_OF_REACH_NO_PLANS]
     reasons.append(_OUT_OF_REACH_WITH_WEB if web else _OUT_OF_REACH_NO_WEB)
     reasons.append(_OUT_OF_REACH_ALWAYS)
     block = "\n".join(reasons)
-    return block + (_EMPTY_IS_NOT_NO if structured or web else "")
+    return block + (_EMPTY_IS_NOT_NO if structured or web or live or marketplace else "")
 
 
-def _self_description(structured: bool, web: bool) -> str:
+def _self_description(structured: bool, web: bool, live: bool, marketplace: bool) -> str:
     """How to answer a question about the agent itself, naming the lanes it actually holds."""
     lanes = ["the reference corpus"]
     if structured:
         lanes.append("the vendored plan tables")
     if web:
         lanes.append("live web search")
+    if live:
+        lanes.append("live FDA drug labelling and recalls")
+    if marketplace:
+        lanes.append("live HealthCare.gov plan prices and formularies")
     joined = (
         lanes[0]
         if len(lanes) == 1
@@ -375,12 +548,15 @@ def _self_description(structured: bool, web: bool) -> str:
     )
 
 
-def _citation_forms(structured: bool, web: bool) -> str:
+def _citation_forms(structured: bool, web: bool, live: bool, marketplace: bool) -> str:
     """How to form a citation, listing only the shapes this configuration can actually produce."""
-    if not structured and not web:
+    if not structured and not web and not live and not marketplace:
         return _CITATION_ONLY_PASSAGES
     forms = [_CITATION_PASSAGE]
-    if structured:
+    # One form for both halves of the structured lane, because a live record *is* a row
+    # (docs/structured-api-tools.md §14a) — same `row_id` + `cells` shape, same validator, same
+    # card. Listing it twice would invite the model to think there were two kinds.
+    if structured or live or marketplace:
         forms.append(_CITATION_ROW)
     if web:
         forms.append(_CITATION_WEB)
@@ -391,7 +567,13 @@ def _citation_forms(structured: bool, web: bool) -> str:
     )
 
 
-def system_prompt(toolset: Toolset, structured: bool = False, web: bool = False) -> str:
+def system_prompt(
+    toolset: Toolset,
+    structured: bool = False,
+    web: bool = False,
+    live: bool = False,
+    marketplace: bool = False,
+) -> str:
     """The instructions for one lane configuration.
 
     Composed rather than cached: it is a handful of string joins, and `runtime._build_agent`
@@ -415,13 +597,21 @@ def system_prompt(toolset: Toolset, structured: bool = False, web: bool = False)
         (_STEP_SEARCH_FIRST,)
         + _SEARCH_STEPS[toolset]
         + (_STRUCTURED_STEPS if structured else ())
-        + (_WEB_STEPS if web else ())
+        + (
+            (_WEB_STEP_FIRST_WITH_LIVE if live else _WEB_STEP_FIRST_NO_LIVE,) + _WEB_STEPS
+            if web
+            else ()
+        )
+        + ((_WEB_STEP_LIVE_OVERLAP,) if web and live else ())
+        + (_LIVE_STEPS if live else ())
+        + (_MARKETPLACE_STEPS if marketplace else ())
+        + ((_RECONCILIATION_STEP,) if structured and live else ())
         + (_STEP_READ_WHAT_YOU_GOT,)
     )
     return _PREAMBLE.format(
-        sources=_sources(structured, web), steps=_number(steps)
+        sources=_sources(structured, web, live, marketplace), steps=_number(steps)
     ) + _ANSWERING.format(
-        citation_forms=_citation_forms(structured, web),
-        self_description=_self_description(structured, web),
-        out_of_reach=_out_of_reach(structured, web),
+        citation_forms=_citation_forms(structured, web, live, marketplace),
+        self_description=_self_description(structured, web, live, marketplace),
+        out_of_reach=_out_of_reach(structured, web, live, marketplace),
     )

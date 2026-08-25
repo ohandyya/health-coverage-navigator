@@ -26,6 +26,7 @@ at a moment, not a source of truth.
 
 import argparse
 import asyncio
+import hashlib
 import sys
 import time
 from collections.abc import Callable, Sequence
@@ -47,6 +48,12 @@ from health_coverage_navigator.evals.answerers import AnswerFn
 from health_coverage_navigator.evals.grading import Grader
 from health_coverage_navigator.evals.loader import load_gold_set
 from health_coverage_navigator.evals.models import GoldQuestion, GoldSet
+from health_coverage_navigator.live.marketplace import (
+    MarketplaceClient,
+    MarketplaceNotConfiguredError,
+)
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.paths import EVAL_RUNS_DIR
 from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
 from health_coverage_navigator.structured.store import StructuredStore
@@ -119,6 +126,32 @@ def score_question(question: GoldQuestion, response: ChatResponse) -> EvalQuesti
       worse than an honest gap (docs/web_search_tool.md §12).
     """
     retrieved = [c.doc_id for c in response.citations if c.doc_id]
+
+    if question.is_live:
+        # **Checked before `is_structured`, which is load-bearing**: both halves of the lane carry
+        # `source_type: structured_api`, so a live question satisfies `is_structured` too — and the
+        # branch below would score it on `expected_cells` it is *forbidden* to carry
+        # (`GoldQuestion._check_shape`). The first Phase 3 sweep did exactly that and reported
+        # `structured_exact_match` 0.444 when all four mirror questions had scored 1.000: five
+        # guaranteed misses in the denominator, which is the "report a certainty as a finding"
+        # mistake `_build` already avoids one layer up.
+        #
+        # Graded like a web question and for the same reason (§16c): a formulary, a premium and a
+        # recall list all move underneath a stable question, so the stable thing to assert is that
+        # the answer rests on the lane it should. `lane_detail_correct` is what checks the tool.
+        lanes = [c.source_type for c in response.citations]
+        return EvalQuestionResult(
+            question_id=question.id,
+            passed=bool(lanes)
+            and not response.abstained
+            and lanes.count("structured_api") * 2 > len(lanes),
+            expected_source_type=question.expected_source_type,
+            expected_abstain=False,
+            abstained=response.abstained,
+            rank=None,
+            retrieved_doc_ids=retrieved,
+            tools_used=_tools_used(response),
+        )
 
     if question.is_structured:
         cited = "\n".join(
@@ -464,6 +497,7 @@ class RunPlan:
     toolset: str | None = None
     structured: bool | None = None
     web: bool | None = None
+    live: bool | None = None
     vectors_snapshot_id: str | None = None
 
 
@@ -473,6 +507,8 @@ async def _build(
     toolset: str | None,
     structured: bool | None,
     web: bool | None,
+    live: bool | None,
+    allow_demo_key: bool = False,
 ) -> RunPlan:
     """Resolve the flags into an answerer, the questions to ask it, and how to grade it.
 
@@ -535,12 +571,19 @@ async def _build(
     store = _open_structured() if lanes else None
     web_on = get_config().agent.web_tools if web is None else web
     searcher = _open_web() if web_on else None
+    live_on = get_config().agent.live_tools if live is None else live
+    # Refused here rather than at argument-parsing time, because whether the demo key matters
+    # depends on whether this run registers the Marketplace tools at all (§3a).
+    _refuse_the_demo_key(live_on, allow_demo_key)
+    openfda = OpenFdaClient.open() if live_on else None
+    nppes = NppesClient.open() if live_on else None
+    marketplace = _open_marketplace() if live_on else None
 
     # Routing is only measurable once there is more than one lane to route between, so the grader
     # goes on the agent runner and only when a second lane is registered. Phase 2 widens the same
     # metric to three lanes rather than introducing a second one — `routing_grader` itself is
     # unchanged, exactly as its docstring predicted.
-    if store is not None or searcher is not None:
+    if store is not None or searcher is not None or openfda is not None:
         graders.append(routing_grader())
 
     # Only ask a question the run can actually answer. A web question put to a run with no web lane
@@ -551,17 +594,45 @@ async def _build(
         questions += gold.structured()
     if searcher is not None:
         questions += gold.web()
+    if openfda is not None:
+        # Same rule as the two lanes above: only ask what this run can answer. A live question put
+        # to a run with no live clients scores a guaranteed miss, which would report a certainty as
+        # a finding.
+        live_questions = gold.live()
+        if marketplace is None:
+            # The Marketplace half is unconfigured, so drop the questions that need it rather than
+            # scoring them as routing failures. `expected_tools` is what says which those are.
+            marketplace_tools = {"find_drug", "check_drug_coverage", "find_plans"}
+            live_questions = [
+                q for q in live_questions if not (set(q.expected_tools) & marketplace_tools)
+            ]
+        questions += live_questions
 
     return RunPlan(
-        agent_answerer(index, vectors, resolved, store, searcher),
+        agent_answerer(index, vectors, resolved, store, searcher, openfda, nppes, marketplace),
         GoldSet(questions=sorted(questions, key=lambda q: gold.questions.index(q))),
         graders,
         model=get_config().agent.model,
         toolset=resolved,
         structured=store is not None,
         web=searcher is not None,
+        live=openfda is not None,
         vectors_snapshot_id=None if vectors is None else vectors.snapshot_id,
     )
+
+
+def _open_marketplace() -> "MarketplaceClient | None":
+    """The Marketplace client, or `None` when no key is configured.
+
+    Degrades rather than exiting, unlike `_open_structured` and `_open_web`. Those guard lanes that
+    are all-or-nothing; this one guards a *third* of a lane whose other two thirds are keyless, so
+    refusing to run would withhold two working sources over one missing credential.
+    """
+    try:
+        return MarketplaceClient.open()
+    except MarketplaceNotConfiguredError as exc:
+        print(f"  marketplace tools skipped: {exc}", file=sys.stderr)
+        return None
 
 
 def _open_structured() -> StructuredStore:
@@ -668,6 +739,59 @@ def _progress_printer(total: int) -> ProgressFn:
     return report
 
 
+#: SHA-256 of the shared demo key CMS publishes in its Marketplace quickstart. Stored as a **hash**
+#: rather than as the literal for the reason docs/structured-api-tools.md §3a gives: a 32-hex
+#: assignment in a tracked file is exactly what `make scan` exists to block, and the guard works
+#: just as well without ever carrying the value.
+_CMS_DEMO_KEY_SHA256 = "0352a2a77be5d83573f02aca5c26036dec88d20b6711541ea7ce1ed8516f62ba"
+
+
+def _refuse_the_demo_key(live_on: bool, allowed: bool = False) -> None:
+    """Stop an eval sweep that would call CMS with its *public demo* Marketplace key.
+
+    **Scoped to runs that actually register the Marketplace tools.** The first version fired
+    whenever the key was present, which blocked `--no-live` runs that could not have sent CMS a
+    single request — a guard that refuses work it does not protect is one people learn to route
+    around, which is worse than not having it.
+
+    §3a records why this is a rule rather than a comment: the key is shared with every reader of
+    CMS's quickstart, so a sweep on it is both a burden on a public resource and a source of 429s
+    that will look like a CMS outage — and **nothing else in the code can tell it apart from a real
+    key**. A hand-run call on it is fine and stays fine; this guards the one usage that is not.
+    """
+    if not live_on:
+        return
+    if allowed:
+        # `--allow-demo-key`. The rule stays and the override is explicit, logged, and visible in
+        # the shell history — which is the difference between a considered exception and a guard
+        # someone quietly deleted. Used when no personal key has arrived yet and the measurement
+        # is worth more than the ceremony; the traffic is still someone else's to pay for, so this
+        # is a per-run decision rather than a setting.
+        print(
+            "  WARNING: sweeping CMS on the SHARED PUBLIC DEMO KEY (--allow-demo-key). "
+            "Rate limits are shared with every other user of it.",
+            file=sys.stderr,
+        )
+        return
+
+    from health_coverage_navigator.settings import get_secrets
+
+    key = get_secrets().cms_marketplace_api_key
+    if key is None:
+        return
+    digest = hashlib.sha256(key.get_secret_value().strip().encode()).hexdigest()
+    if digest == _CMS_DEMO_KEY_SHA256:
+        raise SystemExit(
+            "CMS_MARKETPLACE_API_KEY is the shared demo key CMS publishes in its quickstart. It is "
+            "fine for hand-run calls and for recording fixtures, and wrong for a sweep: it is "
+            "rate-limited across everyone who uses it, so a sweep burdens a public resource and "
+            "will produce 429s that look like a CMS outage. Put your own key in `.env` (get one "
+            "at https://developer.cms.gov/marketplace-api/key-request.html), or pass "
+            "--allow-demo-key to override this deliberately, or --no-live to sweep without the "
+            "live lane."
+        )
+
+
 async def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the gold eval set and write the result to data/eval_runs/."
@@ -732,6 +856,26 @@ async def main() -> int:
             "see the note in the source before raising it. 1 runs sequentially. Default: 3."
         ),
     )
+    parser.add_argument(
+        "--live",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "register the Phase 3 live-API tools (openFDA, NPPES, CMS Marketplace). Defaults to "
+            "config.yaml. `--no-live` is the control arm for the tool-count question: it measures "
+            "whether six more tools cost anything on the questions that were already answerable."
+        ),
+    )
+    parser.add_argument(
+        "--allow-demo-key",
+        action="store_true",
+        help=(
+            "sweep CMS using the shared public demo key. Off by default for a reason "
+            "(docs/structured-api-tools.md §3a): the key is rate-limited across everyone who uses "
+            "it. Pass this only when the measurement is worth spending somebody else's allowance "
+            "on, and prefer a personal key."
+        ),
+    )
     parser.add_argument("--no-write", action="store_true", help="print the run instead of saving")
     args = parser.parse_args()
     if args.concurrency < 1:
@@ -746,13 +890,26 @@ async def main() -> int:
             f"--structured applies to the agent runner; the {args.runner} runner has no lanes to "
             f"route between."
         )
+    if args.live is not None and args.runner != "agent":
+        raise SystemExit(
+            f"--live applies to the agent runner; the {args.runner} runner has no lanes to "
+            f"route between."
+        )
     if args.web is not None and args.runner != "agent":
         raise SystemExit(
             f"--web applies to the agent runner; the {args.runner} runner has no lanes to "
             f"route between."
         )
 
-    plan = await _build(args.runner, args.judge, args.toolset, args.structured, args.web)
+    plan = await _build(
+        args.runner,
+        args.judge,
+        args.toolset,
+        args.structured,
+        args.web,
+        args.live,
+        args.allow_demo_key,
+    )
 
     # Printed before the first call rather than after, so the cost is visible while there is still
     # time to interrupt it.

@@ -79,7 +79,44 @@ class Secrets(BaseSettings):
         ),
     )
 
-    @field_validator("tavily_api_key", mode="before")
+    #: **Optional, like `tavily_api_key` and for the same reason** — but with one difference worth
+    #: recording: a missing Tavily key removes the *whole* web lane, while a missing Marketplace key
+    #: removes only part of the live lane. openFDA and NPPES are keyless
+    #: (docs/structured-api-tools.md §4, §5), so `agent.live_tools: true` with no key here is a
+    #: perfectly coherent deployment — two of three sources work, and the agent is told which
+    #: questions it therefore cannot answer rather than the lane refusing to start.
+    #:
+    #: Carries the same blank-is-none treatment as Tavily's, for the same `cp .env.example .env`
+    #: trap. And one hazard neither of the others has: **CMS keys expire every 60 days**, so this
+    #: value goes stale on a schedule rather than only when someone changes it. A rotation needs
+    #: `.env` edited *and* the process restarted, since this class is frozen behind an `lru_cache`.
+    cms_marketplace_api_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "CMS Marketplace API key (Phase 3 live lane). Server-side only — never expose via a "
+            "VITE_* var. Expires every 60 days; CMS emails a replacement."
+        ),
+    )
+
+    #: **Optional, and the reason it exists is a reversal worth recording.** §4 of
+    #: docs/structured-api-tools.md decided against requesting an openFDA key: the keyless ceiling
+    #: is 1,000 requests/day per *IP*, and per-drug lookups do not approach it. That reasoning still
+    #: holds for a hand-run question; what it did not survive is the eval sweep, whose worst case
+    #: was measured at 78% of a single day's allowance — the exact tripwire §4 wrote down.
+    #:
+    #: So a key is now configured, and the field is optional because the decision it reverses is
+    #: still half-true: **without this the FDA tools work perfectly well**, just at the lower
+    #: ceiling. That is the difference from `cms_marketplace_api_key`, whose absence removes tools
+    #: entirely.
+    openfda_api_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "openFDA API key. Optional — the FDA tools work without it at 1,000 requests/day per "
+            "IP; with it, 120,000/day per key. Server-side only."
+        ),
+    )
+
+    @field_validator("tavily_api_key", "cms_marketplace_api_key", "openfda_api_key", mode="before")
     @classmethod
     def _blank_is_none(cls, value: object) -> object:
         """An unset key and a whitespace-only key are the same thing: no key."""

@@ -120,7 +120,7 @@ def test_answer_question_returns_the_done_payload(agent_kit):
         events = [e async for e in stream_answer(request, agent_kit.index)]
         return events[-1], await answer_question(request, agent_kit.index)
 
-    with build_agent(structured=False, web=False).override(
+    with build_agent(structured=False, web=False, live=False).override(
         model=agent_kit.script(agent_kit.SEARCH, answer)
     ):
         done, direct = asyncio.run(both())

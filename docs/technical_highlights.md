@@ -7,8 +7,9 @@ was rejected, and what evidence exists that it works.
 
 This is a *presentation* index. The reference docs the pages point at carry the full reasoning —
 [agent.md](agent.md), [chunking.md](chunking.md), [lancedb.md](lancedb.md),
-[relational-tool.md](relational-tool.md), [web_search_tool.md](web_search_tool.md) — and
-[progress.md](progress.md) carries the history.
+[relational-tool.md](relational-tool.md), [web_search_tool.md](web_search_tool.md),
+[structured-api-tools.md](structured-api-tools.md) — and [progress.md](progress.md) carries the
+history.
 
 ---
 
@@ -118,3 +119,56 @@ publisher gave it.
 
 Latest run: `structured_exact_match` **1.000**, `routing_correct` **1.000**, and recall on the
 reference questions unchanged against a paired `--no-structured` run.
+
+---
+
+## 6. [Three APIs, three ways of saying "nothing" — and why an empty result is an answer](highlights/live-api-edge-cases.md)
+
+Phase 2's rule was *an outage must never be served as an answer*. Phase 3 needs the inverse too, and
+it is the harder half: ask *"has atorvastatin been recalled?"* and the honest reply is often **no** —
+which the FDA delivers as an **HTTP 404**. A client written the obvious way calls that a failure, and
+the agent hedges on the one question the endpoint exists to answer. Nothing throws, nothing logs, no
+test goes red.
+
+Three upstreams, three conventions for that one meaning: openFDA a **404**, NPPES a **200** with
+`result_count: 0`, CMS a **400** whose text distinguishes *"that state runs its own exchange"* from a
+real rejection. Two of those are codes every HTTP library treats as an error. So there is no shared
+"is it empty" helper — one that was right for two of them would be wrong for the third — and instead
+a very small shared base under three separately-argued mappings. `describe_status()` enforces the
+rule **by omission**: it has no 404 branch, so any path that lets one reach it produces a visibly
+wrong sentence rather than a plausible one.
+
+That yields three outcomes where most agent code has two: **retry** what the model called wrongly
+(`ModelRetry` naming what to send instead), **degrade** what the world broke (`unavailable` as a
+first-class field, phrased as an instruction the model reads before deciding whether to answer), and
+**answer** what the world genuinely says is absent — including emitting a **citable row for the
+absence**, because a true finding with nothing to cite forces a false abstention or a worse source.
+Measured: it once had CMS's own answer in hand, had nothing to point at, and cited a web page
+instead.
+
+---
+
+## 7. [The system prompt is composed per configuration, because a stale sentence is an instruction](highlights/composed-prompt.md)
+
+The agent ships in **48 shapes** — three retrieval toolsets × four independent lane booleans — and
+the eval sweep runs paired arms across them deliberately. One hardcoded prompt is wrong in 47, and
+the ways it is wrong escalate. It **corrupts the measurement** first: describe a tool a run does not
+have and an A/B between configurations partly measures how well each copes with a misleading prompt.
+Then it gets expensive, because **stale text is an instruction to abstain** — every pre-Phase-2
+variant listed "anything needing current news" as out of reach, and Phase 3 measured the agent
+declining *"what plans can a 40-year-old buy in ZIP 27360"* **without calling a single tool.** It had
+been told it could not.
+
+So every lane-dependent region composes from per-lane fragments — sources, search guidance, steps,
+citation forms, self-description, and the abstention list, where **each landed lane removes a reason
+to abstain**. Three rules came out of the failures: state capabilities **affirmatively** and generate
+the absences from the same booleans (a lane described only in the negative is one the model drops
+when asked what it can do — observed); **replace** superseded text rather than rebutting it (keeping
+the old sentence and adding a correction produced an agent that called `drug_recalls`, got 44
+recalls, and cited the web anyway — *a prompt that argues with itself is resolved by the model, not
+by the author*); and let some paragraphs exist only at an **intersection**, since "which source wins,
+the vendored table or the live API" cannot be asked unless both are registered.
+
+The other half is what the prompt deliberately does *not* say. Everything a validator or a usage
+limit can enforce is enforced in code, leaving only the judgement calls — and one appealing
+instruction is omitted because a guardrail would have overruled it and spent the retry budget losing.

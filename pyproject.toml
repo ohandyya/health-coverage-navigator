@@ -40,6 +40,12 @@ dev = [
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]
+# `tests/` is not a package and `scripts/` is not installed, so both are imported by path at
+# runtime — `tests/test_synthetic.py` checks the synthetic-NPI generator against the *scanner's own*
+# `npi_luhn` validator, which is the point of that test (two independent implementations that must
+# agree). Without this, pyright cannot resolve either module and the check fails on an import that
+# works fine.
+extraPaths = ["scripts", "tests"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"

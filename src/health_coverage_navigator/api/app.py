@@ -30,6 +30,12 @@ from health_coverage_navigator.api.routes import chat, corpus, evals, health
 from health_coverage_navigator.config import get_config
 from health_coverage_navigator.corpus import load_doc_index
 from health_coverage_navigator.evals.loader import load_gold_set
+from health_coverage_navigator.live.marketplace import (
+    MarketplaceClient,
+    MarketplaceNotConfiguredError,
+)
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.paths import FRONTEND_DIST
 from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
 from health_coverage_navigator.structured.store import StructuredStore
@@ -200,6 +206,45 @@ def _load_web() -> WebSearchClient | None:
         return None
 
 
+def _load_openfda() -> OpenFdaClient | None:
+    """The live lane's openFDA client, or `None` when the configuration excludes it.
+
+    **The only lane loader in this file with no failure mode**, which is worth stating rather than
+    leaving as an absence: openFDA takes no credential and reads no local artifact, so there is
+    nothing here to be missing or stale (docs/structured-api-tools.md §4). No `try`, no warning, no
+    degraded state — a clone of this repo has a working FDA lane on checkout.
+    """
+    if not get_config().agent.live_tools:
+        return None
+    return OpenFdaClient.open()
+
+
+def _load_nppes() -> NppesClient | None:
+    """The NPI registry client, or `None` when the configuration excludes it. Keyless, so like
+    `_load_openfda` this has no failure mode."""
+    if not get_config().agent.live_tools:
+        return None
+    return NppesClient.open()
+
+
+def _load_marketplace() -> MarketplaceClient | None:
+    """The CMS Marketplace client, or `None` with an explanation on the console.
+
+    The shape of `_load_web` — one failure mode, a missing credential — with a different
+    *consequence*. A missing Tavily key makes the web lane unanswerable and `routes/chat.py` turns
+    that into a 503. A missing Marketplace key leaves two of the three live sources working, so it
+    degrades: the tools go unregistered, the prompt stops claiming them, and the agent says it
+    cannot price plans instead of the app refusing to boot.
+    """
+    if not get_config().agent.live_tools:
+        return None
+    try:
+        return MarketplaceClient.open()
+    except MarketplaceNotConfiguredError as exc:
+        logger.warning("marketplace tools unavailable: %s", exc)
+        return None
+
+
 def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
     """Build the application.
 
@@ -247,6 +292,9 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             vectors=None if stub else await _load_vectors(),
             structured=None if stub else _load_structured(),
             web=None if stub else _load_web(),
+            openfda=None if stub else _load_openfda(),
+            nppes=None if stub else _load_nppes(),
+            marketplace=None if stub else _load_marketplace(),
         )
         app.state.ctx = ctx
         try:
@@ -264,6 +312,13 @@ def create_app(*, dist_dir: Path | None = None, stub: bool = False) -> FastAPI:
             # reason the DuckDB connection is closed here rather than left to process exit.
             if ctx.web is not None:
                 await ctx.web.close()
+            # Same reason again: an `httpx.AsyncClient` owns a connection pool.
+            if ctx.openfda is not None:
+                await ctx.openfda.close()
+            if ctx.nppes is not None:
+                await ctx.nppes.close()
+            if ctx.marketplace is not None:
+                await ctx.marketplace.close()
             app.state.ctx = None
 
     app = FastAPI(

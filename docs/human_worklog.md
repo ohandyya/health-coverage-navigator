@@ -31,7 +31,58 @@ AI (e.g., Claude) should **NOT** read this document.
     - Fix test errors
     - Summarize the change
 
+
+## Known Bugs
+
+- Fix citation bug
+
+    - See for description at docs/negative-finding-gaps.md
+
 ## Work Log
+
+
+### Aug 22, 2026
+
+#### TO Dos
+
+- [Done] Remove my github repo URL from `USER_AGENT`
+
+- [Done] Use real openFDA API key
+
+- [Done] Manual UI walkthrough
+
+- [Done] Code walkthrough
+
+    - What is the cache mechnism for external live APIs?
+
+#### Worthy of adding to highlight
+
+- [Done] How Live API Handle edge cases
+    - Three upstreams, three auth mechanisms, three envelopes — and, critically, three different ways of saying "nothing matched". openFDA says it with an HTTP 404, CMS says it with a 400 carrying prose, NPPES says it with result_count: 0 inside a 200. 
+    - describe_status
+
+- [Done] Dynamic systme prompt based the selected tools
+
+    - `system_prompt`
+
+#### Questions
+
+- Is there an suggested ordering on the tools? Is it anywhere in the prompt?
+
+    - Desired ordering
+
+        - local database tool
+        - structured API
+        - web tools
+
+- [Done] How does the citation work for structured API? by id? by url? Verify this in UI manually.
+
+#### API Requesat status
+
+- `Marketplace API` API 
+
+    - https://developer.cms.gov/marketplace-api/
+    - Request access on Aug 22, 2026
 
 ### Aug 19, 2026
 

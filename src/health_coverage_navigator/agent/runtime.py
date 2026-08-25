@@ -59,6 +59,9 @@ from health_coverage_navigator.api.models import (
     Usage,
 )
 from health_coverage_navigator.config import Toolset, get_config
+from health_coverage_navigator.live.marketplace import MarketplaceClient
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.settings import get_secrets
 from health_coverage_navigator.structured.catalog import source_label, source_url
 from health_coverage_navigator.structured.models import Row
@@ -131,6 +134,8 @@ def build_agent(
     toolset: Toolset | None = None,
     structured: bool | None = None,
     web: bool | None = None,
+    live: bool | None = None,
+    marketplace: bool | None = None,
 ) -> Agent[AnswerDeps, AgentAnswer]:
     """The one agent. Every later phase registers more tools here rather than building another.
 
@@ -140,8 +145,9 @@ def build_agent(
     `agent.override(...)` on the instance they hold, so a second instance means the override
     silently does not apply and the run goes to the real provider — which is exactly how this was
     found. Phase 1b added a second defaulted argument and took the bug again; Phase 1-c added a
-    third and took it a second time. **Phase 2 adds a fourth.** Every one of them is resolved here,
-    and `tests/conftest.py`'s `AgentKit._agent` derives the key the same way `stream_answer` does.
+    third and took it a second time. Phase 2 added a fourth. **Phase 3 adds a fifth.** Every one of
+    them is resolved here, and `tests/conftest.py`'s `AgentKit._agent` derives the key the same way
+    `stream_answer` does.
     """
     config = get_config().agent
     return _build_agent(
@@ -149,14 +155,19 @@ def build_agent(
         toolset or config.toolset,
         config.structured_tools if structured is None else structured,
         config.web_tools if web is None else web,
+        config.live_tools if live is None else live,
+        # Defaults to the live flag rather than to a config key of its own: whether the Marketplace
+        # half is registered is a fact about whether a *credential* exists on this machine, which
+        # `config.yaml` must not encode (docs/configuration.md). `app.py` passes the real answer.
+        (config.live_tools if live is None else live) if marketplace is None else marketplace,
     )
 
 
-#: Three toolsets x two lane booleans x two lane booleans x a handful of models. Sized so a
-#: `make eval` sweep across configurations does not evict the agent it is about to reuse.
-@lru_cache(maxsize=48)
+#: Three toolsets x three lane booleans x a handful of models. Doubled at Phase 3 for the axis it
+#: adds, so a `make eval` sweep across configurations does not evict the agent it is about to reuse.
+@lru_cache(maxsize=128)
 def _build_agent(
-    model: str, toolset: Toolset, structured: bool, web: bool
+    model: str, toolset: Toolset, structured: bool, web: bool, live: bool, marketplace: bool
 ) -> Agent[AnswerDeps, AgentAnswer]:
     """Cached because construction resolves the credential and builds every tool schema.
 
@@ -172,8 +183,8 @@ def _build_agent(
         _resolve_model(model),  # type: ignore[arg-type]
         deps_type=AnswerDeps,
         output_type=AgentAnswer,
-        instructions=system_prompt(toolset, structured, web),
-        tools=select_tools(toolset, structured, web),
+        instructions=system_prompt(toolset, structured, web, live, marketplace),
+        tools=select_tools(toolset, structured, web, live, marketplace),
         # Retries are the grounding guardrail's budget: a rejected answer is re-attempted with the
         # validator's complaint attached. Two is enough for the realistic failures (a mistyped
         # chunk id, a paraphrased quotation) and short of enough to burn a run on a model that has
@@ -243,6 +254,13 @@ def _validate_grounding(ctx: RunContext[AnswerDeps], answer: AgentAnswer) -> Age
     return answer
 
 
+#: Above this length a cell is treated as a passage to quote from rather than a value to reproduce.
+#: Sized from measurement, not feel: the longest real cell in the vendored mirrors is a benefit
+#: description in the low hundreds of characters, while the shortest FDA label section observed was
+#: 500 and a contraindications section runs to 11,000. Anything above this is prose by construction.
+_PROSE_CELL_CHARS = 400
+
+
 def _validate_row_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation) -> None:
     """The relational lane's half of the grounding guardrail.
 
@@ -252,6 +270,19 @@ def _validate_row_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation)
     quotations. **A cell has no wrapping to survive**, and its whitespace is data — `'$4,500 '`
     carries a trailing space that distinguishes the published value from a tidied one — so this
     comparison is byte-exact, and deliberately stricter than the chunk path.
+
+    **One exception, added at Phase 3: a prose cell is quoted from, not reproduced.** A live-API
+    record can carry a cell that is not a value but a passage — an FDA label's indications section
+    measured 2,199 characters, and its warnings sections run to 11,000. Demanding a byte-exact copy
+    of those asks the model to reproduce a page verbatim to cite a sentence, which it cannot do and
+    should not have to; the first Phase 3 sweep spent its whole retry budget failing exactly that.
+
+    So above `_PROSE_CELL_CHARS` the test becomes **verbatim containment** — the cited text must
+    appear in the cell, character for character, with no normalisation. That is the same guarantee
+    the chunk path gives for passages, reached for the same reason, and it is strictly weaker than
+    equality only in *how much* must match, never in whether the words are real. §14a said "a record
+    is not prose"; it is right about a recall and a premium and wrong about a label section, and
+    this is where that correction lands.
     """
     row = ctx.deps.seen_rows.get(citation.row_id or "")
     if row is None:
@@ -274,7 +305,15 @@ def _validate_row_citation(ctx: RunContext[AnswerDeps], citation: AgentCitation)
                 f"{citation.row_id!r}, but that cell is NULL — the query produced no value there. "
                 f"Do not report a value for it."
             )
-        if value != actual:
+        if len(actual) > _PROSE_CELL_CHARS:
+            # A passage, not a value: quote from it. Containment, still byte-exact within the quote.
+            if value not in actual:
+                raise ModelRetry(
+                    f"Citation {citation.id} quotes {column!r} as {value!r}, which does not appear "
+                    f"in that cell. This cell holds a passage — copy a span of it exactly, word "
+                    f"word, rather than summarising it."
+                )
+        elif value != actual:
             raise ModelRetry(
                 f"Citation {citation.id} gives {column!r} as {value!r}, but the row holds "
                 f"{actual!r}. Copy the cell exactly, including any spaces, commas or symbols; "
@@ -332,11 +371,15 @@ def _row_citation(citation: AgentCitation, row: Row) -> Citation:
     `doc_id` and `chunk_id` stay `None`: these are the first citations in this repo that are not
     chunks, and the frontend renders that as a different card rather than an empty drill-down.
     """
-    label = (
-        f"{source_label(row.source)} · {row.view.rsplit('/', 1)[-1]} ({row.partition})"
-        if row.source and row.partition
-        else "Structured query result"
-    )
+    # A live-API record names itself, because nothing else can: it has no partition, and the
+    # useful thing to tell a reader is which label version or which registry answered
+    # (docs/structured-api-tools.md §14c). A mirror row keeps the triple it always had.
+    if row.title:
+        label = row.title
+    elif row.source and row.partition:
+        label = f"{source_label(row.source)} · {row.view.rsplit('/', 1)[-1]} ({row.partition})"
+    else:
+        label = "Structured query result"
     return Citation(
         id=citation.id,
         # `structured_api` has meant *deterministic row-level lookup* since Phase 0. Whether the
@@ -344,7 +387,11 @@ def _row_citation(citation: AgentCitation, row: Row) -> Citation:
         # citation, not a fourth lane — so nothing about the contract moves here.
         source_type="structured_api",
         title=label,
-        url=source_url(row.source),
+        # A live record's own query URL when it has one, and the source dataset otherwise. This is
+        # the first time a structured-lane citation links to the exact record rather than to the
+        # dataset it lives in, and it needed no contract change to do it — `Citation.url` has been
+        # there since Phase 0 and `CitationCard` already renders both branches.
+        url=row.url or source_url(row.source),
         doc_id=None,
         chunk_id=None,
         snippet="\n".join(
@@ -494,6 +541,9 @@ async def stream_answer(
     vectors: VectorIndex | None = None,
     structured: StructuredStore | None = None,
     web: WebSearchClient | None = None,
+    openfda: OpenFdaClient | None = None,
+    marketplace: MarketplaceClient | None = None,
+    nppes: NppesClient | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Answer one question, as the SSE event sequence the frontend already renders.
 
@@ -519,6 +569,9 @@ async def stream_answer(
         vectors=vectors,
         structured=structured,
         web=web,
+        openfda=openfda,
+        marketplace=marketplace,
+        nppes=nppes,
         plan_year=request.plan_year,
     )
     conversation_id = request.conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
@@ -541,7 +594,14 @@ async def stream_answer(
     # No store, no structured tools — whatever the configuration says. `routes/chat.py` turns a
     # configured-but-missing store into a 503 before this point; a caller that builds deps by hand
     # (a test, a script) gets a reference-only agent rather than tools that would raise on use.
-    agent = build_agent(model, toolset, structured=structured is not None, web=web is not None)
+    agent = build_agent(
+        model,
+        toolset,
+        structured=structured is not None,
+        web=web is not None,
+        live=openfda is not None or marketplace is not None or nppes is not None,
+        marketplace=marketplace is not None,
+    )
     buffers: dict[int, str] = {}
     streamed = ""
     drained = 0
@@ -671,6 +731,9 @@ async def answer_question(
     vectors: VectorIndex | None = None,
     structured: StructuredStore | None = None,
     web: WebSearchClient | None = None,
+    openfda: OpenFdaClient | None = None,
+    marketplace: MarketplaceClient | None = None,
+    nppes: NppesClient | None = None,
 ) -> ChatResponse:
     """The same answer, without the stream.
 
@@ -685,6 +748,9 @@ async def answer_question(
         vectors=vectors,
         structured=structured,
         web=web,
+        openfda=openfda,
+        marketplace=marketplace,
+        nppes=nppes,
     ):
         if isinstance(event, DoneEvent):
             return event.response

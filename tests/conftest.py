@@ -48,6 +48,8 @@ from health_coverage_navigator.agent.runtime import answer_question, build_agent
 from health_coverage_navigator.api.models import ChatRequest, ChatResponse, StreamEvent
 from health_coverage_navigator.chunking.models import Chunk
 from health_coverage_navigator.config import StructuredConfig, Toolset
+from health_coverage_navigator.live.marketplace import MarketplaceClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.paths import PROCESSED_DIR
 from health_coverage_navigator.structured.catalog import STRUCTURED_SOURCES
 from health_coverage_navigator.structured.store import StructuredStore
@@ -195,6 +197,46 @@ def web_client(*results: dict, unavailable_status: int | None = None) -> WebSear
     return WebSearchClient.open(client=AsyncTavilyClient(api_key="k", client=http))
 
 
+FDA_TEXT = "Examplor is indicated to treat the example condition."
+
+
+def openfda_client(
+    *, sections: dict[str, list[str]] | None = None, status: int | None = None
+) -> OpenFdaClient:
+    """A real `OpenFdaClient` over an `httpx.MockTransport`.
+
+    The real client rather than a stand-in, for the reason `web_client` gives: a hand-written fake
+    would let an agent test pass while `live/openfda.py` did something else. `status=404` is the
+    one worth naming — it is openFDA's "nothing matched", which the agent tests need in order to
+    assert that an empty result reaches the model as an *answer* rather than an outage.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if status is not None:
+            return httpx.Response(status, json={"error": {"code": "NOT_FOUND"}})
+        if "enforcement" in request.url.path:
+            return httpx.Response(200, json={"meta": {"results": {"total": 0}}, "results": []})
+        return httpx.Response(
+            200,
+            json={
+                "meta": {"disclaimer": "Do not rely on openFDA for medical decisions."},
+                "results": [
+                    {
+                        "effective_time": "20240415",
+                        "openfda": {
+                            "brand_name": ["Examplor"],
+                            "generic_name": ["EXAMPLE SUBSTANCE"],
+                            "rxcui": ["111111"],
+                        },
+                        **(sections or {"indications_and_usage": [FDA_TEXT]}),
+                    }
+                ],
+            },
+        )
+
+    return OpenFdaClient.open(transport=httpx.MockTransport(handler))
+
+
 def web_result(url: str = WEB_URL, content: str = WEB_TEXT, **extra) -> dict:
     """One Tavily-shaped result payload, as the mocked transport would send it."""
     return {"url": url, "title": "Open Enrollment", "content": content, "score": 0.9, **extra}
@@ -317,6 +359,8 @@ class AgentKit:
     WEB_URL = WEB_URL
     WEB_RESULT_ID = WEB_RESULT_ID
     web_client = staticmethod(web_client)
+    openfda_client = staticmethod(openfda_client)
+    FDA_TEXT = FDA_TEXT
     web_result = staticmethod(web_result)
     DEDUCTIBLE_ID = DEDUCTIBLE_ID
     PREMIUM_ID = PREMIUM_ID
@@ -330,10 +374,12 @@ class AgentKit:
         toolset: Toolset | None = None,
         structured: StructuredStore | None = None,
         web: WebSearchClient | None = None,
+        openfda: OpenFdaClient | None = None,
+        marketplace: MarketplaceClient | None = None,
         plan_year: int | None = None,
     ) -> ChatResponse:
         """One full agent run against the scripted turns."""
-        with self._agent(toolset, structured, web).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured, web, openfda).override(model=scripted_model(*turns)):
             return asyncio.run(
                 answer_question(
                     ChatRequest(message=message, plan_year=plan_year),
@@ -342,6 +388,8 @@ class AgentKit:
                     vectors=self.vectors,
                     structured=structured,
                     web=web,
+                    openfda=openfda,
+                    marketplace=marketplace,
                 )
             )
 
@@ -352,6 +400,8 @@ class AgentKit:
         toolset: Toolset | None = None,
         structured: StructuredStore | None = None,
         web: WebSearchClient | None = None,
+        openfda: OpenFdaClient | None = None,
+        marketplace: MarketplaceClient | None = None,
         plan_year: int | None = None,
     ) -> list[StreamEvent]:
         """Every SSE event one run emits, in order."""
@@ -367,10 +417,11 @@ class AgentKit:
                     vectors=self.vectors,
                     structured=structured,
                     web=web,
+                    openfda=openfda,
                 )
             ]
 
-        with self._agent(toolset, structured, web).override(model=scripted_model(*turns)):
+        with self._agent(toolset, structured, web, openfda).override(model=scripted_model(*turns)):
             return asyncio.run(drain())
 
     @staticmethod
@@ -378,6 +429,8 @@ class AgentKit:
         toolset: Toolset | None,
         structured: StructuredStore | None,
         web: WebSearchClient | None = None,
+        openfda: OpenFdaClient | None = None,
+        marketplace: MarketplaceClient | None = None,
     ):
         """The agent `stream_answer` will use for these arguments — not a similar one.
 
@@ -388,16 +441,26 @@ class AgentKit:
         Phase 1-c added the second axis, and `ALLOW_MODEL_REQUESTS = False` is what turned a
         would-be billing incident into a test failure.
 
-        **Phase 2 adds a fourth axis, i.e. a fourth chance at the same bug.** This derivation must
-        stay identical to `stream_answer`'s — both spell it `<handle> is not None`.
+        Phase 2 added a fourth axis. **Phase 3 adds a fifth and a sixth**, i.e. two more chances
+        at the same bug — and it took the sixth on the first try, because `live` is derived from
+        *either* live client while `marketplace` is derived from one. This derivation must stay
+        identical to `stream_answer`'s, line for line.
         """
-        return build_agent(toolset=toolset, structured=structured is not None, web=web is not None)
+        return build_agent(
+            toolset=toolset,
+            structured=structured is not None,
+            web=web is not None,
+            live=openfda is not None or marketplace is not None,
+            marketplace=marketplace is not None,
+        )
 
     def expect_rejection(
         self,
         *turns: Any,
         structured: StructuredStore | None = None,
         web: WebSearchClient | None = None,
+        openfda: OpenFdaClient | None = None,
+        marketplace: MarketplaceClient | None = None,
         plan_year: int | None = None,
     ) -> str:
         """Run a script that never satisfies the validator, and return its last complaint.
@@ -409,7 +472,7 @@ class AgentKit:
         """
         with (
             capture_run_messages() as messages,
-            self._agent(None, structured, web).override(model=scripted_model(*turns)),
+            self._agent(None, structured, web, openfda).override(model=scripted_model(*turns)),
             pytest.raises(UnexpectedModelBehavior),
         ):
             asyncio.run(
@@ -418,6 +481,8 @@ class AgentKit:
                     self.index,
                     structured=structured,
                     web=web,
+                    openfda=openfda,
+                    marketplace=marketplace,
                 )
             )
 

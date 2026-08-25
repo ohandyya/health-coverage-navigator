@@ -25,7 +25,10 @@ Reference docs: [development.md](docs/development.md) (commands, gates, toolchai
 [lancedb.md](docs/lancedb.md) · [relational-tool.md](docs/relational-tool.md) (Phase 1-c: the
 structured lane's design — tools, SQL guard, row citations) ·
 [web_search_tool.md](docs/web_search_tool.md) (Phase 2: the web lane's design — Tavily client,
-budgets, web citations, three-lane routing evals) · per-source data guides
+budgets, web citations, three-lane routing evals) ·
+[structured-api-tools.md](docs/structured-api-tools.md) (Phase 3: the live half of the structured
+lane — API-key access, the three verified contracts, and the implementation plan) ·
+per-source data guides
 (`*_data.md`) · [data/README.md](data/README.md) (layout + per-source licensing).
 
 **Presentation, not reference:** [technical_highlights.md](docs/technical_highlights.md) indexes
@@ -94,7 +97,11 @@ Full list, links, and rationale: [docs/plan.md](docs/plan.md) → *Data sources*
   mirror that Phase 1-c's relational tools query in place — read, never reshaped.
 - **NPPES and openFDA are used live via their APIs and never vendored.** Both publish bulk
   downloads; both are per-record lookups, so a mirror buys staleness and storage for nothing. **Do
-  not add a bulk downloader for either.** Consequence: no provider-level data is ever vendored here.
+  not add a bulk downloader for either.** Consequence: **no real provider-level data is ever vendored
+  here** — which from Phase 3 also governs *fixtures*, since a recorded response is stored data.
+  Provider fixtures are **synthesised** (Luhn-valid synthetic NPIs, synthetic names/addresses/phones,
+  allowlisted in `sensitive_baseline.toml`); never record a real one. See
+  [structured-api-tools.md](docs/structured-api-tools.md) §8a.
 
 ## Glossary — KEEP CURRENT (a standing rule, not a one-time task)
 
@@ -162,7 +169,7 @@ rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0�
 | **1b** | `vector_search` over LanceDB, **alongside** the 1a tools, not replacing them. Toolset (`lexical`/`vector`/`both`) is a per-run flag | lexical vs. vector vs. both |
 | **1c** | The **structured lane**: `list_tables` / `describe_table` / `query_structured` over the vendored PUF mirrors, DuckDB querying Parquet in place. Design: [relational-tool.md](docs/relational-tool.md) | structured-lookup correctness + prose-vs-rows routing |
 | **2** | Web search — `web_search` over **Tavily** (decided, not measured against Exa; not a scraped SERP) as a third lane. Design: [web_search_tool.md](docs/web_search_tool.md) | routing across three lanes |
-| **3** | Typed tools for Marketplace API, openFDA, NPPES + rate limits, caching, fixtures | tri-modal routing |
+| **3** | Typed tools for Marketplace API, openFDA, NPPES + rate limits, caching, fixtures. Design: [structured-api-tools.md](docs/structured-api-tools.md) | tri-modal routing |
 | **4** | Planning and decomposition, per-claim provenance, tracing, cycle detection + hop ceiling | multi-hop + citation accuracy |
 | **5** | Plan comparison, drug costs, network checks, appeals, "what changed" monitor — over the Phase 1-c query tools, not a new backend | regression suite |
 

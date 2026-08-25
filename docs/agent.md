@@ -42,7 +42,7 @@ quote it exactly.
 | `bm25.py` | the ranking formula and an inverted index. Standard library only |
 | `index.py` | `CorpusIndex` — the chunks and the four lexical primitives. No `pydantic_ai` import |
 | `models.py` | what the *model* sees: `ChunkHit` in, `AgentAnswer` out |
-| `prompt.py` | `system_prompt(toolset, structured)` — the grounding rule, plus per-configuration guidance |
+| `prompt.py` | `system_prompt(toolset, structured, web, live, marketplace)` — the grounding rule, plus instructions composed per configuration (§3a) |
 | `deps.py` | `AnswerDeps` — the run-scoped trace and the two citable sets |
 | `tools.py` | the five reference-lane tools and `select_tools` |
 | `structured_tools.py` | the three relational-lane tools |
@@ -93,20 +93,24 @@ unbounded `k` is a context-window problem before it is a latency one) and
 Python's engine — a length cap does not make catastrophic backtracking impossible, it removes the
 room to construct one by accident).
 
-## 3. What the agent can see is a per-run choice — on three independent axes
+## 3. What the agent can see is a per-run choice — on five independent axes
 
-`config.Toolset` is `lexical | vector | both`; `agent.structured_tools` and `agent.web_tools` are
-booleans. `tools.select_tools(toolset, structured, web)` turns the three into the registered list
-and `prompt.system_prompt(toolset, structured, web)` into the matching instructions. `config.yaml`
-sets what the app ships (`both`, both lanes on); `--toolset`, `--structured` / `--no-structured`
-and `--web` / `--no-web` override them for one eval run, and the run record carries all three. That
-is what makes each comparison **one runner with a flag rather than several code paths**
-(docs/plan.md §1b).
+`config.Toolset` is `lexical | vector | both`; `agent.structured_tools`, `agent.web_tools` and
+`agent.live_tools` are booleans, and `marketplace` is a fifth axis that is **not** a config key —
+it records whether a CMS credential exists on this machine, which `config.yaml` must not encode
+(docs/configuration.md). `tools.select_tools(toolset, structured, web, live, marketplace)` turns
+them into the registered list and
+`prompt.system_prompt(toolset, structured, web, live, marketplace)` into the matching instructions.
+`config.yaml` sets what the app ships (`both`, every lane on); `--toolset`, `--structured` /
+`--no-structured`, `--web` / `--no-web` and `--live` / `--no-live` override them for one eval run,
+and the run record carries them. That is what makes each comparison **one runner with a flag rather
+than several code paths** (docs/plan.md §1b).
 
 **Booleans rather than more `Toolset` values**, because they select different things: `toolset`
-picks how the *reference lane* is searched, while `structured` and `web` each pick whether another
-*lane* exists at all. Folding them together would make twelve combinations, most of them
-meaningless, and would redefine the three names Phase 1b's measurement is already recorded under.
+picks how the *reference lane* is searched, while the others pick whether another *lane* — or, for
+`live`, another *half* of a lane — exists at all. Folding them together would make dozens of
+combinations, most of them meaningless, and would redefine the three names Phase 1b's measurement is
+already recorded under.
 
 Three things about it are load-bearing rather than incidental:
 
@@ -115,13 +119,10 @@ orient; they do not rank. Dropping them from the vector-only run would fold "los
 widen a hit" into the lexical-vs-vector number, and nothing downstream could separate the two
 effects again. `grep_corpus` *is* retrieval by content, so it travels with the lexical set.
 
-**The prompt composes with the toolset.** It used to be one constant asserting that search matches
-"on words, not meaning" and naming `grep_corpus` — both false in a vector-only run. Describing a
-tool the agent does not have is not a cosmetic flaw in an eval: it would make the comparison partly
-a measurement of how well each configuration copes with misleading instructions.
-`tests/test_agent.py` asserts that no prompt names a tool its toolset does not register.
+**The prompt composes with every axis**, which is enough of a design to have its own subsection —
+§3a below.
 
-**`_build_agent` caches on `(model, toolset, structured, web)`.** Two agents that differ in what
+**`_build_agent` caches on `(model, toolset, structured, web, live, marketplace)`.** Two agents that differ in what
 they can do must not share one cached object, and every default is resolved *before* the lookup —
 docs/progress.md records the Phase 1a bug where `build_agent()` and `build_agent(None)` were two
 cache keys and an `override` silently went to the real provider. Each new defaulted argument is
@@ -129,12 +130,88 @@ another chance at exactly that, and **every phase since has taken it.** Phase 1-
 key made every agent test build a *structured* agent while the run under test built a reference-only
 one, so the override applied to an object nobody used and the run tried to reach OpenAI. Phase 2:
 adding the fourth key broke three tests that pinned `structured=` explicitly and let `web` default,
-producing the identical mismatch. The suite-wide `ALLOW_MODEL_REQUESTS = False` is what turned a
-would-be bill into a red test both times.
+producing the identical mismatch. **Phase 3 added a fifth *and* a sixth key and took the bug on the
+sixth**, because `live` is derived from *either* live client while `marketplace` is derived from
+one. The suite-wide `ALLOW_MODEL_REQUESTS = False` is what turned a would-be bill into a red test
+every time.
 
-`tests/conftest.py`'s `AgentKit._agent` derives the key the same way `stream_answer` does, and
-`tests/test_web_agent.py::test_each_lane_configuration_is_a_separate_cached_agent` now asserts the
-property directly — so the fifth axis, whenever it arrives, fails a test instead of a bill.
+`tests/conftest.py`'s `AgentKit._agent` must derive the key the same way `stream_answer` does, line
+for line, and
+`tests/test_web_agent.py::test_each_lane_configuration_is_a_separate_cached_agent` asserts the
+property directly — so a new axis fails a test instead of a bill. **Known deviation as of Phase 3:**
+`AgentKit._agent` accepts `marketplace` but its three call sites do not pass it, and `AgentKit.stream`
+does not forward it to `stream_answer` either. Harmless only because no test currently drives a
+Marketplace client through the kit; the first one that does will hit exactly the mismatch above.
+
+### 3a. The prompt composes with every axis
+
+Three toolsets × five lane booleans is **48 configurations** the same code can take, and the eval
+sweep runs paired arms across them on purpose. A single hardcoded prompt is wrong in 47 of them, and
+the ways it is wrong escalate:
+
+1. **It corrupts the measurement.** The original prompt asserted that search matches "on words, not
+   meaning" and named `grep_corpus` — both false in a vector-only run. Describing a tool the agent
+   does not have is not a cosmetic flaw in an eval: it makes the comparison partly a measurement of
+   how well each configuration copes with misleading instructions.
+2. **Stale text becomes an instruction to abstain**, which is the dangerous direction. Every
+   pre-Phase-2 variant listed *"anything needing current news"* as a reason to abstain — with the web
+   lane registered, that declines the questions the lane was added for. Phase 3 hit it harder:
+   the abstention list said plan years the tables do not hold are out of reach, and, measured, the
+   agent declined *"what plans can a 40-year-old buy in ZIP 27360"* **without calling a single tool.**
+3. **A lane described only in the negative disappears.** Asked what it could do, a three-lane run
+   described the corpus and the tables and never mentioned the web — every other reference to that
+   lane was a hedge.
+4. **A prompt that contradicts itself is resolved by the model, not by the author.** The first Phase 3
+   attempt kept the Phase 2 sentence naming "a recent recall" as a reason to search the web and
+   *added* a step saying the web is the wrong source for recalls. Measured: the agent called
+   `drug_recalls`, got 44 recalls, searched the web anyway, and cited the web.
+
+Maintaining one prompt per combination is 48 documents that drift on the first edit. So every
+lane-dependent region is assembled from per-lane fragments — **one copy of each sentence** — and that
+means every region, not just the tool list: what the agent holds, the search guidance, the numbered
+steps, the citation forms, the self-description, and the abstention list, where **each landed lane
+removes a reason to abstain.**
+
+Four properties make it hold:
+
+**Capabilities are affirmative; absences are generated.** Each lane owns one positive paragraph, and
+the closing "you have no access to anything else" clause is built from the same booleans, so it can
+never survive a lane landing. Leading with the capability is a fix for failure 3 — and
+`_self_description` closes the loop from the other side, naming the lanes from the booleans and
+telling the model to give the last the same weight as the first.
+
+**Superseded text is replaced, never rebutted.** There are two mutually exclusive versions of the
+"the web is the last place to look" step, and the live-lane variant simply does not contain the
+recall example. That is the whole fix for failure 4.
+
+**Some fragments exist only at an intersection.** `_WEB_STEP_LIVE_OVERLAP` needs `web and live`;
+`_RECONCILIATION_STEP` needs `structured and live`, because "which source wins when the vendored
+table and the live API disagree" cannot be asked unless both are registered (§15 of
+[structured-api-tools.md](structured-api-tools.md)). Neither can be owned by a single lane's
+fragment.
+
+**Structure is generated, not transcribed.** Steps are stored unnumbered and numbered at render,
+replacing a hand-maintained `step=6 if structured else 4` — one magic number per combination. A
+mis-numbered list is a small but real signal to the model that the instructions were not written for
+the tools it has.
+
+**What the prompt deliberately does not say** is the other half of the design. Everything a guardrail
+can enforce is enforced: it does not ask the model to cite only what it retrieved (`seen_chunks` plus
+the output validator make that impossible rather than requested), does not ask for verbatim snippets
+on trust (§4 checks them), and does not ask the model to limit its tool calls (`UsageLimits` does).
+What is left is what only the model can do — which tool to reach for, when the evidence is enough,
+and when to say it does not know. The corollary is that **an instruction that fights a guardrail
+loses expensively**: `_self_description` deliberately omits "no citations needed" for a question
+about the agent itself, because `_validate_grounding` refuses a non-abstained answer with an empty
+citation list and that instruction would spend the retry budget losing the argument.
+
+Asserted per axis rather than assumed: `tests/test_agent.py` (toolset),
+`tests/test_web_agent.py::test_the_prompt_only_promises_lanes_the_run_actually_has` and
+`::test_the_prompt_tells_the_agent_to_name_every_lane_it_holds` (web, and failure 3),
+`tests/test_live_agent.py::test_the_prompt_describes_the_lane_only_when_it_exists`,
+`::test_the_prompt_claims_the_marketplace_only_when_it_is_registered` and
+`::test_the_reconciliation_rule_reaches_the_model_only_with_both_halves` (live, marketplace, and the
+intersection). Each `#:` comment in `agent/prompt.py` records the failure its fragment fixes.
 
 ## 4. The grounding guardrail is code
 

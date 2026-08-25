@@ -32,7 +32,7 @@ CMS publishes nine PUF tables per plan year (2014–2026); this downloader fetch
 | **Service Area** | 8,820 | 14 | Which counties/ZIPs a plan's `ServiceAreaId` covers |
 
 **Service Area is included even though `docs/plan.md` names only the first two.** Without it
-there is no way to answer the plan's own example question — *"find plans in ZIP 30076"* — since
+there is no way to answer the plan's own example question — *"find plans in ZIP 27360"* — since
 Plan Attributes carries a `ServiceAreaId` but not the ZIP-to-area mapping itself. It is also
 tiny (44 KB zipped), so including it is nearly free.
 

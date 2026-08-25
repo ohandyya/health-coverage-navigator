@@ -145,7 +145,12 @@ yearly costs. Interface highlights: [Cms](https://developer.cms.gov/marketplace-
 - Base: `https://marketplace.api.healthcare.gov/api/v1/`
 - Drug autocomplete → RxCUI: `GET /drugs/autocomplete?q={query}&apikey={key}`
 - Drug coverage check: `GET /drugs/covered?year={yr}&drugs={rxcui}&planids={planid}&apikey={key}`
-- Plan search + cost estimates: `POST /households/eligibility/estimates`
+- Plan search: `POST /plans/search` — takes a `PlanSearchRequest` (household, place, market, year)
+- Cost estimates (APTC/CSR): `POST /households/eligibility/estimates` — **a different endpoint**,
+  returning subsidy eligibility rather than plans
+
+The full contract, and how far its published spec can be trusted, is
+[structured-api-tools.md](structured-api-tools.md) §7.
 
 You request a key via the CMS developer portal; note API keys are rate limited, with the limit
 passed back in the response headers. There's also a companion **Finder API** for private health
@@ -489,6 +494,10 @@ web-sourced answer — and the agent chose the right lane on its own.
 
 ### Phase 3 — Add structured-API tools
 
+**[structured-api-tools.md](structured-api-tools.md) is the design document for this phase** — which
+sources need a credential and how to obtain one, and, as the phase is built, the endpoint contracts
+and the typed wrappers over them.
+
 Put live sources into the structured lane: the Marketplace API (plan/drug/provider lookups),
 openFDA (drug facts/recalls), and NPPES (provider lookup), wrapped as **typed tools** — Pydantic
 models in and out, so a malformed API response is a validation error rather than plausible-looking
@@ -507,10 +516,21 @@ provider and get a deterministic answer, not prose from a document.
 
 **User-facing capability**
 - [ ] Run precise lookups:
-  - *"find plans in ZIP 30076 for a family of 3"*
+  - *"find plans in ZIP 27360 for a family of 3"*
   - *"is drug X covered under plan Y"*
   - *"what's this NPI's specialty"*
   - *"has drug X been recalled"*
+
+> **ZIP corrected from 30076 to 27360 (2026-08-22), and the reason is a fact about the API rather
+> than a typo.** The Marketplace API serves **only the states that use HealthCare.gov**; a state
+> running its own exchange returns `400 "state is not a valid marketplace state"` — verified for
+> CA, GA and NY, against NC and TX which work. ZIP 30076 is in **Georgia**, which moved to its own
+> marketplace, so the original acceptance test could never have passed however well the phase was
+> built. 27360 is in North Carolina, which uses HealthCare.gov.
+>
+> The Georgia case was kept rather than discarded: it is a gold question of its own, because a 400
+> there is an **answer** — *that state runs its own marketplace* — and not an outage or an absence
+> of plans. See [structured-api-tools.md](structured-api-tools.md) §10d.
 
 **Software capability**
 - [ ] Typed tool wrappers (Pydantic models) for Marketplace API, openFDA, and NPPES, registered beside the Phase 1-c mirror tools in the same lane
