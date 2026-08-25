@@ -47,6 +47,16 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - What is the cache mechnism for external live APIs?
 
+- Fix citation bug
+
+    - See for description at docs/negative-finding-gaps.md
+
+#### Worthy of adding to highlight
+
+- How Live API Handle edge cases
+    - Three upstreams, three auth mechanisms, three envelopes — and, critically, three different ways of saying "nothing matched". openFDA says it with an HTTP 404, CMS says it with a 400 carrying prose, NPPES says it with result_count: 0 inside a 200. 
+    - describe_status
+
 #### Questions
 
 - Is there an suggested ordering on the tools? Is it anywhere in the prompt?
