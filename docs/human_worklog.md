@@ -38,7 +38,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
     - See for description at docs/negative-finding-gaps.md
 
-- Run `make scan` and address any issues
+- [Fixed] Run `make scan` and address any issues
 
     - See docs/deps/2026-08-26.md for context
 
