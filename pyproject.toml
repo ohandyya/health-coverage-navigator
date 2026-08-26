@@ -9,16 +9,16 @@ dependencies = [
     "duckdb>=1.5.5",
     "fastapi>=0.141.1",
     "lancedb>=0.37.1",
-    "openai>=3.0.0",
+    "openai>=3.3.1",
     "pyarrow>=25.0.1",
     "pydantic>=2.13.4",
-    "pydantic-ai>=2.30.0",
+    "pydantic-ai>=2.35.0",
     "pydantic-settings>=2.15.0",
-    "pypdf>=6.14.2",
+    "pypdf>=6.16.2",
     "pyyaml>=6.0.3",
     "requests>=2.34.2",
-    "tavily-python>=0.7.27",
-    "uvicorn[standard]>=0.52.3",
+    "tavily-python>=0.8.0",
+    "uvicorn[standard]>=0.52.4",
 ]
 
 [project.scripts]
@@ -30,12 +30,12 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "httpx2>=2.10.0",
-    "pre-commit>=4.6.0",
+    "httpx2>=2.12.0",
+    "pre-commit>=4.6.2",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
-    "ruff>=0.15.20",
+    "ruff>=0.16.4",
 ]
 
 [tool.pyright]
@@ -54,6 +54,13 @@ typeCheckingMode = "standard"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.format]
+# ruff 0.16 began formatting Python code blocks inside Markdown by default. The docs under `docs/`
+# align inline comments in their code blocks on purpose — they are read as prose, not compiled —
+# and the formatter collapses that alignment. Excluding Markdown holds this gate at exactly the
+# scope it had before the 0.16 bump: every `.py` file in the repo is still formatted and checked.
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [

@@ -210,7 +210,7 @@ that is the only path, the honest outcomes are:
   propose it, do not just do it.
 - **Report the upgrade as blocked** and leave the rest of the batch upgraded.
 
-Either way, the user hears about it in §11. A silenced gate does not.
+Either way, the user hears about it in §12. A silenced gate does not.
 
 ## 8. Bump the floors in `pyproject.toml`
 
@@ -299,7 +299,45 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 
 **Then stop.** No `git push`, no `gh pr create` — the user opens the PR.
 
-## 11. Report
+## 11. Write the PR description
+
+The user opens the PR (§10), so hand them something to paste. Write **one file**, and do not make
+them assemble it from scrollback.
+
+**Path:** `docs/deps/` plus the branch's last segment — branch `deps/2026-08-26` becomes
+`docs/deps/2026-08-26.md`. The branch's own `deps/` prefix is already the directory; do not nest it
+again into `docs/deps/deps/`. For a branch that is not `deps/<date>`, use its full name with `/`
+replaced by `-`.
+
+**Leave it unstaged.** This skill's commit permission is the upgrade series and nothing else (see
+the preamble). The file is a paste-ready artifact, not project documentation — it is not governed
+by §9, it never records status the way [progress.md](../../../docs/progress.md) does, and the user
+decides whether it is committed, pasted and deleted, or kept as a record. Say which you did.
+
+Write it for **a reviewer who did not watch the run**. That reviewer's questions are: what moved,
+what did it cost, what did you decide on my behalf, and how do I know it works. Derive every line
+from the commits and the gate output — do not re-narrate the session, and never paste a key, a
+token, or command output containing one.
+
+The sections a dependency PR needs:
+
+| Section | Carries |
+| --- | --- |
+| **Summary** | Two or three sentences: what upgraded, why now, gates green or not. |
+| **What moved** | The table — package, old → new, tier. Direct dependencies first, then any transitive worth naming (a major always is). |
+| **Breaking-shaped changes** | One subsection each, with the upstream change, what it cost here, and why it is safe. This is the part a reviewer actually reads. |
+| **Decisions made for the reviewer** | Anything you chose that a reasonable person could have chosen differently — a config change, a pin, an adopted or declined default. State the alternative you rejected. If the user answered a question during the run, that answer belongs here. |
+| **Held back / blocked** | With the reason and what would unblock it. Never omit to look tidy (§7). |
+| **Verification** | Every gate you ran and its result, naming any you skipped and why. Evidence, not adjectives — "454 tests", "manifests reproduce", not "all good". |
+| **Pre-existing issues found** | Anything you hit that the upgrade did not cause. Say explicitly that it is not from this PR, and show the evidence that places the blame elsewhere. |
+| **Commits** | One line each, saying what reverts with what — the §10 split is only useful if the reviewer knows it exists. |
+| **How to verify locally** | The exact commands, including the money ones and what they cost. |
+
+Two failure modes to avoid: a wall of version numbers the reviewer must diff `uv.lock` to
+understand, and a confident "all green" that quietly omits a skipped gate. The table shows the
+numbers; the prose is for what a reader cannot see.
+
+## 12. Report
 
 Short. A clean upgrade of eight patch releases is worth five lines.
 
@@ -310,6 +348,22 @@ Short. A clean upgrade of eight patch releases is worth five lines.
 4. **Anything you asked permission for** and are still waiting on.
 5. **Which gates you actually ran**, naming any you skipped and why (a missing key, most likely).
    A skipped `smoke` is not a passed `smoke`.
+6. **Where the PR description is** — the §11 path, and whether you left it staged, unstaged, or
+   committed. The user is about to paste it; do not make them go looking for it.
+7. **How to push the branch**, with the real branch name substituted — never a placeholder:
+
+   ```bash
+   git push -u origin deps/2026-08-26
+   ```
+
+   Still do not run it yourself (§10); the user pushes and opens the PR. **The `-u` is
+   load-bearing.** §1 created the branch with `git switch -c … origin/main`, which sets its
+   upstream to **`origin/main`** — not to a branch of its own name. A bare `git push` is therefore
+   refused for the name mismatch, and the first fix Git suggests in that error,
+   `git push origin HEAD:main`, would land the whole upgrade series directly on `main`, bypassing
+   the squashed-PR flow every commit in this repo has gone through. Say so when you hand over the
+   command. `-u` re-points tracking at the new remote branch, so the next plain `git push` is
+   correct.
 
 ## When to abandon
 

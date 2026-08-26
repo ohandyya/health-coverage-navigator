@@ -50,6 +50,11 @@ A `Makefile` wraps every gate — `make help` lists them all.
   Only `tests/test_evals.py` is async, because the answerer/grader seam and `run_gold_set` are; the
   agent tests deliberately stay synchronous and call `asyncio.run` at the boundary
   (`tests/conftest.py`), since they exercise a synchronous API.
+- **`ruff format` deliberately skips Markdown.** Ruff 0.16 began formatting Python code blocks
+  inside `.md` files by default; `[tool.ruff.format] exclude = ["*.md"]` turns that back off. The
+  code blocks under `docs/` align their inline comments for reading, and the formatter collapses
+  that alignment across 10 files. Every `.py` file is still formatted and gated — the exclusion
+  holds the gate at the scope it had before 0.16, it does not narrow it.
 - **Pyright's `include` covers `src`, `tests`, and `scripts`.** A type bug in a test file is a real
   typecheck failure, not something that only surfaces if the file happens to be open in an editor.
   It covered only `src` for weeks, and real bugs sat in `tests/` behind a green check.
