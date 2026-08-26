@@ -625,17 +625,56 @@ Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves
   self-reported an English URL. Deduping in the chunker would have silently stamped Spanish titles
   onto 21 English pages.
 
-**Five custom skills encode procedures that are easy to get wrong**, in
-[`.claude/skills/`](.claude/skills/):
-[`scan-sensitive`](.claude/skills/scan-sensitive/SKILL.md) (the pre-publish guardrail),
-[`sync-frontend`](.claude/skills/sync-frontend/SKILL.md) (propagate a contract change through
-codegen — deliberately *not* about `make types`, which is one line, but about the seams codegen
-cannot see), [`upgrade-deps`](.claude/skills/upgrade-deps/SKILL.md) (a dependency bump end to end —
-whose real content is proving the gates were green *before* the upgrade, and the line between a test
-failure it may fix and an application failure it must ask about),
-[`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
-`progress.md`), and [`walkthrough`](.claude/skills/walkthrough/SKILL.md) (hand a change set over one
-step at a time, pausing after each so the human reads the files rather than a summary of them).
+### Five custom skills, and the bar for writing one
+
+A [skill](.claude/skills/) is a Markdown procedure the assistant loads **on demand** — when a
+request matches its description, or on an explicit `/name` — so it costs no context until the
+moment it applies. That makes the interesting question *what deserves to be one*, and the bar here
+is deliberately high: **a procedure that is only commands belongs in the `Makefile`**, which is
+where `make scan` and `make types` already live. A skill earns its place when the commands are the
+easy half and the hard half is a **judgment call** — the decision an assistant would otherwise make
+plausibly, wrongly, differently every session, and with no record of why.
+
+| Skill | What it does | Use it when |
+|---|---|---|
+| [`scan-sensitive`](.claude/skills/scan-sensitive/SKILL.md) | Runs the pre-publish scanner, then **triages every hit** — a real leak, a regex bug, or genuinely publishable — and resolves each one rather than listing it | Before committing or pushing · after vendoring anything under `data/` · *"did I just leak something?"* |
+| [`sync-frontend`](.claude/skills/sync-frontend/SKILL.md) | Propagates an API-contract change through codegen, follows the compiler, then checks **the seams the compiler cannot see** | After changing a Pydantic model under `api/`, or adding or renaming a route |
+| [`upgrade-deps`](.claude/skills/upgrade-deps/SKILL.md) | A dependency bump end to end: prove the gates were green *before* touching anything, upgrade, bisect the breakage, bump the floors, write the PR description | *"update the dependencies"* · a single package bump · *"what's outdated?"* |
+| [`wrap-up`](.claude/skills/wrap-up/SKILL.md) | Closes a session — appends the *Did / Decided / Rejected / Dead end / Stopped at* entry to `progress.md`, rewrites the current-state block, and sweeps the README | At the end of a working session, before the context is lost |
+| [`walkthrough`](.claude/skills/walkthrough/SKILL.md) | Hands a change set over one step at a time — purpose, then the three-to-ten lines that carry the idea, then what to read in what order — and **stops** | Reviewing AI-written code you have not read yet |
+
+**What each one actually encodes** is the rule that would otherwise be re-derived under pressure:
+
+- **`scan-sensitive`: the order of operations after a leak.** Deleting the line fixes nothing — the
+  value is already in history and possibly in someone's clone, so it is *rotate at the provider
+  first*, then remove, then purge. And a false positive is a **pattern bug to fix, not a finding to
+  allowlist**: an allowlist entry silences this instance while leaving the bad pattern free to bury
+  the next true positive of the same shape. It also forbids printing a secret value while reporting
+  one — a scanner that reprints secrets into a shareable transcript is a leak amplifier.
+- **`sync-frontend`: the failure codegen cannot catch.** `make types` is one line and needs no
+  skill. The content is the table of things that stay green and break at runtime — above all that
+  `client.ts` hand-writes its URL strings, so a **renamed route compiles clean and 404s in the
+  browser**. It also says where to *stop*: a new field that could be displayed gets reported and
+  asked about, never rendered, because the UI tracks the phases rather than leading them.
+- **`upgrade-deps`: a permission line, and a floor under the gates.** Tests, fixtures and lint churn
+  it fixes on its own; anything under `src/` that changes runtime behaviour it must stop and ask
+  about. And it may **never reach a green gate by weakening one** — no `# noqa`, no `skip`, no
+  widened `Any`. Pinning a package back with a comment naming what blocks it is a legitimate
+  outcome; a silenced gate is not.
+- **`wrap-up`: never overstate, and never write what git already knows.** Counts and eval numbers
+  are read out of the artifacts, not out of the conversation; *What does not work yet* is treated as
+  the load-bearing list, because an item that quietly stops being true is the worst failure a public
+  README can have.
+- **`walkthrough`: the pause is the whole point.** One step per turn, ending the turn every time —
+  the rule an agent erodes first, because two steps always look adjacent. A follow-up question is
+  not permission to advance, and neither is silence. It also refuses to invent a rationale for code
+  it cannot account for: *"I can see what this does but not why"* is the honest answer.
+
+These are not hypothetical rules. `scan-sensitive` carries its two worked false positives because
+both really happened — a bare `sk-` pattern matching inside the URL slug
+`ask-about-preventive-services`, and an NPI detector firing on any Luhn-valid 10-digit run, which
+reported digits inside a UUID. Both were fixed in the pattern and pinned with anti-canaries so they
+cannot regress, and the skill teaches that fix rather than the workaround.
 
 **A standing rule the assistant must obey: keep the glossary current.** Any change introducing a
 domain term adds its entry in the *same* change — and an entry must say what the term means *in
@@ -649,6 +688,7 @@ acronym.
 ```
 health_coverage_navigator/
 ├── CLAUDE.md                     # invariants the assistant must obey
+├── .claude/skills/               # 5 on-demand procedures the assistant loads by name
 ├── Makefile                      # every gate and workflow — `make help`
 ├── config.yaml                   # ⭐ every non-secret tunable — committed, never env-overridable
 ├── .env.example                  # secrets template; the real .env is git-ignored
