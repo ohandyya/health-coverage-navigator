@@ -18,7 +18,7 @@
 # "ask-about-preventive-services". The fix was a tighter pattern, not an entry here.
 
 [meta]
-updated = "2026-07-31"
+updated = "2026-08-26"
 note = "Advisory counts are a baseline, not a target. Investigate a jump, not a nonzero."
 
 # --------------------------------------------------------------------------- #
@@ -73,6 +73,20 @@ marker = "pii:email"
 match = "*@adsmovil.com"
 reason = "Role mailbox in HealthCare.gov Spanish-language outreach content."
 added = "2026-07-31"
+
+# Git's no-reply mailbox for Claude's Co-Authored-By trailer, per CLAUDE.md's commit
+# convention. It appears in prose wherever a commit message is quoted as an example — the
+# upgrade-deps skill's §10 template, and the dependency-upgrade write-ups that cite it — and
+# will keep reappearing for the same reason. Not a person's address and not a deliverable
+# one: anthropic.com's noreply box accepts no mail. Listed as the exact literal rather than
+# `*@anthropic.com`, so any other address at that domain still surfaces as drift. The entry
+# necessarily makes this file e-mail-shaped in the same way the INSTAMED entry below does,
+# but needs no self-reference twin: it carries no `path`, so it clears its own quotation too.
+[[allow]]
+marker = "pii:email"
+match = "noreply@anthropic.com"
+reason = "Git no-reply address in the Co-Authored-By trailer that CLAUDE.md mandates, quoted in commit-message examples under .claude/skills/ and docs/deps/. Not a personal mailbox."
+added = "2026-08-26"
 
 # Not an e-mail address at all — an issuer's InstaMed payment-portal account identifier,
 # formatted like one, embedded in the Plan Attributes PUF's URLForEnrollmentPayment column
