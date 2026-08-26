@@ -23,7 +23,7 @@ AI (e.g., Claude) should **NOT** read this document.
     - User confirm which one to add
     - Then AI add
 
-4. Use AI to upgrade python package
+4. [Done] Use AI to upgrade python package
 
     - Ask AI to check for the packages we use
     - Upgrade them
@@ -32,11 +32,15 @@ AI (e.g., Claude) should **NOT** read this document.
     - Summarize the change
 
 
-## Known Bugs
+## Known Issues
 
 - Fix citation bug
 
     - See for description at docs/negative-finding-gaps.md
+
+- Run `make scan` and address any issues
+
+    - See docs/deps/2026-08-26.md for context
 
 ## Work Log
 
