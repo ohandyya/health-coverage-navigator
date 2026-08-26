@@ -35,7 +35,7 @@ dev = [
     "pyright>=1.1.411",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
-    "ruff>=0.15.20",
+    "ruff>=0.16.4",
 ]
 
 [tool.pyright]
@@ -54,6 +54,13 @@ typeCheckingMode = "standard"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.format]
+# ruff 0.16 began formatting Python code blocks inside Markdown by default. The docs under `docs/`
+# align inline comments in their code blocks on purpose — they are read as prose, not compiled —
+# and the formatter collapses that alignment. Excluding Markdown holds this gate at exactly the
+# scope it had before the 0.16 bump: every `.py` file in the repo is still formatted and checked.
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [
