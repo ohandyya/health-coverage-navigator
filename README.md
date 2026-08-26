@@ -625,12 +625,15 @@ Rejected / Dead end / Stopped at*. A few of the entries that paid for themselves
   self-reported an English URL. Deduping in the chunker would have silently stamped Spanish titles
   onto 21 English pages.
 
-**Four custom skills encode procedures that are easy to get wrong**, in
+**Five custom skills encode procedures that are easy to get wrong**, in
 [`.claude/skills/`](.claude/skills/):
 [`scan-sensitive`](.claude/skills/scan-sensitive/SKILL.md) (the pre-publish guardrail),
 [`sync-frontend`](.claude/skills/sync-frontend/SKILL.md) (propagate a contract change through
 codegen — deliberately *not* about `make types`, which is one line, but about the seams codegen
-cannot see), [`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
+cannot see), [`upgrade-deps`](.claude/skills/upgrade-deps/SKILL.md) (a dependency bump end to end —
+whose real content is proving the gates were green *before* the upgrade, and the line between a test
+failure it may fix and an application failure it must ask about),
+[`wrap-up`](.claude/skills/wrap-up/SKILL.md) (close a session by updating
 `progress.md`), and [`walkthrough`](.claude/skills/walkthrough/SKILL.md) (hand a change set over one
 step at a time, pausing after each so the human reads the files rather than a summary of them).
 
