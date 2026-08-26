@@ -310,6 +310,20 @@ Short. A clean upgrade of eight patch releases is worth five lines.
 4. **Anything you asked permission for** and are still waiting on.
 5. **Which gates you actually ran**, naming any you skipped and why (a missing key, most likely).
    A skipped `smoke` is not a passed `smoke`.
+6. **How to push the branch**, with the real branch name substituted — never a placeholder:
+
+   ```bash
+   git push -u origin deps/2026-08-26
+   ```
+
+   Still do not run it yourself (§10); the user pushes and opens the PR. **The `-u` is
+   load-bearing.** §1 created the branch with `git switch -c … origin/main`, which sets its
+   upstream to **`origin/main`** — not to a branch of its own name. A bare `git push` is therefore
+   refused for the name mismatch, and the first fix Git suggests in that error,
+   `git push origin HEAD:main`, would land the whole upgrade series directly on `main`, bypassing
+   the squashed-PR flow every commit in this repo has gone through. Say so when you hand over the
+   command. `-u` re-points tracking at the new remote branch, so the next plain `git push` is
+   correct.
 
 ## When to abandon
 
