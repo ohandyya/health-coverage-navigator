@@ -39,7 +39,7 @@ Full reasoning: [docs/plan.md](docs/plan.md).
 ## Technical highlights
 
 **If you are here to read the engineering, start with
-[docs/technical_highlights.md](docs/technical_highlights.md).** Five mechanisms written up in full —
+[docs/technical_highlights.md](docs/technical_highlights.md).** Seven mechanisms written up in full —
 each stating the problem, the approach, the obvious alternative that was rejected, and the evidence
 that it works:
 
@@ -50,6 +50,8 @@ that it works:
 | ["Missing" and "wrong" are different failures, and get opposite treatment](docs/highlights/missing-vs-stale.md) | Degrade when the system is visibly reduced; refuse when it would be invisibly wrong. One rule, four resources, a different policy at each call site |
 | [A model will call your tools wrongly — so every rejection is written as a correction](docs/highlights/tool-retries.md) | A bad regex or a wrong column name is a first draft, not an error. Every rejection says what broke, which value broke it, and **what to send instead** — and the failures a retry cannot fix degrade instead |
 | [Letting a model write SQL — safely, successfully, and with every number citable](docs/highlights/model-written-sql.md) | Two independent guards on model-written SQL, the mechanisms that make the model's queries *succeed*, and a byte-exact citation for a table cell |
+| [Three APIs, three ways of saying "nothing" — and why an empty result is an answer](docs/highlights/live-api-edge-cases.md) | *"No recalls on record"* arrives from the FDA as an HTTP **404**. Written the obvious way, a client calls that a failure and the agent abstains on a question it just answered. Three upstreams, three empty-result conventions, and the citable row every one of them has to leave behind |
+| [The system prompt is composed per configuration, because a stale sentence is an instruction](docs/highlights/composed-prompt.md) | The agent ships in 48 shapes; one hardcoded prompt is wrong in 47. Measured here: a sentence left standing after the tool it described was replaced made the agent abstain without calling a single tool |
 
 ---
 
@@ -64,7 +66,7 @@ that it works:
 > prices and formularies — or, for something none of them can know, searches the open web and cites
 > the page. It says *"not in my reference material"* when the question falls outside all four.
 >
-> **Phase 3's own metric is 6/6** — every live question reached the right tool — and the six new
+> **Phase 3's own metric is 7/7** — every live question reached the right tool — and the six new
 > tools cost the reference slice nothing measurable. What is *not* built is **network** data: the
 > NPI registry says what a provider *is*, never which plans pay them, so *"which dermatologists take
 > Aetna"* is still correctly declined and is now dated to Phase 5 rather than this one.
@@ -88,25 +90,25 @@ a *pre-existing* streaming bug the web lane happened to expose.
 | **The relational lane** | DuckDB queries the vendored CMS plan mirrors **in place** — no load step, 53 ms to open and verify 10 tables, 3–16 ms a lookup. Model-written SQL is guarded twice: one `SELECT` only (statement-type checked before execution), on a connection sandboxed to `data/processed/` with external access off and configuration locked. Escape attempts are a test, not a claim |
 | **The web lane** | `web_search` over Tavily, and the provenance problem it creates is the interesting part: a model can write a *plausible URL it never retrieved*, and unlike an invented chunk id nobody could tell by looking. So a web citation names a `result_id` only a search can assign. A rate limit or outage returns an `unavailable` result the model must report — never an empty list, so an outage cannot be served as "the web does not cover this" |
 | **The live lane** | Three upstreams behind six typed tools, and the rule that shaped all of them: **an empty result is an answer.** openFDA says "nothing matched" with a 404 and NPPES with `result_count: 0` — so *"no recalls on record"* has to arrive as a confident finding, not an outage. The inverse of Phase 2's rule, and it needed the same care: a negative finding has to emit a **citable row**, because a true finding with nothing to cite forces a false abstention or a worse source — measured once as the agent holding CMS's own answer and citing a web page for it. Every such path emits one, and [a test enforces it](docs/negative-finding-gaps.md) rather than the next tool having to remember |
-| **Live-API provenance** | A live record is cited as a **row** — same shape, same validator, same card as a vendored one, because it makes the same kind of claim. What it adds is a `url` the reader can re-fetch, which a mirror row cannot have. The CMS key rides in the query string, so it is **stripped before any citation URL is stored**, with a test whose failure would be a security finding |
+| **Live-API provenance** | A live record is cited as a **row** — same shape, same validator, same card as a vendored one, because it makes the same kind of claim. What it adds is a `url` the reader can open, which a mirror row cannot have. The CMS key rides in the query string, so it is **stripped before any citation URL is stored**, with a test whose failure would be a security finding — and stripping it means the surviving URL returns 401, so the Marketplace lane cites the **consumer page** and carries the exact query as a cell instead. **A citation that looks checkable and is not is worse than one that plainly is not**; a test over every Marketplace shape enforces the split |
 | **Grounding** | Enforced in code, not asked for in the prompt. A passage or web citation must name evidence a tool returned and quote it verbatim; a **row** citation must name a row a query returned and reproduce its cells **byte for byte** — `'$4,500 '` keeps its trailing space, because tidying the evidence is editing it. Citations are rebuilt from the real chunk, row or result, so an invented title cannot reach the browser |
 | **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
 | **Streaming** | The answer streams token by token *and* the tool trace fills in live, over SSE |
 | **Ingestion** | 5 bulk sources fetched, normalized, and committed — idempotent and re-runnable |
 | **Corpus** | 2,056 documents across 3 text corpora → **6,722 chunks** with verified provenance |
 | **Structured mirrors** | Exchange PUFs (3 tables, PY2026) + Medicare Part D SPUF (7 files, 2026Q2) as lossless columnar mirrors — *deliberately not chunked*, and since Phase 1c queried where they lie: 2.96M rows the agent can read but nothing reshapes |
-| **Eval harness** | 49 gold questions in **five** shapes (30 reference + 4 structured-mirror + **6 structured-live** + 4 web + 5 abstention), four runners (`agent` / `bm25` / `vector` / `stub`) through one scorer, retrieval + groundedness + **three-lane routing** + **mirror-vs-live lane detail** + **exact-cell** metrics, runs persisted as JSON and triggerable from the browser. Web questions deliberately carry **no expected answer** — a gold answer about what is true this month is wrong next month, and a set that rots silently is worse than one that admits its scope |
+| **Eval harness** | 50 gold questions in **five** shapes (30 reference + 4 structured-mirror + **7 structured-live** + 4 web + 5 abstention), four runners (`agent` / `bm25` / `vector` / `stub`) through one scorer, retrieval + groundedness + **three-lane routing** + **mirror-vs-live lane detail** + **exact-cell** metrics, runs persisted as JSON and triggerable from the browser. Web questions deliberately carry **no expected answer** — a gold answer about what is true this month is wrong next month, and a set that rots silently is worse than one that admits its scope |
 | **API** | FastAPI with a frozen contract: `POST /api/chat`, SSE streaming, eval endpoints, citation drill-down |
 | **Frontend** | React 19 + Vite 8 + TS + Tailwind 4 + shadcn — chat page with source badges, expandable citation cards, collapsible agent-trace panel, abstention state, and an eval dashboard |
 | **Type safety across the boundary** | TS types generated from FastAPI's OpenAPI schema — a Pydantic change becomes a compile error |
 | **Guardrails** | `make scan` — a three-severity scanner for secrets, PII/PHI, and licence-restricted content, run before anything is published |
 | **Configuration** | Secrets in a git-ignored `.env`; every non-secret in a **committed `config.yaml`** that no environment variable can override — so an eval score is reproducible from the repo |
-| **Gates** | 454 Python tests + 20 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
+| **Gates** | 476 Python tests + 27 Vitest, ruff, pyright, tsc, oxlint — one `make check-all`, which **never reaches a provider**: three separate guards, because a library's safety flag covers that library's surface area and not your intent. No API key needed and nothing to pay for |
 
 ### Measured, not asserted
 
 All on the same chunk snapshots, through one scorer. **The gold set grew with the lanes** — 40
-questions through Phase 1c, 43 at Phase 2, 49 since Phase 3 — so rows from different phases share a scorer but not
+questions through Phase 1c, 43 at Phase 2, 50 since Phase 3 — so rows from different phases share a scorer but not
 always a denominator, and the `measured` column says which phase produced each. The two
 retrieval-only runners retrieve and stop, no model in the loop, so the gap between them and the
 agent rows is what the agent's query reformulation is worth, and the gap between *them* is what the
@@ -129,7 +131,9 @@ Plus `web_reach_rate` **1.000** at Phase 2 and `lane_detail_correct` **1.000** a
 latter is Phase 3's own metric, and the reason it had to exist: **both halves of the structured lane
 carry the same `source_type`**, deliberately, because a live record makes the same kind of claim a
 vendored row does. So `routing` cannot see the split the phase is about — mirror-vs-live — and a
-second metric reads `tools_used` instead. It is 6/6: every live question reached the right tool.
+second metric reads `tools_used` instead. It is 7/7 on the latest run (`run_2026-08-27_1`, 39/50):
+every live question reached the right tool, including one asking for the FDA label of a drug that
+does not exist.
 
 **The bottom two rows are Phase 3's comparison**, and the pair above them is Phase 2's — each is two
 runs differing *only* in whether one lane was registered.
@@ -219,7 +223,7 @@ current `config.yaml` reproduces.
   So *"which dermatologists near 30076 take Aetna"* is still declined; it needs the Marketplace's
   provider-coverage endpoint, which is **Phase 5**, where plan.md puts network checks. That
   question was mis-dated to Phase 3 in the gold set for two phases and is now corrected.
-- **Live-API answers are graded on routing and groundedness, not correctness.** Six live gold
+- **Live-API answers are graded on routing and groundedness, not correctness.** Seven live gold
   questions carry no expected answer, for the same reason the web questions do not: a formulary, a
   premium and a recall list all move underneath a stable question. Correctness for those is asserted
   in offline fixture tests, where the response is pinned. So this repo measures that the agent
@@ -247,11 +251,11 @@ current `config.yaml` reproduces.
   a drug name to RxCUIs and `check_drug_coverage` takes them, so *"is atorvastatin covered under
   plan Y"* is answerable today. The **vendored** Part D formulary still carries NDC and RxCUI and no
   drug names, so the same question against a mirror partition still needs an identifier.
-- **Retrieval is still the bottleneck of the reference lane.** recall@5 0.800 means the agent never
-  saw the right document for about 2 of 10 in-corpus questions. Six of the thirty defeat *both*
+- **Retrieval is still the bottleneck of the reference lane.** recall@5 0.700 in the shipped
+  configuration means the agent never saw the right document for about 3 of 10 in-corpus questions. Six of the thirty defeat *both*
   retrieval methods, so the remaining gap is not one more index — it is chunking, the gold set's
   phrasing, or query reformulation.
-- **Four mirror, six live and four web gold questions is thin.** Every one is unambiguous by
+- **Four mirror, seven live and four web gold questions is thin.** Every one is unambiguous by
   construction, so a routing score near 1.000 is the first number to distrust as they grow — and the
   live slice is thinner than it looks, since two of its six questions were **reworded after they
   failed**. Both rewordings are argued in the questions' notes (one tested state coverage through a
@@ -322,7 +326,7 @@ flowchart LR
         CORP["corpus.jsonl<br/>2,056 docs"]
         CHUNK["chunks.jsonl<br/>6,722 chunks"]
         MIR["processed/*.parquet<br/>10 tables · 2.96M rows"]
-        GOLD["questions.yaml<br/>49 gold questions"]
+        GOLD["questions.yaml<br/>50 gold questions"]
         RUNS["eval_runs/"]
     end
 
@@ -494,7 +498,7 @@ Everything else:
 
 ```bash
 make eval-retrieval     # score BM25 retrieval alone — free, instant, no API key
-make eval               # run the gold set through the agent (49 model calls; run it sequentially)
+make eval               # run the gold set through the agent (50 model calls; run it sequentially)
 make eval-no-web        # the same with the web lane off — the control for what the lane costs
 make eval-judge         # + grade answer correctness with an LLM judge (86 model calls)
 make smoke-web          # one live question that only the web can answer (1 model call + 1 credit)
@@ -711,7 +715,7 @@ health_coverage_navigator/
 │   ├── routes/{ChatPage,EvalsPage}.tsx
 │   └── components/               # SourceBadge · CitationCard · TracePanel · …
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
-├── evals/gold/questions.yaml     # 49 hand-authored questions in five shapes
+├── evals/gold/questions.yaml     # 50 hand-authored questions in five shapes
 ├── data/{raw,processed}/         # committed — see the licensing rules
 └── docs/                         # plan · frontend_plan · progress · glossary
                                   #   + agent · chunking · development · configuration

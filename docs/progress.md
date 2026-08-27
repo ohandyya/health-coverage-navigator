@@ -22,13 +22,16 @@ mid-stream.
 - **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
   Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
   source type — `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` /
-  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (468 Python
-  tests, pyright clean, 20 frontend tests) and `make scan` is clean. Design, contract, the two
+  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (476 Python
+  tests, pyright clean, 27 frontend tests) and `make scan` is clean. Design, contract, the two
   defect families, and what building it changed:
   [structured-api-tools.md](structured-api-tools.md).
-- **The headline: all six live questions pass, and the live lane costs the reference slice nothing
-  measurable.** `run_2026-08-22_8` — 38/49, **live 6/6**, `lane_detail_correct` 1.000,
-  `structured_exact_match` 1.000, groundedness 1.000, abstention 0.800, recall@5 0.700. §16b was
+- **The headline: every live question passes, and the live lane costs the reference slice nothing
+  measurable.** Latest: `run_2026-08-27_1` — 39/50, **live 7/7** including `live-07`,
+  `lane_detail_correct` 1.000, `routing_correct` 1.000, `structured_exact_match` 1.000,
+  groundedness 1.000, abstention 0.800, recall@5 0.700. The *controlled* Phase 3 comparison remains
+  the earlier pair — `run_2026-08-22_8`, 38/49, live 6/6 — because a comparison is only valid
+  against its own control. §16b was
   measured against a `--no-live` control: seven questions changed state between the arms, three lost
   and two *gained*, and **none of the losers touched a live tool**. Over-reach onto pre-existing
   questions across all 43 was **exactly one** (`abs-02` called `find_drug`). recall@5 moved
@@ -71,12 +74,21 @@ mid-stream.
   nothing for half the drug catalogue. And the Marketplace API serves **only the states that use
   HealthCare.gov** — CA, GA and NY are refused — which invalidates `plan.md`'s own acceptance test
   (ZIP 30076 is in Georgia). A 400 there is an *answer*: that state runs its own exchange.
-- **The "new frontend surfaces ship unviewed" streak is back, and only half-broken.** Phase 3
-  populates `Citation.url` for structured citations for the first time, and a **real UI defect was
-  found by reading `CitationCard.tsx`** — a multi-line label passage was parsed as one
-  `column: value` pair per line, inventing a column out of any sentence with a colon. Fixed and
-  tested. But **nobody has opened the app**, so this was caught by reading rather than by looking,
-  which is not the same thing and is not what Phase 2's habit was.
+- **A live citation's URL is for a reader, not for a machine — and the Marketplace is the exception
+  that made the rule.** §14b's premise (*the record carries the URL that produced it, re-fetchable
+  by anyone*) holds for openFDA and NPPES and is **false for CMS**: `apikey` is required on every
+  endpoint, it is stripped before storage, and what is left returns 401 — `/plans/search` is a POST
+  besides. Five branches rendered unlinkable and two linked to that 401, which is the worse of the
+  two: **a citation that looks checkable and is not undercuts provenance more than one that plainly
+  is not**, and no validator or UI check could see it. Every Marketplace row now links to the
+  consumer page; the exact query travels as a `source_url` cell. §14b-bis, and
+  `test_a_marketplace_row_links_somewhere_a_reader_can_open` over all seven shapes.
+- **The "new frontend surfaces ship unviewed" streak is back, and it has now cost two defects.**
+  Phase 3 populates `Citation.url` for structured citations for the first time, and **both**
+  citation-rendering defects since were found by *reading* — `CitationCard.tsx` parsing a multi-line
+  label passage as one `column: value` pair per line, and the Marketplace URLs above. Both fixed and
+  tested. But **nobody has opened the app**, and an unlinkable or wrongly linked citation is exactly
+  what a browser shows and a test does not.
 - **Phase 2, still true:** **complete and measured; the agent has three lanes.**
   `web_search` over Tavily is registered beside the reference and relational tools, cites web
   results by a `result_id` only a search can assign, and degrades to an honest *"I could not check
@@ -340,6 +352,10 @@ Beyond the plan.md list, because implementation made them necessary:
 - [x] Structural test for defect **Family 1** (2026-08-27): every live result that reached its
       upstream leaves something citable, an outage still leaves nothing, and every tool's return
       type has a registered row builder — so a new tool inherits the rule
+- [x] Every Marketplace row links to a page a reader can open (2026-08-27) — §14b's
+      *re-fetchable URL* premise is false for CMS, whose endpoints all require `apikey`; the query
+      URL moved to a `source_url` cell and a structural test over all seven shapes asserts no
+      citation points at the key-gated host
 - [x] `parseCells` in `CitationCard.tsx` — a multi-line label passage was being parsed one
       `column: value` pair per line; the first fix would have broken every **mirror** citation,
       whose PUF columns are CamelCase
@@ -498,6 +514,57 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-27 (later) — the Marketplace citation that looked checkable and was not
+
+**Did:** fixed the "FDA Link Issue" the worklog carried — the one raised as *not a bug, but if you
+want those citations linkable the fix is a `source_url` entry*. It was a bug, the entry would not
+have fixed it, and the diagnosis missed the worse half. Every Marketplace row now links to a page a
+reader can open. `make check-all` green: 476 Python tests, 27 frontend tests.
+
+**Decided: the premise was wrong, not the plumbing.**
+[structured-api-tools.md](structured-api-tools.md) §14b says a live record carries the URL that
+produced it, *re-fetchable by anyone*. True for openFDA and NPPES — keyless GETs — and **false for
+the Marketplace**: `apikey` is required on every CMS endpoint, `_url()` strips it before storage
+(the leak guard, non-negotiable), so what survives returns **401** to whoever clicks it. Verified
+2026-08-27 against `/plans/search` and `/drugs/covered`. `/plans/search` is a **POST** besides, so
+the GET-shaped URL built for it was never an address at all. §14b-bis records the correction; the
+section is not deleted, because it is right for two of the three upstreams.
+
+**The second failure is the worse one, and it is the reason this was not a cosmetic fix.** Five
+branches rendered *unlinkable* (four negative, plus the positive drug-match) — visibly missing, and
+the shape the worklog note described. But the plan and coverage branches **did** carry a URL, and it
+pointed at that 401. **A citation that looks checkable and is not undercuts the provenance guarantee
+more than one that plainly is not:** the reader who clicks is told the source is broken rather than
+that it is elsewhere. Nothing in the repo would have caught it — a URL was present, so both the
+validator and the frontend were satisfied.
+
+**The rule that came out of it: `Row.url` is read by a human; the exact query is machine provenance
+and belongs in a cell.** So every Marketplace row links to the consumer page
+(`MARKETPLACE_PUBLIC_URL`), and the query URL travels as a `source_url` cell — which `_plan_rows`
+was already doing, so the positive branches needed the URL *moved*, not added. `state_not_served` is
+the one row with a better page than the plan finder: *"Georgia runs its own exchange"* is checkable
+against [marketplace-in-your-state](https://www.healthcare.gov/marketplace-in-your-state/), which
+makes that citation genuinely verifiable rather than decorative.
+
+**Rejected: the `source_url()` entry the worklog note proposed.** It keys the vendored mirrors and
+returns one URL per source, so a Marketplace entry would have given all seven shapes the same link
+— and, more to the point, it only ever fills `_row_citation`'s `row.url or …` fallback, so it could
+not have touched the two branches that already had a URL. It would have made the visible half look
+fixed and left the invisible half exactly as it was.
+
+**Rejected: a fallback for openFDA and NPPES too, for symmetry.** Both populate `source_url` on
+every branch, so the entry would be unreachable code implying a gap that does not exist.
+
+`test_a_marketplace_row_links_somewhere_a_reader_can_open` is the guard, parametrised over all seven
+Marketplace shapes and asserting two things — a `url` exists, *and* it is not the key-gated API host.
+Same argument as `test_a_reached_lookup_is_always_citable` one field over: **the next instance will
+be in whichever branch nobody thought to re-check.** Third structural invariant on this lane in one
+session, after Family 1's citable-row test and Family 2's cell-key test.
+
+**Still nobody has opened the app.** This is the second real citation-rendering defect in two
+sessions found by *reading* rather than by looking (after `parseCells`), and an unlinkable — or
+wrongly linked — citation is precisely what a browser shows and a test does not.
 
 ### 2026-08-27 — Family 1 closed structurally, five instances at once
 

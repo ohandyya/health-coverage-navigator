@@ -247,8 +247,12 @@ because this is where a model's instinct to hedge does damage:
   empty-result conventions and three envelopes are *not* shared, and a base class declaring all
   three as overridable would be a base class in name only.
 - **A live record is cited as a row**, same shape and validator as a vendored one, because it makes
-  the same kind of claim — with one addition a mirror row cannot have: a `url` that re-fetches the
-  exact record.
+  the same kind of claim — with one addition a mirror row cannot have: a `url` a reader can open.
+  For openFDA and NPPES, both keyless GETs, that is the exact query. **Not for the Marketplace**,
+  where `apikey` is required everywhere and stripped before storage, so the surviving URL returns
+  401 — those rows cite the consumer page and carry the query as a `source_url` cell, because a
+  citation that *looks* checkable and is not costs more than one that plainly is not
+  ([§14b-bis](../structured-api-tools.md)).
 
 ## Evidence
 
