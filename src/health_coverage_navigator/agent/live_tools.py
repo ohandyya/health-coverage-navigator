@@ -575,37 +575,33 @@ async def lookup_provider(ctx: RunContext[AnswerDeps], npi: str) -> ProviderResu
 def _provider_rows(result: ProviderResult) -> list[Row]:
     """The citable record for a provider lookup.
 
-    A **not-found** lookup is citable too, for the same reason an empty recall search is: "the
-    registry holds no such NPI" is a finding, and without a row behind it the grounding validator
-    would force an abstention on a question that was answered.
+    **Two of its three branches are findings about an absence** — "the registry holds no such NPI"
+    and "that is not a well-formed NPI" — and both go through `_search_row`, which carries the
+    argument for why an absence is evidence. The second is a fact about the *input* rather than
+    about the world, and citable for exactly the same reason.
     """
     if result.unavailable:
         return []
     if result.invalid:
-        # A malformed NPI is a finding about the *input*, and citable for the same reason an empty
-        # search is: the agent established it, and without a row the grounding validator would force
-        # an abstention on a question it actually answered.
-        return [
-            Row(
-                row_id=result.row_id,
-                view="nppes/npi_registry",
-                source="nppes",
-                cells={"npi": result.npi, "rejected_because": result.invalid},
-                url=result.source_url,
-                title=f"NPI registry · {result.npi} · not a valid identifier",
-            )
-        ]
+        # A malformed NPI is a finding about the *input*, and citable for the same reason every
+        # other absence here is — see `_search_row`.
+        return _search_row(
+            row_id=result.row_id,
+            view="nppes/npi_registry",
+            source="nppes",
+            cells={"npi": result.npi, "rejected_because": result.invalid},
+            url=result.source_url,
+            title=f"NPI registry · {result.npi} · not a valid identifier",
+        )
     if not result.found or result.provider is None:
-        return [
-            Row(
-                row_id=result.row_id,
-                view="nppes/npi_registry",
-                source="nppes",
-                cells={"npi": result.npi, "found": "0"},
-                url=result.source_url,
-                title=f"NPI registry · {result.npi} · not found",
-            )
-        ]
+        return _search_row(
+            row_id=result.row_id,
+            view="nppes/npi_registry",
+            source="nppes",
+            cells={"npi": result.npi, "found": "0"},
+            url=result.source_url,
+            title=f"NPI registry · {result.npi} · not found",
+        )
     provider = result.provider
     primary = next((t for t in provider.taxonomies if t.primary), None)
     return [
@@ -928,24 +924,25 @@ def _recall_rows(result: DrugRecallResult) -> list[Row]:
 
     That is not a loophole in the grounding rule, it is the rule applied honestly. The claim being
     made is "I looked here and found nothing", and this row is precisely the evidence for it.
+
+    Kept here as the case that proved it; the general form lives in `_search_row`, which every
+    negative branch in this module now goes through.
     """
     if result.unavailable:
         return []
     if not result.recalls:
-        return [
-            Row(
-                row_id=result.row_id,
-                view="openfda/drug_enforcement",
-                source="openfda",
-                cells={
-                    "drug": result.query,
-                    "recalls_found": "0",
-                    "searched": "FDA enforcement (recall) database",
-                },
-                url=result.source_url,
-                title=f"FDA recall search · {result.query} · no matches",
-            )
-        ]
+        return _search_row(
+            row_id=result.row_id,
+            view="openfda/drug_enforcement",
+            source="openfda",
+            cells={
+                "drug": result.query,
+                "recalls_found": "0",
+                "searched": "FDA enforcement (recall) database",
+            },
+            url=result.source_url,
+            title=f"FDA recall search · {result.query} · no matches",
+        )
     return [
         Row(
             row_id=recall.row_id,
@@ -1004,7 +1001,7 @@ def _summarize_recalls(result: DrugRecallResult) -> str:
 #:
 #: **A registry rather than six call sites**, and that is the point: a tool whose result type is not
 #: in here cannot record a row at all, so the omission fails loudly at the first call instead of
-#: quietly costing an answer its provenance. `test_a_reached_lookup_is_always_citable` walks
+#: quietly costing an answer its provenance. `test_every_live_tool_has_a_row_builder` walks
 #: `LIVE_TOOLS`, reads each tool's return annotation, and demands it appear here — so the next tool
 #: anyone adds inherits the invariant rather than having to remember it.
 _ROW_BUILDERS: dict[type, Callable[[Any], list[Row]]] = {

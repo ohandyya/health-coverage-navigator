@@ -640,6 +640,33 @@ def test_a_reached_lookup_is_always_citable(label: str, result: object) -> None:
         assert row.row_id in visible, f"{label}: the model cannot see the id it must cite"
 
 
+#: Stand-ins by annotation, for building a result with nothing on it but what pydantic insists on.
+#: Deliberately not a `defaultdict` — an unmapped type must fail by *name*, telling the next person
+#: which field to account for, rather than as a `ValidationError` from three frames down.
+_PLACEHOLDERS: dict[object, object] = {str: "x", int: 1, float: 1.0, bool: False}
+
+
+def _only_required(shape, **overrides):
+    """A minimal instance of a live result model: required fields filled, nothing else set.
+
+    Written against `model_fields` rather than against a hand-kept list of constructor arguments,
+    which is what the first version did — it named `query` and `npi` because those were required
+    *that day*, so a new required field would have failed as an unreadable `ValidationError` rather
+    than as the thing that actually changed.
+    """
+    kwargs: dict[str, object] = {}
+    for name, field in shape.model_fields.items():
+        if not field.is_required():
+            continue
+        value = _PLACEHOLDERS.get(field.annotation)
+        assert value is not None, (
+            f"{shape.__name__}.{name} is required and its type "
+            f"({field.annotation}) has no placeholder — add one to _PLACEHOLDERS."
+        )
+        kwargs[name] = value
+    return shape(**{**kwargs, **overrides})
+
+
 def test_an_outage_stays_uncitable() -> None:
     """The inverse, and the half a well-meaning fix breaks: **an outage is not a finding.**
 
@@ -650,11 +677,13 @@ def test_an_outage_stays_uncitable() -> None:
     from health_coverage_navigator.agent.live_tools import _ROW_BUILDERS, rows_for
 
     for shape in _ROW_BUILDERS:
-        kwargs = {"unavailable": "openFDA could not be reached."}
-        for required in ("query", "npi"):
-            if required in shape.model_fields:  # type: ignore[attr-defined]
-                kwargs[required] = "x"
-        assert rows_for(shape(**kwargs)) == [], f"{shape.__name__} cited an outage"
+        assert "unavailable" in shape.model_fields, (
+            f"{shape.__name__} has no `unavailable` field, so an outage and an empty result are "
+            f"indistinguishable on it — the inverse of the rule this test guards"
+        )
+        assert rows_for(_only_required(shape, unavailable="upstream unreachable")) == [], (
+            f"{shape.__name__} cited an outage"
+        )
 
 
 def test_every_live_tool_has_a_row_builder() -> None:
