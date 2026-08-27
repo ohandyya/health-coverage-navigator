@@ -34,7 +34,7 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Known Issues
 
-- Fix citation bug
+- [Fixed] Fix citation bug
 
     - See for description at docs/negative-finding-gaps.md
 
