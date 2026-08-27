@@ -34,7 +34,7 @@ mirror-vs-live reconciliation, the eval slice, the tests, and the build order.
 decision recorded here, the decision was changed here first and [progress.md](progress.md) records
 why — that is the rule every design document in this repo follows, and this phase exercised it
 often: §4a reverses §4, §11 reverses its own county design, §14a-bis and the note under §14a correct
-§14a, and §16a is struck through where it contradicted §11.
+§14a, §14b-bis corrects §14b, and §16a is struck through where it contradicted §11.
 
 **Verified 2026-08-22** — the access facts in §3–§5 against the live CMS and FDA pages, and every
 claim in §7 and §10 against the running APIs. All of it is someone else's operational policy or someone
@@ -751,6 +751,43 @@ parameter.** A citation URL is rendered in the browser and serialised into eval 
 `apikey` before the URL is stored**, and add a test asserting no citation URL contains it — this is
 the one place in the phase where a plumbing mistake leaks a credential into a tracked artefact.
 
+#### 14b-bis. The Marketplace exception is two things, not one
+
+The paragraph above is right and incomplete, and the half it left out cost this section its own
+premise. **A stripped Marketplace URL is not re-fetchable.** `apikey` is required on *every* CMS
+Marketplace endpoint (§5), so what survives the strip returns `401` to anyone who clicks it —
+verified 2026-08-27 against `/plans/search` and `/drugs/covered`. `/plans/search` is a **POST**
+besides, so the GET-shaped URL built for it was never an address a reader could fetch.
+
+So §14b's opening claim — *a live record has the URL that produced it, re-fetchable by anyone* —
+holds for openFDA and NPPES, which are keyless GETs, and **is false for the Marketplace**.
+
+Two failures followed from it, and the second is the worse one:
+
+- Four negative branches and the *positive* drug-match branch emitted `url=None`. `source_url()`
+  ([`structured/catalog.py`](../src/health_coverage_navigator/structured/catalog.py)) keys only the
+  vendored mirrors, so `_row_citation`'s `row.url or source_url(row.source)` fallback had nothing to
+  fall back to, and those citations rendered unlinkable.
+- The plan and coverage branches, which *did* carry a URL, linked to that 401. **A citation that
+  looks checkable and is not undercuts the provenance guarantee more than one that plainly is not**
+  — the reader who clicks is told the source is broken, not that it is elsewhere.
+
+**The rule: `Row.url` is read by a human; the exact query is machine provenance and belongs in a
+cell.** So every Marketplace row — positive and negative alike — links to the consumer page a person
+can actually open (`MARKETPLACE_PUBLIC_URL` in
+[`agent/live_tools.py`](../src/health_coverage_navigator/agent/live_tools.py)), and the query URL
+travels as a `source_url` cell, which `_plan_rows` was already doing. `state_not_served` is the one
+row with a better page than the plan finder: *"Georgia runs its own exchange"* is checkable against
+[marketplace-in-your-state](https://www.healthcare.gov/marketplace-in-your-state/), which makes that
+citation genuinely verifiable rather than decorative.
+
+openFDA and NPPES get **no fallback entry**. Both populate `source_url` on every branch, so one
+would be unreachable code implying a gap that does not exist.
+`test_a_marketplace_row_links_somewhere_a_reader_can_open` is the structural guard, parametrised
+over all seven Marketplace shapes because the next instance will be in whichever branch nobody
+thought to re-check — the same argument as
+`test_a_reached_lookup_is_always_citable`, one field over.
+
 ### 14c. openFDA's disclaimer travels with the citation
 
 §10b.4: openFDA disclaims its own accuracy in every response. The honest handling is to carry it —
@@ -849,6 +886,9 @@ actually returned), and let correctness be asserted by the offline fixture tests
   fails the grounding validator.
 - **`test_no_apikey_in_citation_urls`** — §14b's leak guard. Small, and the only test here whose
   failure would be a security finding rather than a bug.
+- **`test_a_marketplace_row_links_somewhere_a_reader_can_open`** — §14b-bis, parametrised over
+  every Marketplace shape that produces a row. Asserts each carries a `url` *and* that it is not
+  the key-gated API host, which is the pair of failures §14b's incomplete rule allowed.
 - **A fixture-freshness test**, following the `x-version` stamp of §8: assert every fixture carries
   its provenance headers, so a fixture recorded without them cannot land.
 

@@ -651,6 +651,106 @@ def test_a_reached_lookup_is_always_citable(label: str, result: object) -> None:
         )
 
 
+def _marketplace_results() -> list[tuple[str, object]]:
+    """**Every Marketplace shape that produces a row**, positive and negative alike.
+
+    The negative half repeats `_negative_results()` on purpose: the URL invariant below is not the
+    citability invariant, and a branch can satisfy one while failing the other — which is exactly
+    what happened. Four negative branches and one *positive* branch rendered `url=None`, and the two
+    positive branches that did carry a URL carried one no reader can open.
+    """
+    from health_coverage_navigator.live.models import (
+        County,
+        CoverageResult,
+        DrugCoverage,
+        DrugMatch,
+        DrugMatches,
+        PlanMatches,
+        PlanSummary,
+    )
+
+    api = "https://marketplace.api.healthcare.gov/api/v1"
+    return [
+        ("state not served", PlanMatches(state_not_served="GA", row_id="mkt#s1.GA")),
+        ("no plans matched", PlanMatches(zipcode="27360", year=2026, row_id="mkt#p1.0")),
+        ("drug not recognised", DrugMatches(query="lipitorr", row_id="mkt#d1.0")),
+        ("no coverage returned", CoverageResult(year=2026, row_id="mkt#c1.0")),
+        (
+            "plans found",
+            PlanMatches(
+                zipcode="27601",
+                year=2026,
+                county=County(fips="37183", name="Wake County", state="NC"),
+                plans=[
+                    PlanSummary(
+                        row_id="mkt#p1.1",
+                        plan_id="12345NC0010001",
+                        name="Example Silver",
+                        issuer="Example Health",
+                        source_url=f"{api}/plans/search?year=2026&zipcode=27601",
+                    )
+                ],
+                total=1,
+            ),
+        ),
+        (
+            "drug resolved",
+            DrugMatches(
+                query="lipitor",
+                matches=[DrugMatch(row_id="mkt#d1.1", rxcui="617314", name="Lipitor")],
+            ),
+        ),
+        (
+            "coverage found",
+            CoverageResult(
+                year=2026,
+                coverage=[
+                    DrugCoverage(
+                        row_id="mkt#c1.1",
+                        rxcui="617314",
+                        plan_id="12345NC0010001",
+                        coverage="Covered",
+                        source_url=f"{api}/drugs/covered?year=2026&drugs=617314",
+                    )
+                ],
+            ),
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "label,result", _marketplace_results(), ids=lambda v: v if isinstance(v, str) else ""
+)
+def test_a_marketplace_row_links_somewhere_a_reader_can_open(label: str, result: object) -> None:
+    """**§14b holds for openFDA and NPPES and does not hold here.**
+
+    The section's premise is that a live record carries the query URL that produced it, re-fetchable
+    by anyone. `apikey` is required on *every* CMS Marketplace endpoint, and `_url()` strips it
+    before storage — correctly, that is the leak guard — so the stored URL returns 401 to anyone who
+    clicks it. `/plans/search` is a POST besides, so its GET-shaped URL was never an address at all.
+
+    Two failures, and the second is the worse one: four negative branches plus the positive
+    drug-match branch rendered no link, and the plan and coverage branches rendered a link to an
+    error page. A citation that looks checkable and is not undercuts the provenance guarantee more
+    than one that plainly is not.
+    """
+    from health_coverage_navigator.agent.live_tools import rows_for
+    from health_coverage_navigator.live.marketplace import MARKETPLACE_BASE_URL
+
+    rows = rows_for(result)
+    assert rows, f"{label}: nothing to check — see test_a_reached_lookup_is_always_citable"
+    for row in rows:
+        assert row.url, (
+            f"{label}: a Marketplace citation with no URL. `source_url()` covers the vendored "
+            f"mirrors only, so `runtime._row_citation`'s fallback cannot fill this one in."
+        )
+        assert not row.url.startswith(MARKETPLACE_BASE_URL), (
+            f"{label}: {row.url} needs an API key and returns 401 to a reader. The exact query "
+            f"belongs in a `source_url` cell; `Row.url` is read by a human."
+        )
+        assert "apikey" not in row.url.lower(), f"{label}: §14b's leak guard"
+
+
 #: Stand-ins by annotation, for building a result with nothing on it but what pydantic insists on.
 #: Deliberately not a `defaultdict` — an unmapped type must fail by *name*, telling the next person
 #: which field to account for, rather than as a `ValidationError` from three frames down.

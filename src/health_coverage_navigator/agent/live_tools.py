@@ -68,6 +68,29 @@ BUDGET_SPENT = (
 #: Derived from the type rather than restated, so the runtime check and the signature cannot drift.
 SECTIONS = get_args(LabelSectionName)
 
+#: Where a reader checks a Marketplace row, keyed by `Row.view`.
+#:
+#: **Not the query URL, and that is the whole point.** §14b's premise — *a live record carries the
+#: URL that produced it, re-fetchable by anyone* — holds for openFDA and NPPES, which are keyless
+#: GETs, and is **false here**: `apikey` is required on every CMS Marketplace endpoint, `_url()`
+#: strips it before storage (§14b's leak guard, and non-negotiable), and what is left returns 401
+#: to anyone who clicks it. `/plans/search` is a POST besides, so its GET-shaped URL was never an
+#: address a reader could fetch. A citation that looks checkable and is not is worse than one that
+#: plainly is not, so the Marketplace lane cites the consumer page a person can actually open.
+#:
+#: The exact query still travels — as a `source_url` **cell** on the row, which is where machine
+#: provenance belongs. `Row.url` is read by a human.
+MARKETPLACE_PUBLIC_URL: dict[str, str] = {
+    "marketplace/plan_search": "https://www.healthcare.gov/see-plans/",
+    "marketplace/drug_search": "https://www.healthcare.gov/see-plans/",
+    "marketplace/drug_coverage": "https://www.healthcare.gov/see-plans/",
+}
+
+#: The one Marketplace row whose reader-facing page is not the plan finder. "Georgia runs its own
+#: exchange" is checkable against the page that lists which states do — which makes this citation
+#: genuinely verifiable rather than decorative.
+STATE_NOT_SERVED_URL = "https://www.healthcare.gov/marketplace-in-your-state/"
+
 
 def _search_row(
     *,
@@ -661,7 +684,7 @@ def _coverage_rows(result: CoverageResult) -> list[Row]:
                 "year": str(result.year) if result.year else None,
                 "coverage": "[]",
             },
-            url=None,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_coverage"],
             title=f"Marketplace formulary · no coverage data returned · {result.year}",
         )
     return [
@@ -675,8 +698,11 @@ def _coverage_rows(result: CoverageResult) -> list[Row]:
                 "coverage": item.coverage,
                 "generic_rxcui": item.generic_rxcui,
                 "year": str(result.year) if result.year else None,
+                # The exact query, as a cell rather than as `url` — see `MARKETPLACE_PUBLIC_URL`.
+                # A `DrugCoverage` field, so it is a name the model was shown (§18c family 2).
+                "source_url": item.source_url,
             },
-            url=item.source_url,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_coverage"],
             title=f"Marketplace formulary · plan {item.plan_id} · {result.year}",
         )
         for item in result.coverage
@@ -709,7 +735,7 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                     "zipcode": result.zipcode,
                     "year": str(result.year) if result.year else None,
                 },
-                url=None,
+                url=STATE_NOT_SERVED_URL,
                 title=f"HealthCare.gov · {result.state_not_served} not served",
             )
         ]
@@ -726,7 +752,7 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                 "total": str(result.total),
                 "plans": "[]",
             },  # every key a `PlanMatches` field, and both ways it can say "nothing matched"
-            url=None,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/plan_search"],
             title=f"HealthCare.gov plan search · {result.zipcode} · no plans matched",
         )
     return [
@@ -753,7 +779,10 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                 "zipcode": result.zipcode,
                 "year": str(result.year) if result.year else None,
             },
-            url=plan.source_url,
+            # The `source_url` cell above already carries the exact query for the record; this is
+            # the page a *reader* can open, which the key-stripped API URL is not. See
+            # `MARKETPLACE_PUBLIC_URL`.
+            url=MARKETPLACE_PUBLIC_URL["marketplace/plan_search"],
             title=f"Marketplace plan · {plan.name} · {result.year}",
         )
         for plan in result.plans
@@ -795,7 +824,7 @@ def _drug_rows(result: DrugMatches) -> list[Row]:
             view="marketplace/drug_search",
             source="marketplace",
             cells={"query": result.query, "matches": "[]"},
-            url=None,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_search"],
             title=f"Marketplace drug search · {result.query} · not recognised",
         )
     return [
@@ -812,7 +841,7 @@ def _drug_rows(result: DrugMatches) -> list[Row]:
                 "route": match.route,
                 "full_name": match.full_name,
             },
-            url=None,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_search"],
             title=f"Marketplace drug · {match.full_name or match.name}",
         )
         for match in result.matches
