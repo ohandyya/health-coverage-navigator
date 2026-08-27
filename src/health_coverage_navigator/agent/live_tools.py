@@ -21,7 +21,8 @@ has a test asserting exactly this distinction for the web lane; the same rule ho
 """
 
 import time
-from typing import get_args
+from collections.abc import Callable
+from typing import Any, get_args
 
 from pydantic_ai import ModelRetry, RunContext
 
@@ -67,6 +68,67 @@ BUDGET_SPENT = (
 #: Derived from the type rather than restated, so the runtime check and the signature cannot drift.
 SECTIONS = get_args(LabelSectionName)
 
+#: Where a reader checks a Marketplace row, keyed by `Row.view`.
+#:
+#: **Not the query URL, and that is the whole point.** §14b's premise — *a live record carries the
+#: URL that produced it, re-fetchable by anyone* — holds for openFDA and NPPES, which are keyless
+#: GETs, and is **false here**: `apikey` is required on every CMS Marketplace endpoint, `_url()`
+#: strips it before storage (§14b's leak guard, and non-negotiable), and what is left returns 401
+#: to anyone who clicks it. `/plans/search` is a POST besides, so its GET-shaped URL was never an
+#: address a reader could fetch. A citation that looks checkable and is not is worse than one that
+#: plainly is not, so the Marketplace lane cites the consumer page a person can actually open.
+#:
+#: The exact query still travels — as a `source_url` **cell** on the row, which is where machine
+#: provenance belongs. `Row.url` is read by a human.
+MARKETPLACE_PUBLIC_URL: dict[str, str] = {
+    "marketplace/plan_search": "https://www.healthcare.gov/see-plans/",
+    "marketplace/drug_search": "https://www.healthcare.gov/see-plans/",
+    "marketplace/drug_coverage": "https://www.healthcare.gov/see-plans/",
+}
+
+#: The one Marketplace row whose reader-facing page is not the plan finder. "Georgia runs its own
+#: exchange" is checkable against the page that lists which states do — which makes this citation
+#: genuinely verifiable rather than decorative.
+STATE_NOT_SERVED_URL = "https://www.healthcare.gov/marketplace-in-your-state/"
+
+
+def _search_row(
+    *,
+    row_id: str,
+    view: str,
+    source: str,
+    cells: dict[str, str | None],
+    url: str | None,
+    title: str,
+) -> list[Row]:
+    """The citable record for **"I looked here and found nothing"** — one row, in a list.
+
+    Seven instances of one defect made this a helper rather than a habit
+    (docs/negative-finding-gaps.md). The grounding validator requires a non-abstained answer to cite
+    something, and a citation may only name a row a tool recorded. So a tool that establishes an
+    absence and emits no row leaves the model two wrong moves: abstain, which is false because it
+    did answer, or cite something else — measured once, when the agent held CMS's own "Georgia is
+    not served" answer, had nothing to point at, and cited a web page instead.
+
+    **The rule: if a tool can establish something, it must emit a row for it — including when what
+    it established is an absence.** The search that found nothing is the evidence that nothing is
+    there. Not a loophole in the grounding rule; the rule applied to a negative claim.
+
+    Returns a list because every caller returns one, and because the shape says what this is: the
+    whole of what a reached-but-empty lookup has to offer.
+
+    Two things this must not become:
+
+    - **It is never emitted for `unavailable`.** An outage is not a finding — nothing was looked up,
+      so there is nothing to cite, and a row would let the model cite the fact that it failed. Every
+      builder's first guard stays a bare `return []`.
+    - **Cells stay short values named after fields the model was shown** (§18c family 2). A count
+      the model can read off an empty list, and the query terms it supplied — never a prose sentence
+      explaining the absence. That explanation belongs in the field's docstring, which the model
+      reads and does not have to reproduce.
+    """
+    return [Row(row_id=row_id, view=view, source=source, cells=cells, url=url, title=title)]
+
 
 async def drug_label(
     ctx: RunContext[AnswerDeps],
@@ -87,11 +149,18 @@ async def drug_label(
     **Ask for one section at a time.** A whole label runs to a quarter of a million characters, so
     this returns only the section you name. If you need warnings *and* interactions, call twice.
 
-    **Read `label_found` and `sections` separately — they mean different things.**
-    `label_found=False` means the FDA holds no label under that name; try the generic name, or say
-    the drug was not found. `label_found=True` with empty `sections` means the label exists but does
-    not carry that section, which is normal for over-the-counter drugs — say the label does not
-    include it, never that the drug has no warnings.
+    **Read `label_found` and `sections` separately — they mean different things, and neither empty
+    state is a failed search.**
+
+    - `label_found=False` with `unavailable` unset: **the FDA holds no label under that name, and
+      that is the answer.** Say it plainly and with confidence, and cite the `row_id` on the result
+      — the search is the evidence. Do not soften it into "I could not find one", which a reader
+      hears as the lookup having failed, and **do not call this tool again with the generic name**:
+      both are searched already, brand first and then generic, so a second call returns the same
+      nothing from the cache.
+    - `label_found=True` with empty `sections`: the label exists but does not carry that section,
+      which is normal for over-the-counter drugs. Say the label does not include it, **never** that
+      the drug has no warnings, and cite the `row_id` for that too.
 
     **`rxcuis` on the result is the join to coverage.** Those are the identifiers
     `check_drug_coverage` takes, so a label lookup is one way to resolve a drug name before asking
@@ -125,7 +194,7 @@ async def drug_label(
         )
     else:
         result = await client.drug_label(name, section, sequence=deps.next_live_call())
-        deps.remember_rows(_label_rows(result))
+        deps.remember_rows(rows_for(result))
         deps.remember_live(key, result)
         hit = False
 
@@ -181,7 +250,7 @@ async def drug_recalls(ctx: RunContext[AnswerDeps], name: str) -> DrugRecallResu
         )
     else:
         result = await client.drug_recalls(name, sequence=deps.next_live_call())
-        deps.remember_rows(_recall_rows(result))
+        deps.remember_rows(rows_for(result))
         deps.remember_live(key, result)
         hit = False
 
@@ -229,8 +298,8 @@ async def find_drug(ctx: RunContext[AnswerDeps], name: str) -> DrugMatches:
     elif deps.live_calls >= limit:
         result, hit = DrugMatches(query=name, unavailable=BUDGET_SPENT.format(limit=limit)), False
     else:
-        deps.next_live_call()
-        result = await client.find_drug(name)
+        result = await client.find_drug(name, sequence=deps.next_live_call())
+        deps.remember_rows(rows_for(result))
         deps.remember_live(key, result)
         hit = False
 
@@ -301,7 +370,7 @@ async def check_drug_coverage(
             result = await client.check_drug_coverage(
                 rxcuis, plan_ids, resolved, sequence=deps.next_live_call()
             )
-            deps.remember_rows(_coverage_rows(result))
+            deps.remember_rows(rows_for(result))
 
     result.lookups_remaining = max(0, limit - deps.live_calls)
     deps._record(
@@ -425,7 +494,7 @@ async def find_plans(
                 sequence=deps.next_live_call(),
             )
             result.other_counties = others
-            deps.remember_rows(_plan_rows(result))
+            deps.remember_rows(rows_for(result))
             deps.remember_live(key, result)
 
     result.lookups_remaining = max(0, limit - deps.live_calls)
@@ -519,7 +588,7 @@ async def lookup_provider(ctx: RunContext[AnswerDeps], npi: str) -> ProviderResu
         result, hit = ProviderResult(npi=npi, unavailable=BUDGET_SPENT.format(limit=limit)), False
     else:
         result = await client.lookup_npi(npi, sequence=deps.next_live_call())
-        deps.remember_rows(_provider_rows(result))
+        deps.remember_rows(rows_for(result))
         deps.remember_live(key, result)
         hit = False
 
@@ -536,37 +605,35 @@ async def lookup_provider(ctx: RunContext[AnswerDeps], npi: str) -> ProviderResu
 def _provider_rows(result: ProviderResult) -> list[Row]:
     """The citable record for a provider lookup.
 
-    A **not-found** lookup is citable too, for the same reason an empty recall search is: "the
-    registry holds no such NPI" is a finding, and without a row behind it the grounding validator
-    would force an abstention on a question that was answered.
+    **Two of its three branches are findings about an absence** — "the registry holds no such NPI"
+    and "that is not a well-formed NPI" — and both go through `_search_row`, which carries the
+    argument for why an absence is evidence. The second is a fact about the *input* rather than
+    about the world, and citable for exactly the same reason.
     """
     if result.unavailable:
         return []
     if result.invalid:
-        # A malformed NPI is a finding about the *input*, and citable for the same reason an empty
-        # search is: the agent established it, and without a row the grounding validator would force
-        # an abstention on a question it actually answered.
-        return [
-            Row(
-                row_id=result.row_id,
-                view="nppes/npi_registry",
-                source="nppes",
-                cells={"npi": result.npi, "rejected_because": result.invalid},
-                url=result.source_url,
-                title=f"NPI registry · {result.npi} · not a valid identifier",
-            )
-        ]
+        # A malformed NPI is a finding about the *input*, and citable for the same reason every
+        # other absence here is — see `_search_row`.
+        return _search_row(
+            row_id=result.row_id,
+            view="nppes/npi_registry",
+            source="nppes",
+            # `invalid`, not `rejected_because`: the model was shown the field by its own name, and
+            # a cell it cannot name is a cell it gets refused for naming (§18c family 2).
+            cells={"npi": result.npi, "invalid": result.invalid},
+            url=result.source_url,
+            title=f"NPI registry · {result.npi} · not a valid identifier",
+        )
     if not result.found or result.provider is None:
-        return [
-            Row(
-                row_id=result.row_id,
-                view="nppes/npi_registry",
-                source="nppes",
-                cells={"npi": result.npi, "found": "0"},
-                url=result.source_url,
-                title=f"NPI registry · {result.npi} · not found",
-            )
-        ]
+        return _search_row(
+            row_id=result.row_id,
+            view="nppes/npi_registry",
+            source="nppes",
+            cells={"npi": result.npi, "found": "0"},
+            url=result.source_url,
+            title=f"NPI registry · {result.npi} · not found",
+        )
     provider = result.provider
     primary = next((t for t in provider.taxonomies if t.primary), None)
     return [
@@ -606,6 +673,20 @@ def _coverage_rows(result: CoverageResult) -> list[Row]:
     fact about what the plan filed, and the reader is entitled to see that it was checked."""
     if result.unavailable:
         return []
+    if not result.coverage:
+        # `DataNotProvided` is already a row, which covers the common shape. This is the residue:
+        # the Marketplace answered with nothing at all.
+        return _search_row(
+            row_id=result.row_id,
+            view="marketplace/drug_coverage",
+            source="marketplace",
+            cells={
+                "year": str(result.year) if result.year else None,
+                "coverage": "[]",
+            },
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_coverage"],
+            title=f"Marketplace formulary · no coverage data returned · {result.year}",
+        )
     return [
         Row(
             row_id=item.row_id,
@@ -617,8 +698,11 @@ def _coverage_rows(result: CoverageResult) -> list[Row]:
                 "coverage": item.coverage,
                 "generic_rxcui": item.generic_rxcui,
                 "year": str(result.year) if result.year else None,
+                # The exact query, as a cell rather than as `url` — see `MARKETPLACE_PUBLIC_URL`.
+                # A `DrugCoverage` field, so it is a name the model was shown (§18c family 2).
+                "source_url": item.source_url,
             },
-            url=item.source_url,
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_coverage"],
             title=f"Marketplace formulary · plan {item.plan_id} · {result.year}",
         )
         for item in result.coverage
@@ -651,10 +735,26 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                     "zipcode": result.zipcode,
                     "year": str(result.year) if result.year else None,
                 },
-                url=None,
+                url=STATE_NOT_SERVED_URL,
                 title=f"HealthCare.gov · {result.state_not_served} not served",
             )
         ]
+    if not result.plans:
+        # The fourth state `PlanMatches` documents, and the one its `state_not_served` sibling has
+        # been citable for since §14a-bis: the search ran and matched nothing.
+        return _search_row(
+            row_id=result.row_id,
+            view="marketplace/plan_search",
+            source="marketplace",
+            cells={
+                "zipcode": result.zipcode,
+                "year": str(result.year) if result.year else None,
+                "total": str(result.total),
+                "plans": "[]",
+            },  # every key a `PlanMatches` field, and both ways it can say "nothing matched"
+            url=MARKETPLACE_PUBLIC_URL["marketplace/plan_search"],
+            title=f"HealthCare.gov plan search · {result.zipcode} · no plans matched",
+        )
     return [
         Row(
             row_id=plan.row_id,
@@ -679,7 +779,10 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                 "zipcode": result.zipcode,
                 "year": str(result.year) if result.year else None,
             },
-            url=plan.source_url,
+            # The `source_url` cell above already carries the exact query for the record; this is
+            # the page a *reader* can open, which the key-stripped API URL is not. See
+            # `MARKETPLACE_PUBLIC_URL`.
+            url=MARKETPLACE_PUBLIC_URL["marketplace/plan_search"],
             title=f"Marketplace plan · {plan.name} · {result.year}",
         )
         for plan in result.plans
@@ -700,6 +803,49 @@ def _money(value: float | None) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _drug_rows(result: DrugMatches) -> list[Row]:
+    """One citable record per resolved drug — **and one for "the Marketplace does not recognise
+    that name", which is a finding.**
+
+    Both halves are claims the tool's own docstring tells the model to make. On the negative side it
+    is "check the spelling, or try the generic name", which is a real answer when a name is
+    mistyped. On the positive side it is the instruction to **say which strength was checked** —
+    "Lipitor" resolves to four, they can be covered differently, and a sentence naming one of them
+    is a claim about what this lookup returned. A resolution step is still a step whose output gets
+    quoted.
+    """
+    if result.unavailable:
+        return []
+    if not result.matches:
+        return _search_row(
+            row_id=result.row_id,
+            view="marketplace/drug_search",
+            source="marketplace",
+            cells={"query": result.query, "matches": "[]"},
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_search"],
+            title=f"Marketplace drug search · {result.query} · not recognised",
+        )
+    return [
+        Row(
+            row_id=match.row_id,
+            view="marketplace/drug_search",
+            source="marketplace",
+            # Every key is a `DrugMatch` field, and every value that field's own string form
+            # (§18c family 2).
+            cells={
+                "rxcui": match.rxcui,
+                "name": match.name,
+                "strength": match.strength,
+                "route": match.route,
+                "full_name": match.full_name,
+            },
+            url=MARKETPLACE_PUBLIC_URL["marketplace/drug_search"],
+            title=f"Marketplace drug · {match.full_name or match.name}",
+        )
+        for match in result.matches
+    ]
 
 
 def _summarize_drug_matches(result: DrugMatches) -> str:
@@ -740,8 +886,51 @@ def _label_rows(result: DrugLabelResult) -> list[Row]:
     A single row holding five sections would let a citation name the label and quote whichever part
     it liked, which is the looseness the row shape exists to prevent.
     """
-    if result.unavailable or not result.label_found:
+    if result.unavailable:
         return []
+    if not result.label_found:
+        # Two searches — brand, then generic — found nothing. A stronger finding than a single
+        # miss, and the tool's own docstring tells the model to report it.
+        return _search_row(
+            row_id=result.row_id,
+            view="openfda/drug_label",
+            source="openfda",
+            # **Field names the model was shown, and values spelled as it saw them.** An earlier
+            # version named this cell `labels_found` — a plural nobody was shown — and the model
+            # cited `label_found`, correctly, by the only name it had, and was refused. §18c
+            # family 2, reintroduced in the rows written to close family 1 and caught by running
+            # the question. `false` rather than `False`: the model reads this result as JSON.
+            cells={
+                "query": result.query,
+                "requested_section": result.requested_section,
+                "label_found": "false",
+                # **The field the model reaches for to cite the emptiness itself.** Measured: with
+                # only `label_found` here it cited `sections`, correctly by the name it was shown,
+                # and spent a retry. An empty list is `[]` in the JSON it read, so that is how the
+                # cell is spelled — the `_money` rule, one type over.
+                "sections": "[]",
+            },
+            url=result.source_url or None,
+            title=f"openFDA label search · {result.query} · no label found",
+        )
+    if not result.sections:
+        # The ordinary over-the-counter case: the label is real, it simply does not carry this
+        # section. **Not the same claim as "no label"** and not the same as "no warnings" — the
+        # title says which, because a citation is read by a person.
+        return _search_row(
+            row_id=result.row_id,
+            view="openfda/drug_label",
+            source="openfda",
+            cells={
+                "query": result.query,
+                "requested_section": result.requested_section,
+                "label_found": "true",
+                "sections": "[]",
+            },
+            url=result.source_url or None,
+            title=f"{_label_title(result)} · no {result.requested_section} section",
+        )
+    drug = ", ".join(result.brand_names or result.generic_names) or result.query
     return [
         Row(
             row_id=section.row_id,
@@ -753,7 +942,7 @@ def _label_rows(result: DrugLabelResult) -> list[Row]:
             # and was rejected for naming a column that did not exist. Third bug of this family in
             # one phase; `test_live_row_cells_use_names_the_model_was_shown` is the general guard.
             cells={
-                "drug": ", ".join(result.brand_names or result.generic_names) or result.query,
+                "drug": drug,
                 "field": section.field,
                 "text": section.text,
                 "effective_time": result.effective_time,
@@ -784,24 +973,24 @@ def _recall_rows(result: DrugRecallResult) -> list[Row]:
 
     That is not a loophole in the grounding rule, it is the rule applied honestly. The claim being
     made is "I looked here and found nothing", and this row is precisely the evidence for it.
+
+    Kept here as the case that proved it; the general form lives in `_search_row`, which every
+    negative branch in this module now goes through.
     """
     if result.unavailable:
         return []
     if not result.recalls:
-        return [
-            Row(
-                row_id=result.row_id,
-                view="openfda/drug_enforcement",
-                source="openfda",
-                cells={
-                    "drug": result.query,
-                    "recalls_found": "0",
-                    "searched": "FDA enforcement (recall) database",
-                },
-                url=result.source_url,
-                title=f"FDA recall search · {result.query} · no matches",
-            )
-        ]
+        return _search_row(
+            row_id=result.row_id,
+            view="openfda/drug_enforcement",
+            source="openfda",
+            # Was `drug` / `recalls_found` / `searched` — three keys the model was never shown,
+            # latent only because live-02's drug has recalls and never takes this branch. Same
+            # correction as `_label_rows`, applied before it could cost a retry.
+            cells={"query": result.query, "total_matching": "0", "recalls": "[]"},
+            url=result.source_url,
+            title=f"FDA recall search · {result.query} · no matches",
+        )
     return [
         Row(
             row_id=recall.row_id,
@@ -856,6 +1045,39 @@ def _summarize_recalls(result: DrugRecallResult) -> str:
     return f"{shown}{more} recall(s)"
 
 
+#: Every live result shape, and the builder that turns it into what an answer may cite.
+#:
+#: **A registry rather than six call sites**, and that is the point: a tool whose result type is not
+#: in here cannot record a row at all, so the omission fails loudly at the first call instead of
+#: quietly costing an answer its provenance. `test_every_live_tool_has_a_row_builder` walks
+#: `LIVE_TOOLS`, reads each tool's return annotation, and demands it appear here — so the next tool
+#: anyone adds inherits the invariant rather than having to remember it.
+_ROW_BUILDERS: dict[type, Callable[[Any], list[Row]]] = {
+    DrugLabelResult: _label_rows,
+    DrugRecallResult: _recall_rows,
+    DrugMatches: _drug_rows,
+    CoverageResult: _coverage_rows,
+    PlanMatches: _plan_rows,
+    ProviderResult: _provider_rows,
+}
+
+
+def rows_for(result: object) -> list[Row]:
+    """What a live result leaves behind for an answer to cite.
+
+    **The invariant, in one line: a lookup that reached its upstream always leaves something
+    citable.** Whatever it found, including nothing — see `_search_row` for why an absence is
+    evidence and `unavailable` is not.
+    """
+    builder = _ROW_BUILDERS.get(type(result))
+    if builder is None:  # pragma: no cover - the parametrised test makes this unreachable
+        raise KeyError(
+            f"{type(result).__name__} has no row builder, so nothing it establishes could be "
+            f"cited. Register one in _ROW_BUILDERS."
+        )
+    return builder(result)
+
+
 #: Phase 3's openFDA tools. Registered alongside every earlier lane's, never instead of them.
 OPENFDA_TOOLS = (drug_label, drug_recalls)
 
@@ -888,4 +1110,5 @@ __all__ = [
     "find_drug",
     "find_plans",
     "lookup_provider",
+    "rows_for",
 ]

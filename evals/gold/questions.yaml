@@ -1,14 +1,20 @@
 # The gold evaluation set.
 #
-# 40 hand-authored questions in three shapes:
+# 50 hand-authored questions in five shapes. The count grew with the lanes, and the slices are
+# graded separately because they fail differently — `tests/test_gold_set.py` pins each size exactly,
+# so a slice cannot grow silently and quietly stop being comparable across runs:
 #   * 30 in-corpus  — 10 healthcare_gov / 10 medicare_ncd / 10 medicare_pubs, answered from a
 #                     retrieved passage and scored on recall@5 / MRR;
-#   * 4 structured  — answered from a ROW in the vendored CMS plan data (Phase 1-c), scored on
+#   * 4 mirror      — answered from a ROW in the vendored CMS plan data (Phase 1-c), scored on
 #                     exact cell match. They carry no corpus, no doc ids and no snippet, and are
 #                     deliberately outside the recall denominator: a retrieval-only runner asked a
 #                     table lookup can only miss, and scoring that would report a certainty as a
 #                     finding;
-#   * 6 abstentions — out of reach of every lane that exists, scored on whether the agent declines.
+#   * 7 live        — answered by an API call (Phase 3). Same `source_type` as the mirror four by
+#                     design, split out by `expected_lane_detail: live`, and graded on routing and
+#                     the tools reached rather than on a fixed answer;
+#   * 4 web         — answered from a live page (Phase 2), carrying no expected answer at all;
+#   * 5 abstentions — out of reach of every lane that exists, scored on whether the agent declines.
 # Loaded by
 # health_coverage_navigator.evals.loader.load_gold_set() into the GoldSet/GoldQuestion models in
 # health_coverage_navigator.evals.models — see that module's docstring for the schema.
@@ -835,6 +841,36 @@ questions:
       The plan id is a real 2026 North Carolina plan observed on 2026-08-22. It is CMS public data,
       not a person, so unlike a provider identifier it is safe to write down (§8a governs the other
       case).
+
+  - id: live-07
+    question: "What does the FDA label for Trelavastin say it treats?"
+    expected_source_type: structured_api
+    expected_lane_detail: live
+    expected_tools: [drug_label]
+    volatile: true
+    notes: >
+      THE NEGATIVE-FINDING QUESTION FOR THE LABEL LANE, and the counterpart to live-02. Trelavastin
+      does not exist: openFDA holds no label for it under either brand or generic name (both
+      searched and confirmed empty 2026-08-27), so the honest answer is "the FDA holds no label
+      under that name" — a real answer, not a failed lookup and not an abstention.
+
+      WHY IT IS GRADEABLE AT ALL, which is the whole reason it earns a slot. A live question passes
+      only when it cites something and the majority of its citations are `structured_api`, so this
+      one fails on BOTH of the behaviours the missing row used to force: abstaining (false — the
+      agent did answer) and answering while citing a web page instead (measured once on live-04,
+      where the agent held CMS's own answer and cited a worse source for it). Until 2026-08-27
+      `drug_label` emitted no row on this branch, so neither outcome was avoidable — see
+      docs/negative-finding-gaps.md.
+
+      THE NAME IS DELIBERATELY PLAUSIBLE. An obviously invented name invites the agent to dismiss it
+      from its own knowledge without calling a tool, which would score as a routing failure while
+      actually testing nothing. `-vastin` reads as a statin, so the agent searches — which is the
+      code path under test. It is also the reason this question is the least volatile in the live
+      slice despite the flag the schema requires: a formulary and a premium move every quarter, and
+      the FDA is not going to approve a label for a name nobody has filed.
+
+      NOT A DUPLICATE OF live-01. That one grades the happy path of the same tool (Lipitor, a label
+      that exists); this one grades the branch reached only when two searches come back empty.
 
   - id: abs-02
     question: "Is metformin covered under the Humana Gold Plus HMO plan's drug formulary this year?"

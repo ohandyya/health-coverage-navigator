@@ -17,18 +17,21 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-25.*
+*Updated 2026-08-27.*
 
 - **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
   Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
   source type — `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` /
-  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (454 Python
-  tests, pyright clean, 20 frontend tests) and `make scan` is clean. Design, contract, the two
+  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (476 Python
+  tests, pyright clean, 27 frontend tests) and `make scan` is clean. Design, contract, the two
   defect families, and what building it changed:
   [structured-api-tools.md](structured-api-tools.md).
-- **The headline: all six live questions pass, and the live lane costs the reference slice nothing
-  measurable.** `run_2026-08-22_8` — 38/49, **live 6/6**, `lane_detail_correct` 1.000,
-  `structured_exact_match` 1.000, groundedness 1.000, abstention 0.800, recall@5 0.700. §16b was
+- **The headline: every live question passes, and the live lane costs the reference slice nothing
+  measurable.** Latest: `run_2026-08-27_1` — 39/50, **live 7/7** including `live-07`,
+  `lane_detail_correct` 1.000, `routing_correct` 1.000, `structured_exact_match` 1.000,
+  groundedness 1.000, abstention 0.800, recall@5 0.700. The *controlled* Phase 3 comparison remains
+  the earlier pair — `run_2026-08-22_8`, 38/49, live 6/6 — because a comparison is only valid
+  against its own control. §16b was
   measured against a `--no-live` control: seven questions changed state between the arms, three lost
   and two *gained*, and **none of the losers touched a live tool**. Over-reach onto pre-existing
   questions across all 43 was **exactly one** (`abs-02` called `find_drug`). recall@5 moved
@@ -46,14 +49,15 @@ mid-stream.
   see but cannot cite* — `record_id` vs `row_id`, a result-level id that was not the citable one,
   `field` vs cell key `section`, a recorded row whose id appeared nowhere on the result, and a
   reformatted number (`344.50` where the model was shown `344.5`).
-- **Family 2 has a structural test; Family 1 does not, and is still open** — corrected 2026-08-25,
-  having been overstated above. Family 1's four instances were each fixed individually and the rule
-  was never made an invariant, so the same shape survives in **three more paths**: `drug_label` with
-  no matching label, `drug_label` with no such section, and `find_plans` with an empty result. It
-  has been quiet because those usually sit beside reference citations that satisfy the validator —
-  so the answer is *served* with one clause silently unevidenced, rather than failing loudly the way
-  an empty recall search did. Anchors, blast radius and two fix options:
-  [negative-finding-gaps.md](negative-finding-gaps.md).
+- **Both families now have structural tests — Family 1 as of 2026-08-27.** Its four instances had
+  each been fixed individually and the rule was never made an invariant, so the same shape survived
+  in **five more paths** (`drug_label` with no matching label, `drug_label` with no such section,
+  `find_plans` empty, `find_drug` unrecognised, `check_drug_coverage` empty). All five now emit a
+  row; `_search_row` is the one place that happens, `rows_for` dispatches every result type to a
+  builder, and three tests hold the line — including one that walks `LIVE_TOOLS` reading return
+  annotations, so a **new** tool inherits the invariant. The mirror half (`query_structured`
+  returning zero rows) is deliberately still open: Phase 1-c code whose change should be measured
+  against the mirror slice. [negative-finding-gaps.md](negative-finding-gaps.md).
 - **A third lesson, separate from those: a stale instruction must be deleted, not counter-argued.**
   `_WEB_STEPS` still told the model to search the web "for a recent recall" after `drug_recalls`
   existed; the first fix *added* a step saying the web was wrong for recalls, and the model resolved
@@ -70,12 +74,21 @@ mid-stream.
   nothing for half the drug catalogue. And the Marketplace API serves **only the states that use
   HealthCare.gov** — CA, GA and NY are refused — which invalidates `plan.md`'s own acceptance test
   (ZIP 30076 is in Georgia). A 400 there is an *answer*: that state runs its own exchange.
-- **The "new frontend surfaces ship unviewed" streak is back, and only half-broken.** Phase 3
-  populates `Citation.url` for structured citations for the first time, and a **real UI defect was
-  found by reading `CitationCard.tsx`** — a multi-line label passage was parsed as one
-  `column: value` pair per line, inventing a column out of any sentence with a colon. Fixed and
-  tested. But **nobody has opened the app**, so this was caught by reading rather than by looking,
-  which is not the same thing and is not what Phase 2's habit was.
+- **A live citation's URL is for a reader, not for a machine — and the Marketplace is the exception
+  that made the rule.** §14b's premise (*the record carries the URL that produced it, re-fetchable
+  by anyone*) holds for openFDA and NPPES and is **false for CMS**: `apikey` is required on every
+  endpoint, it is stripped before storage, and what is left returns 401 — `/plans/search` is a POST
+  besides. Five branches rendered unlinkable and two linked to that 401, which is the worse of the
+  two: **a citation that looks checkable and is not undercuts provenance more than one that plainly
+  is not**, and no validator or UI check could see it. Every Marketplace row now links to the
+  consumer page; the exact query travels as a `source_url` cell. §14b-bis, and
+  `test_a_marketplace_row_links_somewhere_a_reader_can_open` over all seven shapes.
+- **The "new frontend surfaces ship unviewed" streak is back, and it has now cost two defects.**
+  Phase 3 populates `Citation.url` for structured citations for the first time, and **both**
+  citation-rendering defects since were found by *reading* — `CitationCard.tsx` parsing a multi-line
+  label passage as one `column: value` pair per line, and the Marketplace URLs above. Both fixed and
+  tested. But **nobody has opened the app**, and an unlinkable or wrongly linked citation is exactly
+  what a browser shows and a test does not.
 - **Phase 2, still true:** **complete and measured; the agent has three lanes.**
   `web_search` over Tavily is registered beside the reference and relational tools, cites web
   results by a `result_id` only a search can assign, and degrades to an honest *"I could not check
@@ -335,8 +348,14 @@ Beyond the plan.md list, because implementation made them necessary:
 - [x] `--allow-demo-key` — an explicit, logged override for CMS's shared demo key, and the guard
       scoped so it stops refusing runs that could not reach CMS at all
 - [x] Structural test for defect **Family 2**: cell keys must be names the model was shown, and
-      every recorded row's id must be readable off its result. **Family 1 has no equivalent** — see
-      the unticked row below
+      every recorded row's id must be readable off its result
+- [x] Structural test for defect **Family 1** (2026-08-27): every live result that reached its
+      upstream leaves something citable, an outage still leaves nothing, and every tool's return
+      type has a registered row builder — so a new tool inherits the rule
+- [x] Every Marketplace row links to a page a reader can open (2026-08-27) — §14b's
+      *re-fetchable URL* premise is false for CMS, whose endpoints all require `apikey`; the query
+      URL moved to a `source_url` cell and a structural test over all seven shapes asserts no
+      citation points at the key-gated host
 - [x] `parseCells` in `CitationCard.tsx` — a multi-line label passage was being parsed one
       `column: value` pair per line; the first fix would have broken every **mirror** citation,
       whose PUF columns are CamelCase
@@ -347,8 +366,9 @@ Not done:
 
 - [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
       Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
-- [ ] **Close defect Family 1 structurally** — three negative-finding paths still emit no citable
-      row. Recommended shape and anchors: [negative-finding-gaps.md](negative-finding-gaps.md)
+- [ ] **The mirror half of Family 1** — `query_structured` returning zero rows is the same bind
+      ([relational-tool.md](relational-tool.md) §6). Left open deliberately: Phase 1-c code whose
+      change should be measured against the mirror slice
 - [ ] `AgentKit._agent` accepts `marketplace` and drops it at all three call sites; `AgentKit.stream`
       does not forward it to `stream_answer`. The `_build_agent` cache-key trap armed a sixth time,
       latent only until a test drives a Marketplace client through the kit
@@ -494,6 +514,185 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-27 (later) — the Marketplace citation that looked checkable and was not
+
+**Did:** fixed the "FDA Link Issue" the worklog carried — the one raised as *not a bug, but if you
+want those citations linkable the fix is a `source_url` entry*. It was a bug, the entry would not
+have fixed it, and the diagnosis missed the worse half. Every Marketplace row now links to a page a
+reader can open. `make check-all` green: 476 Python tests, 27 frontend tests.
+
+**Decided: the premise was wrong, not the plumbing.**
+[structured-api-tools.md](structured-api-tools.md) §14b says a live record carries the URL that
+produced it, *re-fetchable by anyone*. True for openFDA and NPPES — keyless GETs — and **false for
+the Marketplace**: `apikey` is required on every CMS endpoint, `_url()` strips it before storage
+(the leak guard, non-negotiable), so what survives returns **401** to whoever clicks it. Verified
+2026-08-27 against `/plans/search` and `/drugs/covered`. `/plans/search` is a **POST** besides, so
+the GET-shaped URL built for it was never an address at all. §14b-bis records the correction; the
+section is not deleted, because it is right for two of the three upstreams.
+
+**The second failure is the worse one, and it is the reason this was not a cosmetic fix.** Five
+branches rendered *unlinkable* (four negative, plus the positive drug-match) — visibly missing, and
+the shape the worklog note described. But the plan and coverage branches **did** carry a URL, and it
+pointed at that 401. **A citation that looks checkable and is not undercuts the provenance guarantee
+more than one that plainly is not:** the reader who clicks is told the source is broken rather than
+that it is elsewhere. Nothing in the repo would have caught it — a URL was present, so both the
+validator and the frontend were satisfied.
+
+**The rule that came out of it: `Row.url` is read by a human; the exact query is machine provenance
+and belongs in a cell.** So every Marketplace row links to the consumer page
+(`MARKETPLACE_PUBLIC_URL`), and the query URL travels as a `source_url` cell — which `_plan_rows`
+was already doing, so the positive branches needed the URL *moved*, not added. `state_not_served` is
+the one row with a better page than the plan finder: *"Georgia runs its own exchange"* is checkable
+against [marketplace-in-your-state](https://www.healthcare.gov/marketplace-in-your-state/), which
+makes that citation genuinely verifiable rather than decorative.
+
+**Rejected: the `source_url()` entry the worklog note proposed.** It keys the vendored mirrors and
+returns one URL per source, so a Marketplace entry would have given all seven shapes the same link
+— and, more to the point, it only ever fills `_row_citation`'s `row.url or …` fallback, so it could
+not have touched the two branches that already had a URL. It would have made the visible half look
+fixed and left the invisible half exactly as it was.
+
+**Rejected: a fallback for openFDA and NPPES too, for symmetry.** Both populate `source_url` on
+every branch, so the entry would be unreachable code implying a gap that does not exist.
+
+`test_a_marketplace_row_links_somewhere_a_reader_can_open` is the guard, parametrised over all seven
+Marketplace shapes and asserting two things — a `url` exists, *and* it is not the key-gated API host.
+Same argument as `test_a_reached_lookup_is_always_citable` one field over: **the next instance will
+be in whichever branch nobody thought to re-check.** Third structural invariant on this lane in one
+session, after Family 1's citable-row test and Family 2's cell-key test.
+
+**Still nobody has opened the app.** This is the second real citation-rendering defect in two
+sessions found by *reading* rather than by looking (after `parseCells`), and an unlinkable — or
+wrongly linked — citation is precisely what a browser shows and a test does not.
+
+### 2026-08-27 — Family 1 closed structurally, five instances at once
+
+**Did:** closed defect Family 1 (*a finding with nothing to cite*) as an invariant rather than as
+three more point fixes, per the recommendation the 2026-08-25 entry left open. `make check-all` is
+green: 468 Python tests (+14), pyright clean, frontend gate unchanged.
+
+**Decided: all five holes, not the three the write-up named.** [negative-finding-gaps.md](negative-finding-gaps.md)
+ranked `find_drug` and `check_drug_coverage` as lower priority — true of their blast radius, and
+irrelevant to the choice, because the invariant that makes the fix stick does not admit exemptions.
+A test asserting *"every live tool leaves something citable"* with two documented carve-outs is a
+test that has already lost the argument it exists to win.
+
+**Decided: `find_drug` gets per-match ids too, which nothing asked for.** Closing only its negative
+branch would have left its *positive* branch needing the exemption — and that exemption would have
+been hiding the same defect. The tool's docstring tells the model to **say which strength it
+checked**; *"I checked the 20 mg tablet"* is a claim about what the lookup returned and needs a row
+behind it. A resolution step is still a step whose output gets quoted.
+
+**The mechanism, in three parts:** `_search_row` is the single place a reached-but-empty lookup
+becomes a row and carries the rule in its docstring; `_ROW_BUILDERS` / `rows_for` replaces six
+direct builder calls with a registry keyed on result type, so a shape with no builder raises instead
+of silently recording nothing; and three tests enforce it —
+`test_a_reached_lookup_is_always_citable` (nine negative shapes),
+`test_an_outage_stays_uncitable` (the inverse), and `test_every_live_tool_has_a_row_builder`, which
+walks `LIVE_TOOLS` reading return annotations. **The third is the one that outlives the fix:** a new
+tool inherits the invariant instead of having to remember it.
+
+**Pinned the client half separately.** The agent-level test builds results by hand, so it would pass
+even if no client ever assigned the id. `tests/test_live_clients.py` now drives each negative branch
+over `MockTransport` and asserts the row comes back citable — and does its `rows_for` imports
+*inside* the tests, because that file deliberately keeps PydanticAI out of its import graph.
+
+**Not done, deliberately: the mirror half.** `query_structured` returning zero rows is the same bind
+([relational-tool.md](relational-tool.md) §6) and `_search_row` is now the natural place to close
+it — but it is Phase 1-c code whose change should be measured against the mirror slice, so it stays
+a separate change with its own eval run.
+
+**Then added `live-07` and ran it — which found three more defects.** The slice had no question for
+any of the five newly-closed paths, so the fix was unmeasured. `live-07` asks for the FDA label of
+*Trelavastin*, a drug that does not exist. It is gradeable because a live question passes only when
+it cites something whose majority lane is `structured_api`, so it fails on **both** pre-fix
+behaviours: abstaining, and answering while citing a web page.
+
+1. **The negative rows named cells the model had never been shown** — `labels_found` where it was
+   shown `label_found`, and four more of the same. Measured: two retries, budget exhausted, on a
+   question the agent had answered. §18c family 2, reintroduced in the rows written to close family
+   1, because the structural guard only ever ran over *positive* rows. It now runs over every
+   negative shape, and that immediately turned up `rejected_because` (shown as `invalid`) and three
+   invented keys on the pre-existing empty-recall row.
+2. **A negative row must carry the fields that express the emptiness.** With the keys corrected the
+   model still spent a retry reaching for `sections` — the natural thing to cite when the claim is
+   "there is nothing here". The rows now carry the empty collection, spelled as the JSON the model
+   read.
+3. **A citable row is necessary and not sufficient.** With row and cells both right, the agent
+   *still* abstained: `drug_label`'s docstring said "try the generic name, or say the drug was not
+   found" where `drug_recalls` says *"an empty result is a real answer ... do not soften it"*. It
+   also told the model to retry with the generic name, which the client already does internally —
+   and the trace shows the agent duly calling the tool twice. Rewritten to match. **The row removes
+   the obstacle to answering; the tool's text still has to supply the instruction.**
+
+After all three, `live-07` runs 9/9: one tool call, no retries, `abstained=False`, citing
+`fda#l1.0`. Details: [negative-finding-gaps.md](negative-finding-gaps.md) §7.
+
+**Also fixed: `scripts/smoke.py` never registered the live lane.** It opens the structured and web
+clients from config and passes them to `stream_answer`, but never opened `openfda` / `nppes` /
+`marketplace` — so `make smoke` drove a **three-lane agent while the app served four**, silently,
+since Phase 3. The first `live-07` run went to `web_search` and looked like a routing failure when
+the tool simply was not registered. The same gap the file's own comment describes for the web lane
+one lane earlier ("the default run smoked a two-lane agent no user ever gets"), and the same family
+as the `AgentKit._agent` marketplace drop still on the Phase 3 checklist.
+
+**Measured: `run_2026-08-27_1` — 39/50, and the live slice is 7/7 including `live-07`.** Run on the
+shared demo key with `--allow-demo-key`, the author's explicit call after `_refuse_the_demo_key`
+blocked the sweep (§3a); the three CMS questions drew no 429s. Against `run_2026-08-22_8`:
+
+| | 08-22_8 | 08-27_1 |
+|---|---|---|
+| lane_detail_correct | 1.000 | 1.000 |
+| routing_correct | 0.977 | 1.000 |
+| groundedness / citation_resolution | 1.000 | 1.000 |
+| structured_exact_match | 1.000 | 1.000 |
+| recall@5 | 0.700 | 0.700 |
+| abstention_accuracy | 0.800 | 0.800 |
+| false_abstention_rate | 0.000 | 0.000 |
+| web_reach_rate | 0.750 | 0.750 |
+
+**`lane_detail_correct` holds at 1.000 with a seventh live question in the denominator, and
+groundedness stays at 1.000 — so the new negative rows are cited correctly, not merely cited.**
+Four reference questions flipped (`hcg-04`, `hcg-06` to pass; `hcg-02`, `ncd-02` to fail) and
+nothing in this session touched reference retrieval: that is the 0.200 spread this set already has
+at fixed config, net zero, with `recall@5` identical. Read `routing_correct` 0.977 → 1.000 the same
+way — one question out of 43 is this set's resolution limit, not an effect.
+
+The two failures are both pre-existing: `abs-03` answered a question it should decline (abstention
+accuracy unmoved at 0.800), and `web-01` false-abstained (`web_reach_rate` unmoved at 0.750) — the
+question whose own gold note predicted this, since Phase 3 gave openFDA a competing claim on it.
+
+**Then fixed what the run header revealed: the run record never carried the live lane.** The header
+read `lanes reference + structured + web` while answering seven live questions — `_build` computed
+`plan.live` and both the header and the `EvalRun` record dropped it, so **no run file before
+`run_2026-08-27_2` can say whether the live lane was registered.** `EvalRunSummary.live` is now a
+contract field beside `structured` and `web` (additive, `make types` regenerated), and
+`test_the_run_record_pins_every_lane_that_was_registered` asserts all four flags survive the trip.
+**Third instance in this repo of a value accepted and dropped at its call sites**, after
+`AgentKit._agent`'s `marketplace` and `scripts/smoke.py`'s live clients — two of the three found in
+one session, which is the argument for looking at the other seams rather than waiting.
+
+**And the same omission had already reached the dashboard, where it was misreporting.**
+`EvalsPage`'s comparison panel warns when two runs differ in anything outside the axis being
+compared — the check that stops a metric delta being read as evidence. It computed that from
+`provenance()`, which returned `toolset` and `structured` but **not `web` or `live`**: a field that
+function does not return cannot be detected as differing, so `eval-live` against its own
+`eval-no-live` control — the pair [Makefile](../Makefile) exists to produce, and the pair §16b was
+actually measured with — compared as though the two runs were identical, no warning, whole delta
+attributed to nothing.
+
+Fixed together, because either half alone leaves the panel wrong in a different direction: both
+flags join `provenance()`, and `COMPARISON_AXES` grows to all four so a deliberate lane comparison
+does not warn about its own axis. **Plus the gap that widening exposed: an axis moving is the point,
+but only one at a time.** The old check looked only *outside* the axes, so any number of them could
+move in silence — two runs differing in both `toolset` and `live` answer neither question. It now
+warns in two directions, in two sentences, because they are different failures.
+
+The logic moved to `frontend/src/lib/comparability.ts` — pure, no React — rather than staying in the
+page as two exports existing only so a test could reach them. Seven tests pin it, including the
+`eval-live`-against-its-control case that used to compare as identical. `web` and `live` also gained
+badges and detail-line text, which is the only cosmetic part of this.
 
 ### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
 

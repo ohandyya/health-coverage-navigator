@@ -172,7 +172,7 @@ def test_no_recalls_reaches_the_model_as_an_answer(agent_kit) -> None:
             # The *search* is the citable evidence for a negative finding. Without this the
             # grounding validator would force an abstention on a question the agent did answer —
             # see `_recall_rows` for why the empty result is still a row.
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "0"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "0"}}],
             abstained=False,
         ),
         openfda=agent_kit.openfda_client(status=404),
@@ -371,7 +371,7 @@ def test_a_repeated_lookup_is_answered_from_the_run_cache(agent_kit) -> None:
         RECALLS,
         agent_kit.answer(
             answer="No recalls on record. [c1]",
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "0"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "0"}}],
             abstained=False,
         ),
         openfda=agent_kit.openfda_client(status=404),
@@ -437,7 +437,7 @@ def test_a_short_cell_still_demands_an_exact_copy(agent_kit) -> None:
         RECALLS,
         agent_kit.answer(
             answer="Close enough. [c1]",
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "zero"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "zero"}}],
         ),
         openfda=agent_kit.openfda_client(status=404),
     )
@@ -497,12 +497,11 @@ async def test_live_row_cells_use_names_the_model_was_shown() -> None:
         row_id="",
         recalls=[DrugRecall(row_id="fda#r1.1", recall_number="D-1", reason="r")],
     )
-    visible_recall = set(DrugRecall.model_fields) | {
-        "recall_initiation_date",
-        "recalls_found",
-        "searched",
-        "drug",
-    }
+    # **No synthetic names left to allow.** This set used to carry `recalls_found`, `searched` and
+    # `drug` — three keys the model was never shown, latent because live-02's drug has recalls and
+    # never takes the empty branch. The same shape in `_label_rows` did cost two retries when the
+    # question was finally asked, so the negative rows now use result fields only.
+    visible_recall = set(DrugRecall.model_fields) | set(DrugRecallResult.model_fields)
     for row in _recall_rows(recalls):
         unknown = set(row.cells) - visible_recall
         assert not unknown, f"cell key(s) the model never saw: {sorted(unknown)}"
@@ -555,3 +554,263 @@ async def test_live_row_cells_use_names_the_model_was_shown() -> None:
             assert row.row_id in visible_ids, (
                 "the row's id must be a value the model can read off the result"
             )
+
+
+# ---------------------------------------------------------------- the invariant ---------------
+
+
+def _negative_results() -> list[tuple[str, object]]:
+    """Every shape a live lookup can come back in having **reached its upstream and found nothing**.
+
+    Written out rather than generated, because the point of the list is that a person had to think
+    about each branch — the four that were fixed case by case, and the five that were not.
+    """
+    from health_coverage_navigator.live.models import (
+        CoverageResult,
+        DrugLabelResult,
+        DrugMatches,
+        DrugRecallResult,
+        PlanMatches,
+        ProviderResult,
+    )
+
+    return [
+        # The four that were fixed while building Phase 3 (§18c family 1).
+        ("no recalls", DrugRecallResult(query="Examplor", row_id="fda#r1.0")),
+        ("no such npi", ProviderResult(npi="1000000000", found=False, row_id="npi#1000000000.0")),
+        ("malformed npi", ProviderResult(npi="123", invalid="too short", row_id="npi#123.x")),
+        ("state not served", PlanMatches(state_not_served="GA", row_id="mkt#s1.GA")),
+        # The five this test was written for (docs/negative-finding-gaps.md).
+        (
+            "no label",
+            DrugLabelResult(
+                query="nosuchdrug",
+                requested_section="indications",
+                label_found=False,
+                row_id="fda#l1.0",
+                source_url="https://api.fda.gov/drug/label.json?search=x",
+            ),
+        ),
+        (
+            "label without that section",
+            DrugLabelResult(
+                query="Examplor",
+                requested_section="interactions",
+                label_found=True,
+                brand_names=["Examplor"],
+                row_id="fda#l1.0",
+                source_url="https://api.fda.gov/drug/label.json?search=x",
+            ),
+        ),
+        ("no plans matched", PlanMatches(zipcode="27360", year=2026, row_id="mkt#p1.0")),
+        ("drug not recognised", DrugMatches(query="lipitorr", row_id="mkt#d1.0")),
+        ("no coverage returned", CoverageResult(year=2026, row_id="mkt#c1.0")),
+    ]
+
+
+@pytest.mark.parametrize(
+    "label,result", _negative_results(), ids=lambda v: v if isinstance(v, str) else ""
+)
+def test_a_reached_lookup_is_always_citable(label: str, result: object) -> None:
+    """**The invariant the point fixes never became.**
+
+    A lookup that reached its upstream must leave something an answer can cite — whatever it found,
+    including nothing. Otherwise the grounding validator forces the model to abstain on a question
+    it did answer, or to go and cite a worse source for a fact it already holds authoritatively.
+    Both were measured; see `_search_row`.
+
+    Nine shapes, four of which were fixed one at a time before anyone wrote the rule down. This is
+    the check that would have caught all nine at once, which is the whole argument for having it:
+    *the next instance will be in whichever tool nobody thought to re-check.*
+    """
+    from health_coverage_navigator.agent.live_tools import rows_for
+
+    rows = rows_for(result)
+    assert rows, f"{label}: a finding with nothing to cite forces a false abstention"
+    for row in rows:
+        assert row.row_id, f"{label}: a recorded row with no id is uncitable by construction"
+        # Family 2's half of the same rule: the id must be readable off the result the model was
+        # handed, or it holds an answer it is not allowed to point at.
+        visible = {
+            value
+            for name in type(result).model_fields  # type: ignore[attr-defined]
+            if isinstance(value := getattr(result, name, None), str)
+        }
+        assert row.row_id in visible, f"{label}: the model cannot see the id it must cite"
+        # **Family 2, on the rows written to close family 1.** Measured the hard way: the not-found
+        # label row named a cell `labels_found`, the model cited `label_found` — correctly, by the
+        # only name it had been given — and burned both retries on a question it had answered. The
+        # positive rows were guarded by `test_live_row_cells_use_names_the_model_was_shown` from the
+        # start; these were not, and three of them carried invented names.
+        fields = set(type(result).model_fields)  # type: ignore[attr-defined]
+        unknown = set(row.cells) - fields
+        assert not unknown, (
+            f"{label}: cell key(s) the model was never shown: {sorted(unknown)}. A negative row's "
+            f"cells must be fields of the result it came from — there is nothing else for the "
+            f"model to copy."
+        )
+
+
+def _marketplace_results() -> list[tuple[str, object]]:
+    """**Every Marketplace shape that produces a row**, positive and negative alike.
+
+    The negative half repeats `_negative_results()` on purpose: the URL invariant below is not the
+    citability invariant, and a branch can satisfy one while failing the other — which is exactly
+    what happened. Four negative branches and one *positive* branch rendered `url=None`, and the two
+    positive branches that did carry a URL carried one no reader can open.
+    """
+    from health_coverage_navigator.live.models import (
+        County,
+        CoverageResult,
+        DrugCoverage,
+        DrugMatch,
+        DrugMatches,
+        PlanMatches,
+        PlanSummary,
+    )
+
+    api = "https://marketplace.api.healthcare.gov/api/v1"
+    return [
+        ("state not served", PlanMatches(state_not_served="GA", row_id="mkt#s1.GA")),
+        ("no plans matched", PlanMatches(zipcode="27360", year=2026, row_id="mkt#p1.0")),
+        ("drug not recognised", DrugMatches(query="lipitorr", row_id="mkt#d1.0")),
+        ("no coverage returned", CoverageResult(year=2026, row_id="mkt#c1.0")),
+        (
+            "plans found",
+            PlanMatches(
+                zipcode="27601",
+                year=2026,
+                county=County(fips="37183", name="Wake County", state="NC"),
+                plans=[
+                    PlanSummary(
+                        row_id="mkt#p1.1",
+                        plan_id="12345NC0010001",
+                        name="Example Silver",
+                        issuer="Example Health",
+                        source_url=f"{api}/plans/search?year=2026&zipcode=27601",
+                    )
+                ],
+                total=1,
+            ),
+        ),
+        (
+            "drug resolved",
+            DrugMatches(
+                query="lipitor",
+                matches=[DrugMatch(row_id="mkt#d1.1", rxcui="617314", name="Lipitor")],
+            ),
+        ),
+        (
+            "coverage found",
+            CoverageResult(
+                year=2026,
+                coverage=[
+                    DrugCoverage(
+                        row_id="mkt#c1.1",
+                        rxcui="617314",
+                        plan_id="12345NC0010001",
+                        coverage="Covered",
+                        source_url=f"{api}/drugs/covered?year=2026&drugs=617314",
+                    )
+                ],
+            ),
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "label,result", _marketplace_results(), ids=lambda v: v if isinstance(v, str) else ""
+)
+def test_a_marketplace_row_links_somewhere_a_reader_can_open(label: str, result: object) -> None:
+    """**§14b holds for openFDA and NPPES and does not hold here.**
+
+    The section's premise is that a live record carries the query URL that produced it, re-fetchable
+    by anyone. `apikey` is required on *every* CMS Marketplace endpoint, and `_url()` strips it
+    before storage — correctly, that is the leak guard — so the stored URL returns 401 to anyone who
+    clicks it. `/plans/search` is a POST besides, so its GET-shaped URL was never an address at all.
+
+    Two failures, and the second is the worse one: four negative branches plus the positive
+    drug-match branch rendered no link, and the plan and coverage branches rendered a link to an
+    error page. A citation that looks checkable and is not undercuts the provenance guarantee more
+    than one that plainly is not.
+    """
+    from health_coverage_navigator.agent.live_tools import rows_for
+    from health_coverage_navigator.live.marketplace import MARKETPLACE_BASE_URL
+
+    rows = rows_for(result)
+    assert rows, f"{label}: nothing to check — see test_a_reached_lookup_is_always_citable"
+    for row in rows:
+        assert row.url, (
+            f"{label}: a Marketplace citation with no URL. `source_url()` covers the vendored "
+            f"mirrors only, so `runtime._row_citation`'s fallback cannot fill this one in."
+        )
+        assert not row.url.startswith(MARKETPLACE_BASE_URL), (
+            f"{label}: {row.url} needs an API key and returns 401 to a reader. The exact query "
+            f"belongs in a `source_url` cell; `Row.url` is read by a human."
+        )
+        assert "apikey" not in row.url.lower(), f"{label}: §14b's leak guard"
+
+
+#: Stand-ins by annotation, for building a result with nothing on it but what pydantic insists on.
+#: Deliberately not a `defaultdict` — an unmapped type must fail by *name*, telling the next person
+#: which field to account for, rather than as a `ValidationError` from three frames down.
+_PLACEHOLDERS: dict[object, object] = {str: "x", int: 1, float: 1.0, bool: False}
+
+
+def _only_required(shape, **overrides):
+    """A minimal instance of a live result model: required fields filled, nothing else set.
+
+    Written against `model_fields` rather than against a hand-kept list of constructor arguments,
+    which is what the first version did — it named `query` and `npi` because those were required
+    *that day*, so a new required field would have failed as an unreadable `ValidationError` rather
+    than as the thing that actually changed.
+    """
+    kwargs: dict[str, object] = {}
+    for name, field in shape.model_fields.items():
+        if not field.is_required():
+            continue
+        value = _PLACEHOLDERS.get(field.annotation)
+        assert value is not None, (
+            f"{shape.__name__}.{name} is required and its type "
+            f"({field.annotation}) has no placeholder — add one to _PLACEHOLDERS."
+        )
+        kwargs[name] = value
+    return shape(**{**kwargs, **overrides})
+
+
+def test_an_outage_stays_uncitable() -> None:
+    """The inverse, and the half a well-meaning fix breaks: **an outage is not a finding.**
+
+    Nothing was looked up, so there is nothing to cite. A row here would let the model cite the fact
+    that it failed, which is the same defect pointing the other way and a worse one — it turns "I
+    could not check" into a sourced claim.
+    """
+    from health_coverage_navigator.agent.live_tools import _ROW_BUILDERS, rows_for
+
+    for shape in _ROW_BUILDERS:
+        assert "unavailable" in shape.model_fields, (
+            f"{shape.__name__} has no `unavailable` field, so an outage and an empty result are "
+            f"indistinguishable on it — the inverse of the rule this test guards"
+        )
+        assert rows_for(_only_required(shape, unavailable="upstream unreachable")) == [], (
+            f"{shape.__name__} cited an outage"
+        )
+
+
+def test_every_live_tool_has_a_row_builder() -> None:
+    """What makes the invariant survive the next tool someone adds.
+
+    The two tests above check the shapes that exist today; this one checks that a *new* shape cannot
+    slip in without one. A tool whose result type has no builder cannot record a row at all, so
+    everything it establishes would be uncitable — the defect, in its most general form.
+    """
+    from typing import get_type_hints
+
+    from health_coverage_navigator.agent.live_tools import _ROW_BUILDERS, LIVE_TOOLS
+
+    for tool in LIVE_TOOLS:
+        returns = get_type_hints(tool)["return"]
+        assert returns in _ROW_BUILDERS, (
+            f"{tool.__name__} returns {returns.__name__}, which has no row builder — nothing it "
+            f"finds could be cited. Register one in _ROW_BUILDERS."
+        )

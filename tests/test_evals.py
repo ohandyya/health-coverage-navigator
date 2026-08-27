@@ -185,6 +185,33 @@ async def test_the_run_record_pins_the_toolset_and_the_embeddings(agent_kit):
     assert run.config_fingerprint
 
 
+async def test_the_run_record_pins_every_lane_that_was_registered(agent_kit):
+    """**Which lanes a run could see is part of what its score means**, and each of the three was
+    added a phase after the lane itself.
+
+    `live` was the one that got away: `run_2026-08-27_1` answered seven live questions under a
+    header reading `lanes reference + structured + web`, because `_build` computed the flag and both
+    the header and the record then dropped it. Two runs that differ only in a lane cannot be
+    compared if a run does not say which lanes it had — the argument `toolset`, `structured` and
+    `web` each won separately, and the reason this asserts all four together rather than one more.
+    """
+    gold = GoldSet(questions=[_question()])
+    run = await run_gold_set(
+        bm25_answerer(agent_kit.index),
+        gold,
+        runner="agent",
+        toolset="both",
+        structured=True,
+        web=False,
+        live=True,
+    )
+
+    assert (run.structured, run.web, run.live) == (True, False, True), (
+        "every lane flag passed in must reach the record — a dropped one is invisible until "
+        "someone tries to compare two runs"
+    )
+
+
 # ---------------------------------------------------------------- groundedness --------------
 
 

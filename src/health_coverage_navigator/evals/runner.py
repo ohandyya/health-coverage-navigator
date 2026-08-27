@@ -382,6 +382,7 @@ async def run_gold_set(
     toolset: str | None = None,
     structured: bool | None = None,
     web: bool | None = None,
+    live: bool | None = None,
     vectors_snapshot_id: str | None = None,
     max_concurrency: int = 1,
 ) -> EvalRun:
@@ -416,6 +417,7 @@ async def run_gold_set(
         model=model,
         structured=structured,
         web=web,
+        live=live,
         # Phase 1b's comparison is between runs that differ *only* in `toolset`, so a run that does
         # not name it cannot take part in that comparison. `vectors_snapshot_id` does the same job
         # for the embeddings that `chunker_snapshot_id` does for the chunks — a recall number that
@@ -926,12 +928,19 @@ async def main() -> int:
         print(f"  model    {plan.model}", file=sys.stderr)
     if plan.toolset:
         print(f"  toolset  {plan.toolset}", file=sys.stderr)
-    if plan.structured is not None or plan.web is not None:
+    if plan.structured is not None or plan.web is not None or plan.live is not None:
+        # **Every registered lane, or the header lies by omission.** `run_2026-08-27_1` printed
+        # `reference + structured + web` while answering seven live questions: `plan.live` was
+        # computed in `_build` and then dropped here and at the record below. Third instance in this
+        # repo of a value accepted and dropped at its call sites, after `AgentKit._agent`'s
+        # `marketplace` and `scripts/smoke.py`'s live clients.
         lanes = "reference"
         if plan.structured:
             lanes += " + structured"
         if plan.web:
             lanes += " + web"
+        if plan.live:
+            lanes += " + live"
         print(
             f"  lanes    {lanes if lanes != 'reference' else 'reference only'}",
             file=sys.stderr,
@@ -950,6 +959,7 @@ async def main() -> int:
         toolset=plan.toolset,
         structured=plan.structured,
         web=plan.web,
+        live=plan.live,
         vectors_snapshot_id=plan.vectors_snapshot_id,
         on_progress=_progress_printer(total),
         max_concurrency=concurrency,

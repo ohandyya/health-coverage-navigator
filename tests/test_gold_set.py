@@ -254,10 +254,15 @@ def test_answers_are_gradeable(gold: GoldSet):
         assert q.answer_key_facts, f"{q.id}: missing answer_key_facts"
 
 
-def test_six_live_questions(gold: GoldSet):
-    """Phase 3's slice. Deliberately outside `in_corpus()`, like the mirror and web slices."""
+def test_the_live_slice(gold: GoldSet):
+    """Phase 3's slice. Deliberately outside `in_corpus()`, like the mirror and web slices.
+
+    Seven since 2026-08-27: `live-07` grades the *negative* branch of `drug_label`, which the four
+    original questions could not reach. Counted exactly rather than as a floor, for the reason the
+    abstention count is — a slice that grows silently stops being comparable across runs.
+    """
     live = gold.live()
-    assert len(live) == 6
+    assert len(live) == 7
     assert all(q.expected_tools for q in live), (
         "`structured_api` no longer names one lane half, so routing is only scorable from tools"
     )

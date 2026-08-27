@@ -62,6 +62,12 @@ from health_coverage_navigator.api.models import (
     TokenEvent,
 )
 from health_coverage_navigator.config import get_config
+from health_coverage_navigator.live.marketplace import (
+    MarketplaceClient,
+    MarketplaceNotConfiguredError,
+)
+from health_coverage_navigator.live.nppes import NppesClient
+from health_coverage_navigator.live.openfda import OpenFdaClient
 from health_coverage_navigator.structured.catalog import StructuredNotBuiltError
 from health_coverage_navigator.structured.store import StructuredStore
 from health_coverage_navigator.vectors import embedder as embedder_module
@@ -423,7 +429,30 @@ def main() -> int:
             print(f"{exc}", file=sys.stderr)
             return 1
 
-    lanes = "reference" + (" + plan data" if structured else "") + (" + web" if web else "")
+    # **The live lane, on the same terms as the two above: config.yaml decides, not a flag.** It was
+    # missing here entirely — `agent.live_tools: true` was ignored, so a default `make smoke` drove
+    # a three-lane agent while the app served four, and a question needing `drug_label` reached the
+    # web instead and looked like a routing failure. Exactly the gap the comment above describes for
+    # `--web`, one lane later.
+    #
+    # openFDA and NPPES are keyless, so they open unconditionally like `app.py`'s loaders do. The
+    # Marketplace **degrades** rather than exiting, also matching `app.py`: it is a third of a lane
+    # whose other two thirds need no credential, so a missing key must not withhold them.
+    openfda = nppes = marketplace = None
+    if get_config().agent.live_tools:
+        openfda = OpenFdaClient.open()
+        nppes = NppesClient.open()
+        try:
+            marketplace = MarketplaceClient.open()
+        except MarketplaceNotConfiguredError as exc:
+            print(f"  marketplace tools skipped: {exc}", file=sys.stderr)
+
+    lanes = (
+        "reference"
+        + (" + plan data" if structured else "")
+        + (" + web" if web else "")
+        + (" + live APIs" if openfda else "")
+    )
     print(f"Q: {question}")
     print(
         f"   ({len(index)} chunks indexed, toolset={toolset}, lanes={lanes}"
@@ -451,6 +480,9 @@ def main() -> int:
                 vectors=vectors,
                 structured=structured,
                 web=web,
+                openfda=openfda,
+                nppes=nppes,
+                marketplace=marketplace,
             )
         ]
 

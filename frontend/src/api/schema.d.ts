@@ -356,6 +356,8 @@ export interface components {
             duration_ms?: number | null;
             /** Id */
             id: string;
+            /** Live */
+            live?: boolean | null;
             /** Metrics */
             metrics?: {
                 [key: string]: number;
@@ -455,6 +457,8 @@ export interface components {
             duration_ms?: number | null;
             /** Id */
             id: string;
+            /** Live */
+            live?: boolean | null;
             /** Metrics */
             metrics?: {
                 [key: string]: number;

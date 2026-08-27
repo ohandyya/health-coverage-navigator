@@ -147,13 +147,26 @@ So **the search itself becomes the record**:
 ```python
 if not result.recalls:
     return [Row(row_id=result.row_id, view="openfda/drug_enforcement", source="openfda",
-                cells={"drug": result.query, "recalls_found": "0",
-                       "searched": "FDA enforcement (recall) database"},
+                cells={"query": result.query, "total_matching": "0", "recalls": "[]"},
                 url=result.source_url, title=f"FDA recall search · {result.query} · no matches")]
 ```
 
 Not a loophole in the grounding rule — the rule applied to a negative claim. The assertion is *"I
 looked here and found nothing"*, and that row is precisely the evidence for it.
+
+**Every cell key there is a field of the result the model was handed** — including `recalls: "[]"`,
+spelled as the JSON it read. That is not fastidiousness: the first version of the *label* equivalent
+named a cell `labels_found`, the model cited `label_found` (correctly, by the only name it had), and
+burned its whole retry budget on a question it had answered. A negative row has nothing for the
+model to copy except the fields that say the thing is empty, so those are exactly what it must
+carry.
+
+**The rule had to become a mechanism before it held.** Four instances were fixed one at a time, the
+rule was written down, and five more instances of the identical shape were found afterwards in the
+same file — so the row above now comes from a shared `_search_row` helper, and a parametrised test
+asserts that *every* live result which reached its upstream leaves something citable. The general
+lesson is the one worth taking: a rule enforced by memory is a rule that gets re-broken in whichever
+code path nobody thought to re-check.
 
 ## Retry versus degrade, concretely
 
@@ -234,8 +247,12 @@ because this is where a model's instinct to hedge does damage:
   empty-result conventions and three envelopes are *not* shared, and a base class declaring all
   three as overridable would be a base class in name only.
 - **A live record is cited as a row**, same shape and validator as a vendored one, because it makes
-  the same kind of claim — with one addition a mirror row cannot have: a `url` that re-fetches the
-  exact record.
+  the same kind of claim — with one addition a mirror row cannot have: a `url` a reader can open.
+  For openFDA and NPPES, both keyless GETs, that is the exact query. **Not for the Marketplace**,
+  where `apikey` is required everywhere and stripped before storage, so the surviving URL returns
+  401 — those rows cite the consumer page and carry the query as a `source_url` cell, because a
+  citation that *looks* checkable and is not costs more than one that plainly is not
+  ([§14b-bis](../structured-api-tools.md)).
 
 ## Evidence
 
@@ -268,10 +285,15 @@ because this is where a model's instinct to hedge does damage:
   call. `test_the_recall_query_is_a_valid_disjunction` now inspects the outgoing request rather than
   the canned reply. The honest statement is that offline tests pin the *handling* of every edge case
   and only one test pins the *asking*.
-- **A known residual gap**, recorded rather than papered over: three negative findings still emit no
-  citable row — `drug_label` when no label matches, `drug_label` when the label lacks the requested
-  section, and `find_plans` when the search returns nothing. See
-  [negative-finding-gaps.md](../negative-finding-gaps.md).
+- **The gap that this list used to record is closed** (2026-08-27), and how it closed is the more
+  useful half. Five further paths had the same hole — `drug_label` with no matching label,
+  `drug_label` with no such section, `find_plans` with an empty result, `find_drug` with an
+  unrecognised name, `check_drug_coverage` with an empty envelope — because the family had been
+  fixed four times and never made an invariant. It is one now: `rows_for` dispatches every result
+  type to a builder, and `test_every_live_tool_has_a_row_builder` walks `LIVE_TOOLS` reading return
+  annotations, so **a new tool inherits the rule rather than having to remember it.**
+  `test_an_outage_stays_uncitable` pins the boundary in the other direction: nothing was looked up,
+  so nothing may be cited. See [negative-finding-gaps.md](../negative-finding-gaps.md).
 
 ## Why it presents well
 

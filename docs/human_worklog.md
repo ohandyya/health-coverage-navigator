@@ -34,13 +34,20 @@ AI (e.g., Claude) should **NOT** read this document.
 
 ## Known Issues
 
-- Fix citation bug
+- [Fixed] Fix citation bug
 
     - See for description at docs/negative-finding-gaps.md
 
 - [Fixed] Run `make scan` and address any issues
 
     - See docs/deps/2026-08-26.md for context
+
+- [Fixed] FDA Link Issue
+
+    ```
+    Unrelated to evals, one thing I noticed while tracing this: source_url() has no key for marketplace or openfda, so the three new Marketplace negative rows render with url=None (the openFDA ones carry their query URL). That matches the pre-existing state_not_served row and the frontend handles both branches, so it's not a bug — but if you want those citations linkable, the fix is a source_url entry, not an eval change.
+    ```
+
 
 ## Work Log
 

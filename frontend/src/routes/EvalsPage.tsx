@@ -18,7 +18,9 @@
  * decision that needed it, and lexical-vs-vector-vs-both is that decision. The design point is that
  * a metric delta on its own is not evidence — two runs are only comparable if they were measured
  * under the same corpus, config and model — so `RunCompare` shows what differs between the runs
- * *before* it shows what differs between their scores, and says so when more than the toolset moved.
+ * *before* it shows what differs between their scores, and says so when more than the axis moved.
+ * It warns in two directions: something outside the axes moved, or more than one axis did. Both
+ * make a delta unattributable, and they are different sentences.
  */
 import { CircleAlert, Play } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -34,6 +36,7 @@ import {
   streamEvalRun,
 } from '@/api/client'
 import { readEvents } from '@/api/stream'
+import { comparability } from '@/lib/comparability'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +73,19 @@ function RunnerBadge({ run }: { run: EvalRunSummary }) {
       {run.structured != null && (
         <span className="ml-1 rounded-full bg-lane-structured/10 px-2 py-0.5 text-xs text-lane-structured ring-1 ring-inset ring-lane-structured/30">
           {run.structured ? '+ tables' : 'no tables'}
+        </span>
+      )}
+      {/* Phase 2's axis and Phase 3's, on the same terms. Both reached the contract with their
+          lanes and neither was ever surfaced, so a reader could not tell a three-lane run from a
+          four-lane one — see `provenance` for what that cost the comparison panel. */}
+      {run.web != null && (
+        <span className="ml-1 rounded-full bg-lane-web/10 px-2 py-0.5 text-xs text-lane-web ring-1 ring-inset ring-lane-web/30">
+          {run.web ? '+ web' : 'no web'}
+        </span>
+      )}
+      {run.live != null && (
+        <span className="ml-1 rounded-full bg-lane-structured/10 px-2 py-0.5 text-xs text-lane-structured ring-1 ring-inset ring-lane-structured/30">
+          {run.live ? '+ live' : 'no live'}
         </span>
       )}
     </>
@@ -145,35 +161,13 @@ function MetricTable({
   )
 }
 
-/** Everything that has to match for two scores to be comparable, as one line per run. */
-function provenance(run: EvalRun): Record<string, string> {
-  return {
-    runner: run.runner,
-    toolset: run.toolset ?? '—',
-    structured: run.structured == null ? '—' : String(run.structured),
-    model: run.model ?? '—',
-    config: run.config_fingerprint?.slice(0, 12) ?? '—',
-    chunks: Object.values(run.chunker_snapshot_id ?? {}).join(', ') || '—',
-    vectors: run.vectors_snapshot_id ?? '—',
-  }
-}
-
 function RunCompare({ a, b, questions }: { a: EvalRun; b: EvalRun; questions: EvalQuestionsResponse | null }) {
   const byId = useMemo(
     () => new Map((questions?.questions ?? []).map((q) => [q.id, q])),
     [questions],
   )
 
-  const left = provenance(a)
-  const right = provenance(b)
-  // `toolset` and `structured` are excluded because differing on one of them is the *point* of a
-  // comparison — Phase 1b's and Phase 1-c's respectively. Anything else that differs makes the
-  // delta below partly a measurement of something the comparison is not asking about, which the
-  // reader has to be told rather than left to notice.
-  const axes = ['toolset', 'structured']
-  const confounds = Object.keys(left).filter(
-    (key) => !axes.includes(key) && left[key] !== right[key],
-  )
+  const { left, right, movedAxes, confounds } = comparability(a, b)
 
   const buckets = useMemo(() => {
     const rightById = new Map(b.results.map((r) => [r.question_id, r]))
@@ -218,14 +212,24 @@ function RunCompare({ a, b, questions }: { a: EvalRun; b: EvalRun; questions: Ev
         </table>
       </div>
 
-      {confounds.length > 0 && (
-        <p className="flex items-start gap-2 rounded-lg border border-lane-web/40 bg-lane-web/5 px-3 py-2 text-xs text-lane-web">
+      {(confounds.length > 0 || movedAxes.length > 1) && (
+        <div className="flex items-start gap-2 rounded-lg border border-lane-web/40 bg-lane-web/5 px-3 py-2 text-xs text-lane-web">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>
-            These runs differ in <strong>{confounds.join(', ')}</strong> as well as the axis being
-            compared, so the deltas below are not attributable to that axis alone.
-          </span>
-        </p>
+          <div className="space-y-1">
+            {movedAxes.length > 1 && (
+              <p>
+                These runs differ in <strong>{movedAxes.join(' and ')}</strong> — more than one
+                axis at once, so the deltas below are not attributable to any single one of them.
+              </p>
+            )}
+            {confounds.length > 0 && (
+              <p>
+                These runs differ in <strong>{confounds.join(', ')}</strong> as well as the axis
+                being compared, so the deltas below are not attributable to that axis alone.
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border">
@@ -330,6 +334,8 @@ function RunDetail({ run, questions }: { run: EvalRun; questions: EvalQuestionsR
           {run.vectors_snapshot_id && <> · {run.vectors_snapshot_id}</>}
           {run.toolset && <> · toolset {run.toolset}</>}
           {run.structured != null && <> · {run.structured ? 'with' : 'without'} plan data</>}
+          {run.web != null && <> · {run.web ? 'with' : 'without'} web</>}
+          {run.live != null && <> · {run.live ? 'with' : 'without'} live APIs</>}
           {run.model && <> · {run.model}</>}
           {run.config_fingerprint && <> · config {run.config_fingerprint.slice(0, 12)}</>}
         </span>

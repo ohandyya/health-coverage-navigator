@@ -101,6 +101,16 @@ class DrugLabelResult(BaseModel):
     query: str
     """The drug name that was actually searched for."""
 
+    row_id: str = ""
+    """Cite this **only when `sections` is empty** — it identifies the label search itself, which is
+    the evidence for both negative findings this result can carry: *the FDA holds no label under
+    that name*, and *the label exists but does not carry that section*. Either is a true answer, and
+    without an id to point at the grounding validator would force an abstention on a question that
+    was answered.
+
+    Blank whenever `sections` is populated, because then each section carries its own citable id and
+    an unusable id in the payload is an invitation to cite something the validator will reject."""
+
     unavailable: str | None = None
     """Set when openFDA could not be reached — an outage, a timeout, a rate limit, or this run's
     lookup budget being spent.
@@ -232,6 +242,10 @@ __all__ = [
 class DrugMatch(BaseModel):
     """One drug the Marketplace API recognises, and the RxCUI that identifies it."""
 
+    row_id: str = ""
+    """Cite this exact string when you say **which** strength or form you checked — that is a claim
+    about what this lookup returned, and it needs a row behind it like any other."""
+
     rxcui: str
     """**The identifier `check_drug_coverage` takes.** Coverage is asked per RxCUI, and an RxCUI
     names one strength and form — not the drug in general."""
@@ -254,6 +268,12 @@ class DrugMatches(BaseModel):
 
     query: str
     unavailable: str | None = None
+
+    row_id: str = ""
+    """Cite this **only when `matches` is empty** — it identifies the search, which is the evidence
+    for "the Marketplace does not recognise that name". Blank otherwise: a resolved drug is cited
+    through the coverage answer it leads to, not through this lookup."""
+
     matches: list[DrugMatch] = Field(default_factory=list)
     """Usually several: one per strength and form. **Which one the reader meant is a question, not
     a detail to pick silently** — if the answer turns on strength and they did not say, ask or say
@@ -294,6 +314,12 @@ class CoverageResult(BaseModel):
     for the year it was asked about."""
 
     coverage: list[DrugCoverage] = Field(default_factory=list)
+
+    row_id: str = ""
+    """Cite this **only when `coverage` is empty** — the plans were asked about these drugs and the
+    Marketplace returned nothing at all, which is different from a `DataNotProvided` verdict (that
+    one is itself a row). Blank otherwise, because then each pair carries its own citable id."""
+
     lookups_remaining: int = 0
 
 
@@ -353,9 +379,10 @@ class PlanMatches(BaseModel):
     unavailable: str | None = None
 
     row_id: str = ""
-    """Cite this when `state_not_served` is set — the lookup itself is the evidence that
-    HealthCare.gov does not sell in that state. Blank otherwise, because then each plan carries its
-    own citable id.
+    """Cite this when **either** negative finding is what you are reporting: `state_not_served` is
+    set, or the search ran and `plans` came back empty. The lookup itself is the evidence — that
+    HealthCare.gov does not sell in that state, or that nothing matched this household. Blank when
+    `plans` is populated, because then each plan carries its own citable id.
 
     Its absence was the fourth instance in this phase of a citable row whose id the model could not
     see: the row was recorded, the agent had the right answer, and it abstained because it had

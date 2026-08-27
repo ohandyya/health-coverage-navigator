@@ -34,7 +34,7 @@ mirror-vs-live reconciliation, the eval slice, the tests, and the build order.
 decision recorded here, the decision was changed here first and [progress.md](progress.md) records
 why — that is the rule every design document in this repo follows, and this phase exercised it
 often: §4a reverses §4, §11 reverses its own county design, §14a-bis and the note under §14a correct
-§14a, and §16a is struck through where it contradicted §11.
+§14a, §14b-bis corrects §14b, and §16a is struck through where it contradicted §11.
 
 **Verified 2026-08-22** — the access facts in §3–§5 against the live CMS and FDA pages, and every
 claim in §7 and §10 against the running APIs. All of it is someone else's operational policy or someone
@@ -751,6 +751,43 @@ parameter.** A citation URL is rendered in the browser and serialised into eval 
 `apikey` before the URL is stored**, and add a test asserting no citation URL contains it — this is
 the one place in the phase where a plumbing mistake leaks a credential into a tracked artefact.
 
+#### 14b-bis. The Marketplace exception is two things, not one
+
+The paragraph above is right and incomplete, and the half it left out cost this section its own
+premise. **A stripped Marketplace URL is not re-fetchable.** `apikey` is required on *every* CMS
+Marketplace endpoint (§5), so what survives the strip returns `401` to anyone who clicks it —
+verified 2026-08-27 against `/plans/search` and `/drugs/covered`. `/plans/search` is a **POST**
+besides, so the GET-shaped URL built for it was never an address a reader could fetch.
+
+So §14b's opening claim — *a live record has the URL that produced it, re-fetchable by anyone* —
+holds for openFDA and NPPES, which are keyless GETs, and **is false for the Marketplace**.
+
+Two failures followed from it, and the second is the worse one:
+
+- Four negative branches and the *positive* drug-match branch emitted `url=None`. `source_url()`
+  ([`structured/catalog.py`](../src/health_coverage_navigator/structured/catalog.py)) keys only the
+  vendored mirrors, so `_row_citation`'s `row.url or source_url(row.source)` fallback had nothing to
+  fall back to, and those citations rendered unlinkable.
+- The plan and coverage branches, which *did* carry a URL, linked to that 401. **A citation that
+  looks checkable and is not undercuts the provenance guarantee more than one that plainly is not**
+  — the reader who clicks is told the source is broken, not that it is elsewhere.
+
+**The rule: `Row.url` is read by a human; the exact query is machine provenance and belongs in a
+cell.** So every Marketplace row — positive and negative alike — links to the consumer page a person
+can actually open (`MARKETPLACE_PUBLIC_URL` in
+[`agent/live_tools.py`](../src/health_coverage_navigator/agent/live_tools.py)), and the query URL
+travels as a `source_url` cell, which `_plan_rows` was already doing. `state_not_served` is the one
+row with a better page than the plan finder: *"Georgia runs its own exchange"* is checkable against
+[marketplace-in-your-state](https://www.healthcare.gov/marketplace-in-your-state/), which makes that
+citation genuinely verifiable rather than decorative.
+
+openFDA and NPPES get **no fallback entry**. Both populate `source_url` on every branch, so one
+would be unreachable code implying a gap that does not exist.
+`test_a_marketplace_row_links_somewhere_a_reader_can_open` is the structural guard, parametrised
+over all seven Marketplace shapes because the next instance will be in whichever branch nobody
+thought to re-check — the same argument as
+`test_a_reached_lookup_is_always_citable`, one field over.
+
 ### 14c. openFDA's disclaimer travels with the citation
 
 §10b.4: openFDA disclaims its own accuracy in every response. The honest handling is to carry it —
@@ -849,6 +886,9 @@ actually returned), and let correctness be asserted by the offline fixture tests
   fails the grounding validator.
 - **`test_no_apikey_in_citation_urls`** — §14b's leak guard. Small, and the only test here whose
   failure would be a security finding rather than a bug.
+- **`test_a_marketplace_row_links_somewhere_a_reader_can_open`** — §14b-bis, parametrised over
+  every Marketplace shape that produces a row. Asserts each carries a `url` *and* that it is not
+  the key-gated API host, which is the pair of failures §14b's incomplete rule allowed.
 - **A fixture-freshness test**, following the `x-version` stamp of §8: assert every fixture carries
   its provenance headers, so a fixture recorded without them cannot land.
 
@@ -912,7 +952,8 @@ because each one recurred after being fixed once.
 ### Family 1 — a finding with nothing to cite
 
 The grounding validator requires a non-abstained answer to cite something. So **any true finding
-with no citable row forces a false abstention, or a worse source.** Four instances:
+with no citable row forces a false abstention, or a worse source.** Four instances were found while
+building the phase:
 
 | Finding | What went wrong before it was citable |
 |---|---|
@@ -924,6 +965,44 @@ with no citable row forces a false abstention, or a worse source.** Four instanc
 **The rule: if a tool can establish something, it must emit a row for it — including when what it
 established is an absence.** The search that found nothing *is* the evidence that nothing is there.
 This is not a loophole in the grounding rule; it is the rule applied to a negative claim.
+
+**Fixing it four times is not the same as closing it, and the difference cost five more instances.**
+Each fix was made where someone noticed, the rule was written down but never enforced, and a
+2026-08-25 walkthrough found the identical shape in five further paths — `drug_label` with no
+matching label, `drug_label` with no such section, `find_plans` with an empty result, `find_drug`
+with an unrecognised name, and `check_drug_coverage` with an empty envelope. Closed structurally on
+2026-08-27:
+
+- **`_search_row` in `agent/live_tools.py`** is the one place a reached-but-empty lookup becomes a
+  row, and its docstring carries the rule and both of its boundaries.
+- **`_ROW_BUILDERS` / `rows_for`** replaces six direct builder calls with a registry keyed on result
+  type, so a result shape with no builder raises rather than silently recording nothing.
+- **A citable row is necessary, not sufficient.** Measured on `live-07`: with the row in place and
+  its cells correct, the agent still abstained, because `drug_label`'s docstring said only "try the
+  generic name, or say the drug was not found" where `drug_recalls` says *"an empty result is a real
+  answer, not a failed search ... do not soften it"*. The row removes the **obstacle** to answering;
+  the tool's own text still has to supply the **instruction**. Both halves are now present on both
+  tools.
+- **Three tests in `tests/test_live_agent.py` enforce it** instead of memory:
+  `test_a_reached_lookup_is_always_citable` over all nine negative shapes,
+  `test_an_outage_stays_uncitable` for the inverse, and `test_every_live_tool_has_a_row_builder`,
+  which walks `LIVE_TOOLS` and reads each tool's return annotation — so **the next tool anyone adds
+  inherits the invariant rather than having to remember it.**
+
+Two boundaries the fix must not cross, and the first is the one a well-meaning version breaks:
+
+- **`unavailable` still emits nothing.** An outage is not a finding — nothing was looked up, so
+  there is nothing to cite. A row there would let the model cite the fact that it *failed*, turning
+  "I could not check" into a sourced claim. That is the same defect pointing the other way, and a
+  worse one.
+- **A negative row is still a row**: source-namespaced id readable off the result (family 2 below),
+  and cells that are short values rather than prose. `find_drug` gained per-match ids in the same
+  change, because *"I checked the 20 mg tablet"* is a claim about a lookup's output like any other.
+
+**Still open: the mirror half.** [relational-tool.md](relational-tool.md) §6 says "empty is an
+answer" without saying how one gets cited, so a `query_structured` returning zero rows is in the
+same bind. Deliberately left — it is Phase 1-c code whose change should be measured against the
+mirror slice, so it is a separate change with its own measurement.
 
 ### Family 2 — a name the model can see but cannot cite
 
@@ -942,6 +1021,21 @@ instances:
 recorded row's id must be readable off the result it came with.
 `tests/test_live_agent.py::test_live_row_cells_use_names_the_model_was_shown` checks both
 structurally, because the next instance will be in whichever tool nobody thought to re-check.
+
+**Four more instances, 2026-08-27, all in the *negative* rows** — and the reason they survived is
+that the structural guard above only ever ran over *positive* ones. `labels_found` where the model
+was shown `label_found` (measured: two retries, budget exhausted, on a question the agent had
+answered); `sections_found`, `matches_found` and `coverage_found` the same way; `rejected_because`
+where the model was shown `invalid`; and `drug` / `recalls_found` / `searched` on the empty-recall
+row, latent only because live-02's drug has recalls and never takes that branch.
+`test_a_reached_lookup_is_always_citable` now asserts the cell-key rule over every negative shape.
+
+**A second corollary, from the same run: a negative row must carry the fields that *express* the
+emptiness.** With the keys corrected the model still spent a retry reaching for `sections` — the
+natural thing to point at when the claim is "there is nothing here", and a real field it had been
+shown. A negative row has nothing else to copy, so it carries the empty collection too, spelled as
+the JSON the model read (`"[]"`). The positive-row rule is *don't invent names*; the negative-row
+rule is that **plus** *carry what the absence is made of*.
 
 **A corollary that cost a fifth round on `live-04`: a cell is something to copy, not something to
 read.** That row's `reason` cell held a prose sentence; the model paraphrased it and was refused.

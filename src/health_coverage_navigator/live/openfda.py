@@ -208,10 +208,15 @@ class OpenFdaClient:
                     query=name, requested_section=section, unavailable=unavailable
                 )
             if payload is None:
+                # **Two searches found nothing, and that is a finding, not a failure.** It is
+                # citable for the same reason an empty recall search is: the agent established it,
+                # and with nothing in `seen_rows` behind it the grounding validator would force an
+                # abstention on a question that was answered (docs/negative-finding-gaps.md).
                 return DrugLabelResult(
                     query=name,
                     requested_section=section,
                     label_found=False,
+                    row_id=f"fda#l{sequence}.0",
                     source_url=self._url(path, params),
                 )
 
@@ -253,6 +258,11 @@ class OpenFdaClient:
                 label_found=True,
                 requested_section=section,
                 sections=sections,
+                # Blank whenever a section came back — then each section is citable in its own
+                # right, and an id in the payload the model must not use is an invitation to use
+                # it (§18c family 2). Set only for the other real answer this branch can carry:
+                # the label exists and does not have the section that was asked for.
+                row_id="" if sections else f"fda#l{sequence}.0",
                 brand_names=_strings(openfda.get("brand_name")),
                 generic_names=_strings(openfda.get("generic_name")),
                 rxcuis=_strings(openfda.get("rxcui")),
