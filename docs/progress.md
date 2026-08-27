@@ -350,10 +350,6 @@ Not done:
 
 - [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
       Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
-- [ ] **The evals dashboard shows neither the `web` lane nor the `live` lane.** `EvalsPage.tsx`
-      renders a `structured` badge and compares on `['toolset', 'structured']` only — `web` has been
-      in the contract since Phase 2 and was never surfaced, and `live` now joins it. The data is
-      there; the UI lags it
 - [ ] **The mirror half of Family 1** — `query_structured` returning zero rows is the same bind
       ([relational-tool.md](relational-tool.md) §6). Left open deliberately: Phase 1-c code whose
       change should be measured against the mirror slice
@@ -609,6 +605,27 @@ contract field beside `structured` and `web` (additive, `make types` regenerated
 **Third instance in this repo of a value accepted and dropped at its call sites**, after
 `AgentKit._agent`'s `marketplace` and `scripts/smoke.py`'s live clients — two of the three found in
 one session, which is the argument for looking at the other seams rather than waiting.
+
+**And the same omission had already reached the dashboard, where it was misreporting.**
+`EvalsPage`'s comparison panel warns when two runs differ in anything outside the axis being
+compared — the check that stops a metric delta being read as evidence. It computed that from
+`provenance()`, which returned `toolset` and `structured` but **not `web` or `live`**: a field that
+function does not return cannot be detected as differing, so `eval-live` against its own
+`eval-no-live` control — the pair [Makefile](../Makefile) exists to produce, and the pair §16b was
+actually measured with — compared as though the two runs were identical, no warning, whole delta
+attributed to nothing.
+
+Fixed together, because either half alone leaves the panel wrong in a different direction: both
+flags join `provenance()`, and `COMPARISON_AXES` grows to all four so a deliberate lane comparison
+does not warn about its own axis. **Plus the gap that widening exposed: an axis moving is the point,
+but only one at a time.** The old check looked only *outside* the axes, so any number of them could
+move in silence — two runs differing in both `toolset` and `live` answer neither question. It now
+warns in two directions, in two sentences, because they are different failures.
+
+The logic moved to `frontend/src/lib/comparability.ts` — pure, no React — rather than staying in the
+page as two exports existing only so a test could reach them. Seven tests pin it, including the
+`eval-live`-against-its-control case that used to compare as identical. `web` and `live` also gained
+badges and detail-line text, which is the only cosmetic part of this.
 
 ### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
 
