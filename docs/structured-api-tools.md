@@ -937,6 +937,12 @@ with an unrecognised name, and `check_drug_coverage` with an empty envelope. Clo
   row, and its docstring carries the rule and both of its boundaries.
 - **`_ROW_BUILDERS` / `rows_for`** replaces six direct builder calls with a registry keyed on result
   type, so a result shape with no builder raises rather than silently recording nothing.
+- **A citable row is necessary, not sufficient.** Measured on `live-07`: with the row in place and
+  its cells correct, the agent still abstained, because `drug_label`'s docstring said only "try the
+  generic name, or say the drug was not found" where `drug_recalls` says *"an empty result is a real
+  answer, not a failed search ... do not soften it"*. The row removes the **obstacle** to answering;
+  the tool's own text still has to supply the **instruction**. Both halves are now present on both
+  tools.
 - **Three tests in `tests/test_live_agent.py` enforce it** instead of memory:
   `test_a_reached_lookup_is_always_citable` over all nine negative shapes,
   `test_an_outage_stays_uncitable` for the inverse, and `test_every_live_tool_has_a_row_builder`,
@@ -975,6 +981,21 @@ instances:
 recorded row's id must be readable off the result it came with.
 `tests/test_live_agent.py::test_live_row_cells_use_names_the_model_was_shown` checks both
 structurally, because the next instance will be in whichever tool nobody thought to re-check.
+
+**Four more instances, 2026-08-27, all in the *negative* rows** — and the reason they survived is
+that the structural guard above only ever ran over *positive* ones. `labels_found` where the model
+was shown `label_found` (measured: two retries, budget exhausted, on a question the agent had
+answered); `sections_found`, `matches_found` and `coverage_found` the same way; `rejected_because`
+where the model was shown `invalid`; and `drug` / `recalls_found` / `searched` on the empty-recall
+row, latent only because live-02's drug has recalls and never takes that branch.
+`test_a_reached_lookup_is_always_citable` now asserts the cell-key rule over every negative shape.
+
+**A second corollary, from the same run: a negative row must carry the fields that *express* the
+emptiness.** With the keys corrected the model still spent a retry reaching for `sections` — the
+natural thing to point at when the claim is "there is nothing here", and a real field it had been
+shown. A negative row has nothing else to copy, so it carries the empty collection too, spelled as
+the JSON the model read (`"[]"`). The positive-row rule is *don't invent names*; the negative-row
+rule is that **plus** *carry what the absence is made of*.
 
 **A corollary that cost a fifth round on `live-04`: a cell is something to copy, not something to
 read.** That row's `reason` cell held a prose sentence; the model paraphrased it and was refused.

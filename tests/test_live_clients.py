@@ -163,7 +163,10 @@ async def test_a_missing_section_is_not_a_missing_label() -> None:
     # model is told to report it. Without a row the grounding validator forces an abstention on it.
     rows = rows_for(result)
     assert [r.row_id for r in rows] == [result.row_id] != [""]
-    assert rows[0].cells["sections_found"] == "0"
+    assert rows[0].cells["label_found"] == "true", (
+        "the label WAS found — the negative finding here is the missing section, and the cell must "
+        "be spelled as the model saw the field"
+    )
 
 
 @pytest.mark.anyio

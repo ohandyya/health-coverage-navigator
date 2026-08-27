@@ -124,8 +124,11 @@ the id.
 - **Ids stay source-namespaced** (`fda#`, `npi#`, `mkt#`) and readable off the result the model was
   handed (§14a-bis, §18c Family 2).
 - **Cells stay short values, not prose** — a cell is something to copy, not something to read
-  (§18c). The negative rows carry a count (`labels_found: "0"`) and the query terms the model
-  supplied, and nothing else.
+  (§18c). And **every key is a field of the result**, spelled as the model saw it: the query terms
+  it supplied, plus the fields that say the thing is empty (`label_found: "false"`,
+  `sections: "[]"`). The first version invented `labels_found`, `sections_found`, `matches_found`
+  and `coverage_found`; the model cited `label_found` — the only name it had been shown — and spent
+  its whole retry budget being refused. §7 records how that was found.
 
 ## 6. The same hole in the mirror half — still open
 
@@ -135,7 +138,38 @@ same bind. It was left alone deliberately, and remains so: it is Phase 1-c code 
 be measured against the mirror slice. `_search_row` is now the natural place to close it — but the
 measurement caveat still applies, and it should be a separate change with its own eval run.
 
-## 7. Related
+## 7. What running the question found
+
+The gold set gained `live-07` on 2026-08-27 — *"What does the FDA label for Trelavastin say it
+treats?"*, a drug that does not exist — and running it turned up **three defects the offline tests
+could not see.** All three are recorded here because each is a general lesson, not an incident.
+
+**1. The cell keys were names the model had never been shown.** The not-found row named a cell
+`labels_found`; the model read `label_found` off the result and cited that, correctly, by the only
+name it had — and was refused twice, exhausting the retry budget on a question it had answered.
+Exactly §18c family 2, reintroduced in the rows written to close family 1. Four rows carried
+invented keys (`labels_found`, `sections_found`, `matches_found`, `coverage_found`) and a fifth,
+pre-existing one carried three (`drug`, `recalls_found`, `searched` on the empty-recall row), latent
+only because live-02's drug has recalls and never takes that branch. `_provider_rows` had a sixth,
+`rejected_because`, where the model was shown `invalid`. The structural guard that should have
+caught this only ever checked *positive* rows; it now runs over every negative shape.
+
+**2. A negative row has to carry the fields that express the emptiness.** With the keys corrected
+the model still spent a retry, reaching for `sections` — a real field, and the natural thing to
+point at when the claim is "there is nothing here". A negative row has nothing else for the model to
+copy, so it now carries the empty collection too, spelled as the JSON the model read (`"[]"`).
+
+**3. The row was necessary and not sufficient — the tool also had to say the absence is an answer.**
+With a citable row and correct cells, the agent still abstained: `drug_label`'s docstring said only
+*"try the generic name, or say the drug was not found"*, where `drug_recalls` says **"an empty
+result is a real answer, not a failed search ... do not soften it"**. It also instructed a retry the
+client already performs internally, and the trace shows the agent duly calling `drug_label` twice.
+Rewritten to match `drug_recalls`. **A citable row removes the *obstacle* to answering; it does not
+supply the instruction to answer.**
+
+After all three: 9/9 checks, one tool call, no retries, `abstained=False`, citing `fda#l1.0`.
+
+## 8. Related
 
 - [structured-api-tools.md](structured-api-tools.md) §14a-bis — why a negative finding is citable
   and not a loophole

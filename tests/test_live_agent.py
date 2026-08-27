@@ -172,7 +172,7 @@ def test_no_recalls_reaches_the_model_as_an_answer(agent_kit) -> None:
             # The *search* is the citable evidence for a negative finding. Without this the
             # grounding validator would force an abstention on a question the agent did answer —
             # see `_recall_rows` for why the empty result is still a row.
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "0"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "0"}}],
             abstained=False,
         ),
         openfda=agent_kit.openfda_client(status=404),
@@ -371,7 +371,7 @@ def test_a_repeated_lookup_is_answered_from_the_run_cache(agent_kit) -> None:
         RECALLS,
         agent_kit.answer(
             answer="No recalls on record. [c1]",
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "0"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "0"}}],
             abstained=False,
         ),
         openfda=agent_kit.openfda_client(status=404),
@@ -437,7 +437,7 @@ def test_a_short_cell_still_demands_an_exact_copy(agent_kit) -> None:
         RECALLS,
         agent_kit.answer(
             answer="Close enough. [c1]",
-            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"recalls_found": "zero"}}],
+            citations=[{"id": "c1", "row_id": "fda#r1.0", "cells": {"total_matching": "zero"}}],
         ),
         openfda=agent_kit.openfda_client(status=404),
     )
@@ -497,12 +497,11 @@ async def test_live_row_cells_use_names_the_model_was_shown() -> None:
         row_id="",
         recalls=[DrugRecall(row_id="fda#r1.1", recall_number="D-1", reason="r")],
     )
-    visible_recall = set(DrugRecall.model_fields) | {
-        "recall_initiation_date",
-        "recalls_found",
-        "searched",
-        "drug",
-    }
+    # **No synthetic names left to allow.** This set used to carry `recalls_found`, `searched` and
+    # `drug` — three keys the model was never shown, latent because live-02's drug has recalls and
+    # never takes the empty branch. The same shape in `_label_rows` did cost two retries when the
+    # question was finally asked, so the negative rows now use result fields only.
+    visible_recall = set(DrugRecall.model_fields) | set(DrugRecallResult.model_fields)
     for row in _recall_rows(recalls):
         unknown = set(row.cells) - visible_recall
         assert not unknown, f"cell key(s) the model never saw: {sorted(unknown)}"
@@ -638,6 +637,18 @@ def test_a_reached_lookup_is_always_citable(label: str, result: object) -> None:
             if isinstance(value := getattr(result, name, None), str)
         }
         assert row.row_id in visible, f"{label}: the model cannot see the id it must cite"
+        # **Family 2, on the rows written to close family 1.** Measured the hard way: the not-found
+        # label row named a cell `labels_found`, the model cited `label_found` — correctly, by the
+        # only name it had been given — and burned both retries on a question it had answered. The
+        # positive rows were guarded by `test_live_row_cells_use_names_the_model_was_shown` from the
+        # start; these were not, and three of them carried invented names.
+        fields = set(type(result).model_fields)  # type: ignore[attr-defined]
+        unknown = set(row.cells) - fields
+        assert not unknown, (
+            f"{label}: cell key(s) the model was never shown: {sorted(unknown)}. A negative row's "
+            f"cells must be fields of the result it came from — there is nothing else for the "
+            f"model to copy."
+        )
 
 
 #: Stand-ins by annotation, for building a result with nothing on it but what pydantic insists on.

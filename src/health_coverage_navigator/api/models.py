@@ -390,6 +390,16 @@ class EvalRunSummary(BaseModel):
     no agent in it. Recorded for the same reason as `toolset` and `structured`: a comparison between
     two runs that differ only in this is only possible if a run says which it was."""
 
+    live: bool | None = None
+    """Whether the agent could see the live-API half of the structured lane — openFDA, NPPES and
+    (with a credential) the CMS Marketplace (Phase 3). `None` for every runner with no agent in it.
+
+    Added 2026-08-27, later than the lane itself, and the gap is the reason the field is worth
+    having: `run_2026-08-27_1` ran seven live questions and its header said
+    `lanes reference + structured + web`, because the flag was computed and then dropped at both the
+    print and the record. A run that cannot say which lanes were registered cannot be compared with
+    one that had a different set, which is the entire job of the four fields above it."""
+
     config_fingerprint: str | None = None
     """`Config.fingerprint()` — a sha256 over every value in `config.yaml`. The answer to "what
     was this score measured under" for everything the repo *can* pin."""

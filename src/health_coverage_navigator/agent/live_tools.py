@@ -126,11 +126,18 @@ async def drug_label(
     **Ask for one section at a time.** A whole label runs to a quarter of a million characters, so
     this returns only the section you name. If you need warnings *and* interactions, call twice.
 
-    **Read `label_found` and `sections` separately — they mean different things.**
-    `label_found=False` means the FDA holds no label under that name; try the generic name, or say
-    the drug was not found. `label_found=True` with empty `sections` means the label exists but does
-    not carry that section, which is normal for over-the-counter drugs — say the label does not
-    include it, never that the drug has no warnings.
+    **Read `label_found` and `sections` separately — they mean different things, and neither empty
+    state is a failed search.**
+
+    - `label_found=False` with `unavailable` unset: **the FDA holds no label under that name, and
+      that is the answer.** Say it plainly and with confidence, and cite the `row_id` on the result
+      — the search is the evidence. Do not soften it into "I could not find one", which a reader
+      hears as the lookup having failed, and **do not call this tool again with the generic name**:
+      both are searched already, brand first and then generic, so a second call returns the same
+      nothing from the cache.
+    - `label_found=True` with empty `sections`: the label exists but does not carry that section,
+      which is normal for over-the-counter drugs. Say the label does not include it, **never** that
+      the drug has no warnings, and cite the `row_id` for that too.
 
     **`rxcuis` on the result is the join to coverage.** Those are the identifiers
     `check_drug_coverage` takes, so a label lookup is one way to resolve a drug name before asking
@@ -589,7 +596,9 @@ def _provider_rows(result: ProviderResult) -> list[Row]:
             row_id=result.row_id,
             view="nppes/npi_registry",
             source="nppes",
-            cells={"npi": result.npi, "rejected_because": result.invalid},
+            # `invalid`, not `rejected_because`: the model was shown the field by its own name, and
+            # a cell it cannot name is a cell it gets refused for naming (§18c family 2).
+            cells={"npi": result.npi, "invalid": result.invalid},
             url=result.source_url,
             title=f"NPI registry · {result.npi} · not a valid identifier",
         )
@@ -650,7 +659,7 @@ def _coverage_rows(result: CoverageResult) -> list[Row]:
             source="marketplace",
             cells={
                 "year": str(result.year) if result.year else None,
-                "coverage_found": "0",
+                "coverage": "[]",
             },
             url=None,
             title=f"Marketplace formulary · no coverage data returned · {result.year}",
@@ -715,7 +724,8 @@ def _plan_rows(result: PlanMatches) -> list[Row]:
                 "zipcode": result.zipcode,
                 "year": str(result.year) if result.year else None,
                 "total": str(result.total),
-            },
+                "plans": "[]",
+            },  # every key a `PlanMatches` field, and both ways it can say "nothing matched"
             url=None,
             title=f"HealthCare.gov plan search · {result.zipcode} · no plans matched",
         )
@@ -784,7 +794,7 @@ def _drug_rows(result: DrugMatches) -> list[Row]:
             row_id=result.row_id,
             view="marketplace/drug_search",
             source="marketplace",
-            cells={"query": result.query, "matches_found": "0"},
+            cells={"query": result.query, "matches": "[]"},
             url=None,
             title=f"Marketplace drug search · {result.query} · not recognised",
         )
@@ -849,7 +859,6 @@ def _label_rows(result: DrugLabelResult) -> list[Row]:
     """
     if result.unavailable:
         return []
-    drug = ", ".join(result.brand_names or result.generic_names) or result.query
     if not result.label_found:
         # Two searches — brand, then generic — found nothing. A stronger finding than a single
         # miss, and the tool's own docstring tells the model to report it.
@@ -857,10 +866,20 @@ def _label_rows(result: DrugLabelResult) -> list[Row]:
             row_id=result.row_id,
             view="openfda/drug_label",
             source="openfda",
+            # **Field names the model was shown, and values spelled as it saw them.** An earlier
+            # version named this cell `labels_found` — a plural nobody was shown — and the model
+            # cited `label_found`, correctly, by the only name it had, and was refused. §18c
+            # family 2, reintroduced in the rows written to close family 1 and caught by running
+            # the question. `false` rather than `False`: the model reads this result as JSON.
             cells={
                 "query": result.query,
                 "requested_section": result.requested_section,
-                "labels_found": "0",
+                "label_found": "false",
+                # **The field the model reaches for to cite the emptiness itself.** Measured: with
+                # only `label_found` here it cited `sections`, correctly by the name it was shown,
+                # and spent a retry. An empty list is `[]` in the JSON it read, so that is how the
+                # cell is spelled — the `_money` rule, one type over.
+                "sections": "[]",
             },
             url=result.source_url or None,
             title=f"openFDA label search · {result.query} · no label found",
@@ -874,14 +893,15 @@ def _label_rows(result: DrugLabelResult) -> list[Row]:
             view="openfda/drug_label",
             source="openfda",
             cells={
-                "drug": drug,
                 "query": result.query,
                 "requested_section": result.requested_section,
-                "sections_found": "0",
+                "label_found": "true",
+                "sections": "[]",
             },
             url=result.source_url or None,
             title=f"{_label_title(result)} · no {result.requested_section} section",
         )
+    drug = ", ".join(result.brand_names or result.generic_names) or result.query
     return [
         Row(
             row_id=section.row_id,
@@ -935,11 +955,10 @@ def _recall_rows(result: DrugRecallResult) -> list[Row]:
             row_id=result.row_id,
             view="openfda/drug_enforcement",
             source="openfda",
-            cells={
-                "drug": result.query,
-                "recalls_found": "0",
-                "searched": "FDA enforcement (recall) database",
-            },
+            # Was `drug` / `recalls_found` / `searched` — three keys the model was never shown,
+            # latent only because live-02's drug has recalls and never takes this branch. Same
+            # correction as `_label_rows`, applied before it could cost a retry.
+            cells={"query": result.query, "total_matching": "0", "recalls": "[]"},
             url=result.source_url,
             title=f"FDA recall search · {result.query} · no matches",
         )

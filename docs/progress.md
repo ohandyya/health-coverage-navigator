@@ -350,6 +350,10 @@ Not done:
 
 - [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
       Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
+- [ ] **The evals dashboard shows neither the `web` lane nor the `live` lane.** `EvalsPage.tsx`
+      renders a `structured` badge and compares on `['toolset', 'structured']` only — `web` has been
+      in the contract since Phase 2 and was never surfaced, and `live` now joins it. The data is
+      there; the UI lags it
 - [ ] **The mirror half of Family 1** — `query_structured` returning zero rows is the same bind
       ([relational-tool.md](relational-tool.md) §6). Left open deliberately: Phase 1-c code whose
       change should be measured against the mirror slice
@@ -536,10 +540,75 @@ over `MockTransport` and asserts the row comes back citable — and does its `ro
 it — but it is Phase 1-c code whose change should be measured against the mirror slice, so it stays
 a separate change with its own eval run.
 
-**Not done: new gold questions.** The failure this fixes is a *silently unevidenced clause* in an
-otherwise-served answer, which the existing abstention and groundedness metrics already score; the
-work is pinned offline, inside `check-all`, at no cost. If the mirror half is taken up, that one
-does need a measured run.
+**Then added `live-07` and ran it — which found three more defects.** The slice had no question for
+any of the five newly-closed paths, so the fix was unmeasured. `live-07` asks for the FDA label of
+*Trelavastin*, a drug that does not exist. It is gradeable because a live question passes only when
+it cites something whose majority lane is `structured_api`, so it fails on **both** pre-fix
+behaviours: abstaining, and answering while citing a web page.
+
+1. **The negative rows named cells the model had never been shown** — `labels_found` where it was
+   shown `label_found`, and four more of the same. Measured: two retries, budget exhausted, on a
+   question the agent had answered. §18c family 2, reintroduced in the rows written to close family
+   1, because the structural guard only ever ran over *positive* rows. It now runs over every
+   negative shape, and that immediately turned up `rejected_because` (shown as `invalid`) and three
+   invented keys on the pre-existing empty-recall row.
+2. **A negative row must carry the fields that express the emptiness.** With the keys corrected the
+   model still spent a retry reaching for `sections` — the natural thing to cite when the claim is
+   "there is nothing here". The rows now carry the empty collection, spelled as the JSON the model
+   read.
+3. **A citable row is necessary and not sufficient.** With row and cells both right, the agent
+   *still* abstained: `drug_label`'s docstring said "try the generic name, or say the drug was not
+   found" where `drug_recalls` says *"an empty result is a real answer ... do not soften it"*. It
+   also told the model to retry with the generic name, which the client already does internally —
+   and the trace shows the agent duly calling the tool twice. Rewritten to match. **The row removes
+   the obstacle to answering; the tool's text still has to supply the instruction.**
+
+After all three, `live-07` runs 9/9: one tool call, no retries, `abstained=False`, citing
+`fda#l1.0`. Details: [negative-finding-gaps.md](negative-finding-gaps.md) §7.
+
+**Also fixed: `scripts/smoke.py` never registered the live lane.** It opens the structured and web
+clients from config and passes them to `stream_answer`, but never opened `openfda` / `nppes` /
+`marketplace` — so `make smoke` drove a **three-lane agent while the app served four**, silently,
+since Phase 3. The first `live-07` run went to `web_search` and looked like a routing failure when
+the tool simply was not registered. The same gap the file's own comment describes for the web lane
+one lane earlier ("the default run smoked a two-lane agent no user ever gets"), and the same family
+as the `AgentKit._agent` marketplace drop still on the Phase 3 checklist.
+
+**Measured: `run_2026-08-27_1` — 39/50, and the live slice is 7/7 including `live-07`.** Run on the
+shared demo key with `--allow-demo-key`, the author's explicit call after `_refuse_the_demo_key`
+blocked the sweep (§3a); the three CMS questions drew no 429s. Against `run_2026-08-22_8`:
+
+| | 08-22_8 | 08-27_1 |
+|---|---|---|
+| lane_detail_correct | 1.000 | 1.000 |
+| routing_correct | 0.977 | 1.000 |
+| groundedness / citation_resolution | 1.000 | 1.000 |
+| structured_exact_match | 1.000 | 1.000 |
+| recall@5 | 0.700 | 0.700 |
+| abstention_accuracy | 0.800 | 0.800 |
+| false_abstention_rate | 0.000 | 0.000 |
+| web_reach_rate | 0.750 | 0.750 |
+
+**`lane_detail_correct` holds at 1.000 with a seventh live question in the denominator, and
+groundedness stays at 1.000 — so the new negative rows are cited correctly, not merely cited.**
+Four reference questions flipped (`hcg-04`, `hcg-06` to pass; `hcg-02`, `ncd-02` to fail) and
+nothing in this session touched reference retrieval: that is the 0.200 spread this set already has
+at fixed config, net zero, with `recall@5` identical. Read `routing_correct` 0.977 → 1.000 the same
+way — one question out of 43 is this set's resolution limit, not an effect.
+
+The two failures are both pre-existing: `abs-03` answered a question it should decline (abstention
+accuracy unmoved at 0.800), and `web-01` false-abstained (`web_reach_rate` unmoved at 0.750) — the
+question whose own gold note predicted this, since Phase 3 gave openFDA a competing claim on it.
+
+**Then fixed what the run header revealed: the run record never carried the live lane.** The header
+read `lanes reference + structured + web` while answering seven live questions — `_build` computed
+`plan.live` and both the header and the `EvalRun` record dropped it, so **no run file before
+`run_2026-08-27_2` can say whether the live lane was registered.** `EvalRunSummary.live` is now a
+contract field beside `structured` and `web` (additive, `make types` regenerated), and
+`test_the_run_record_pins_every_lane_that_was_registered` asserts all four flags survive the trip.
+**Third instance in this repo of a value accepted and dropped at its call sites**, after
+`AgentKit._agent`'s `marketplace` and `scripts/smoke.py`'s live clients — two of the three found in
+one session, which is the argument for looking at the other seams rather than waiting.
 
 ### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
 

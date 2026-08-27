@@ -147,13 +147,19 @@ So **the search itself becomes the record**:
 ```python
 if not result.recalls:
     return [Row(row_id=result.row_id, view="openfda/drug_enforcement", source="openfda",
-                cells={"drug": result.query, "recalls_found": "0",
-                       "searched": "FDA enforcement (recall) database"},
+                cells={"query": result.query, "total_matching": "0", "recalls": "[]"},
                 url=result.source_url, title=f"FDA recall search · {result.query} · no matches")]
 ```
 
 Not a loophole in the grounding rule — the rule applied to a negative claim. The assertion is *"I
 looked here and found nothing"*, and that row is precisely the evidence for it.
+
+**Every cell key there is a field of the result the model was handed** — including `recalls: "[]"`,
+spelled as the JSON it read. That is not fastidiousness: the first version of the *label* equivalent
+named a cell `labels_found`, the model cited `label_found` (correctly, by the only name it had), and
+burned its whole retry budget on a question it had answered. A negative row has nothing for the
+model to copy except the fields that say the thing is empty, so those are exactly what it must
+carry.
 
 **The rule had to become a mechanism before it held.** Four instances were fixed one at a time, the
 rule was written down, and five more instances of the identical shape were found afterwards in the
