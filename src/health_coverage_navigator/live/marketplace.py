@@ -200,7 +200,7 @@ class MarketplaceClient:
         current = payload.get("current")
         return current if isinstance(current, int) else None
 
-    async def find_drug(self, name: str) -> DrugMatches:
+    async def find_drug(self, name: str, *, sequence: int = 1) -> DrugMatches:
         """Resolve a drug name to RxCUIs. Never raises.
 
         **The response is a bare JSON array**, not the object the published spec declares (§7a).
@@ -218,16 +218,21 @@ class MarketplaceClient:
             )
         matches = [
             DrugMatch(
+                row_id=f"mkt#d{sequence}.{index}",
                 rxcui=str(item.get("rxcui", "")),
                 name=str(item.get("name", "")),
                 strength=str(item.get("strength", "") or ""),
                 route=str(item.get("route", "") or ""),
                 full_name=str(item.get("full_name", "") or ""),
             )
-            for item in payload
+            for index, item in enumerate(payload, start=1)
             if isinstance(item, dict) and item.get("rxcui")
         ]
-        return DrugMatches(query=name, matches=matches)
+        # An unrecognised name is a real answer — usually a misspelling worth naming — so the
+        # search itself is citable when nothing matched.
+        return DrugMatches(
+            query=name, matches=matches, row_id="" if matches else f"mkt#d{sequence}.0"
+        )
 
     async def check_drug_coverage(
         self, rxcuis: list[str], plan_ids: list[str], year: int, *, sequence: int = 1
@@ -267,7 +272,10 @@ class MarketplaceClient:
             for index, item in enumerate(payload["coverage"], start=1)
             if isinstance(item, dict)
         ]
-        return CoverageResult(coverage=rows, year=year)
+        # An empty envelope is not the same as a `DataNotProvided` verdict: that one arrives as a
+        # row and is citable already. This is the residue — the Marketplace returned nothing at all
+        # for these drugs and plans — and the lookup is the evidence for saying so.
+        return CoverageResult(coverage=rows, year=year, row_id="" if rows else f"mkt#c{sequence}.0")
 
     async def counties_for_zip(self, zipcode: str) -> tuple[list[County], str]:
         """Every county a ZIP falls in, and an unavailability reason if it could not be asked.
@@ -353,6 +361,10 @@ class MarketplaceClient:
             county=county,
             plans=plans,
             total=total if isinstance(total, int) else len(plans),
+            # The fourth of the four states this model documents: the search ran and matched
+            # nothing. Its `state_not_served` sibling has been citable since §14a-bis; this one was
+            # the same hole one branch over.
+            row_id="" if plans else f"mkt#p{sequence}.0",
         )
 
 

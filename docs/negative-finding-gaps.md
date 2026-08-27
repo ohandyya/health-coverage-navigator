@@ -1,14 +1,15 @@
 # Negative findings that are still not citable
 
-**Status: known gap, not scheduled. Nothing here is fixed.** Written 2026-08-25 during a
-walkthrough of the Phase 3 branch, so that the residue of a defect family is recorded rather than
-rediscovered.
+**Status: closed for the live lane on 2026-08-27. One half remains open — §6, the mirror.**
+Written 2026-08-25 during a walkthrough of the Phase 3 branch, so that the residue of a defect
+family was recorded rather than rediscovered; kept afterwards because *how* a family gets closed is
+worth more than the list of instances, and §6 is still live.
 
 [structured-api-tools.md](structured-api-tools.md) §14a-bis and §18c describe *Family 1* — "a
-finding with nothing to cite" — and list the four instances that were found and fixed while
-building Phase 3. This document records what those four fixes did **not** cover. The family was
-closed case by case; it was never turned into an invariant, so the same shape survives in three
-more places in `agent/live_tools.py`.
+finding with nothing to cite" — and list the four instances found and fixed while building Phase 3.
+This document recorded what those four fixes did **not** cover: the family was closed case by case,
+never turned into an invariant, so the same shape survived in five more paths in
+`agent/live_tools.py`. All five are now closed, structurally.
 
 ---
 
@@ -36,79 +37,46 @@ are wrong:
 something, it must emit a row for it — *including when what it established is an absence*. The
 search that found nothing is the evidence that nothing is there.
 
-## 2. What the four fixes did
+## 2. What the four original fixes did
 
 Each fixed case makes the **lookup itself** the citable record, with the id assigned in the client
 so the model can read it off the result it was handed:
 
 | Finding | Client assigns | Row builder |
 |---|---|---|
-| openFDA holds no recall | `row_id=f"fda#r{seq}.0"` | [`_recall_rows`](../src/health_coverage_navigator/agent/live_tools.py#L788) |
-| NPPES holds no such NPI | `row_id=f"npi#{npi}.0"` | [`_provider_rows`](../src/health_coverage_navigator/agent/live_tools.py#L560) |
-| NPPES rejects a malformed NPI | `row_id=f"npi#{npi}.x"` | [`_provider_rows`](../src/health_coverage_navigator/agent/live_tools.py#L546) |
-| CMS does not serve a state | `row_id=f"mkt#s{seq}.{state}"` | [`_plan_rows`](../src/health_coverage_navigator/agent/live_tools.py#L640) |
+| openFDA holds no recall | `row_id=f"fda#r{seq}.0"` | `_recall_rows` |
+| NPPES holds no such NPI | `row_id=f"npi#{npi}.0"` | `_provider_rows` |
+| NPPES rejects a malformed NPI | `row_id=f"npi#{npi}.x"` | `_provider_rows` |
+| CMS does not serve a state | `row_id=f"mkt#s{seq}.{state}"` | `_plan_rows` |
 
-The models encode the discipline too: `DrugRecallResult.row_id` and `PlanMatches.row_id` are
-populated **only** on the negative branch and left blank otherwise, so the model is never shown an
-id that would be refused if it cited it (that is Family 2's rule, §18c).
+The models encode the discipline too: a result-level `row_id` is populated **only** on the negative
+branch and left blank otherwise, so the model is never shown an id that would be refused if it cited
+it (that is Family 2's rule, §18c).
 
-## 3. The three paths that still have the hole
+## 3. The five paths that had the same hole
 
-### 3a. `drug_label` — the FDA holds no label under that name
+All five now emit a row. Each was the same shape: guard on `unavailable`, return rows for whatever
+came back, and fall through to `[]` on the branch where the finding *was* the absence.
 
-[`_label_rows`](../src/health_coverage_navigator/agent/live_tools.py#L743) returns `[]` whenever
-`label_found` is false:
+| Path | The finding that had nothing to cite | Now assigned |
+|---|---|---|
+| `drug_label`, no matching label | the FDA holds no label under that name — after **two** searches, brand then generic | `fda#l{seq}.0` |
+| `drug_label`, no such section | the label exists and does not carry that section (the ordinary OTC case) | `fda#l{seq}.0` |
+| `find_plans`, empty result | the search ran and matched nothing — the fourth of `PlanMatches`' four states | `mkt#p{seq}.0` |
+| `find_drug`, no match | the Marketplace does not recognise that name — usually a misspelling worth naming | `mkt#d{seq}.0` |
+| `check_drug_coverage`, empty envelope | nothing came back at all — the residue `DataNotProvided` does not cover | `mkt#c{seq}.0` |
 
-```python
-if result.unavailable or not result.label_found:
-    return []
-```
+Each id is set in the client, on the negative branch only, and is visible on the result the model
+was handed.
 
-`DrugLabelResult` has **no result-level `row_id` field at all**, so there is nothing to assign even
-if the builder wanted to emit a row. Meanwhile `drug_label`'s own docstring instructs the model to
-report this outcome:
+**`find_drug` also gained per-match ids** (`mkt#d{seq}.{n}` on `DrugMatch`), which the original
+write-up did not ask for. Closing only its negative branch would have left the invariant needing an
+exemption for its *positive* one — and that exemption would have been hiding the same defect: the
+tool's docstring tells the model to **say which strength it checked**, and "I checked the 20 mg
+tablet" is a claim about what the lookup returned. A resolution step is still a step whose output
+gets quoted.
 
-> `label_found=False` means the FDA holds no label under that name; try the generic name, or say
-> the drug was not found.
-
-That is the same instruction `drug_recalls` carries for its empty case — the one that was fixed.
-
-Note this path already runs **two** searches before concluding an absence (brand, then generic), so
-the finding is a stronger one than a single miss, and is exactly the kind of thing worth citing.
-
-### 3b. `drug_label` — the label exists but does not carry that section
-
-Same builder, different branch: the list comprehension at
-[live_tools.py:764](../src/health_coverage_navigator/agent/live_tools.py#L764) iterates
-`result.sections`, so an empty `sections` list produces no rows. This is the documented, ordinary
-case for over-the-counter labels, and again the model is told to report it:
-
-> `label_found=True` with empty `sections` means the label exists but does not carry that section
-> ... say the label does not include it, never that the drug has no warnings.
-
-### 3c. `find_plans` — the search ran and matched nothing
-
-[`_plan_rows`](../src/health_coverage_navigator/agent/live_tools.py#L685) falls through to a
-comprehension over `result.plans`, which is empty in the fourth of the four states `PlanMatches`
-documents:
-
-> - empty `plans` with neither set — the search ran and found nothing.
-
-The `state_not_served` sibling of this branch **is** citable; this one is not.
-
-### Two lesser cases, noted but lower priority
-
-- **`find_drug`** never calls `remember_rows` at all
-  ([live_tools.py:201](../src/health_coverage_navigator/agent/live_tools.py#L201)), so "the
-  Marketplace does not recognise that name" has no row. Lower priority because `find_drug` is a
-  resolution step feeding `check_drug_coverage` rather than a final claim — but it *is* a real
-  answer when the name is misspelled, and the model is told to say so.
-- **`check_drug_coverage`** with an empty `coverage` list yields no rows
-  ([`_coverage_rows`](../src/health_coverage_navigator/agent/live_tools.py#L607)). The
-  `DataNotProvided` verdict is already citable, which covers the common shape; a wholly empty
-  response is the residue.
-
-## 4. Why this has not bitten as hard as the four fixed cases
+## 4. Why it had not bitten as hard as the four fixed cases
 
 Blast radius depends on whether the negative finding is the **whole** answer or one clause of a
 compound one. *"Has atorvastatin been recalled"* has nothing else to cite, so the recall case failed
@@ -117,74 +85,55 @@ so the answer is served — it is just missing the provenance for the one clause
 FDA. That is quieter and arguably worse: a served answer with a silently unevidenced claim, rather
 than a visible retry.
 
-None of the three is pinned by a test, unlike the four fixed cases.
+That is also why none of the five was caught by a passing eval, and why the fix is a test rather
+than five fixes.
 
-## 5. How to fix it
+## 5. How it was fixed
 
-Two options. The second is preferred.
+Option B of the two this document originally offered — the structural one — extended to all five
+paths rather than the three named, because the invariant that makes it stick does not admit
+exemptions.
 
-### Option A — three more point fixes
+**[`_search_row`](../src/health_coverage_navigator/agent/live_tools.py)** is the single place a
+reached-but-empty lookup becomes a row. Its docstring carries the rule and both boundaries, so the
+next person to write a builder reads them where they are working.
 
-Mirror what was done for recalls: add a result-level `row_id` to `DrugLabelResult`, populate it in
-`OpenFdaClient.drug_label` on the not-found branch, and emit a row from `_label_rows`; do the same
-for the empty-section branch and for `find_plans`' empty result. Roughly:
+**`_ROW_BUILDERS` and `rows_for(result)`** replace six direct builder calls with a registry keyed on
+result type. That is what makes "every live tool" enumerable: a result shape with no builder cannot
+record a row at all, and now raises instead of quietly recording nothing.
 
-- `live/models.py` — add `row_id: str = ""` to `DrugLabelResult`, documented the way
-  `DrugRecallResult.row_id` is (cite this **only** when there is nothing else to cite).
-- `live/openfda.py` — set it on the `payload is None` branch of `drug_label`, and set it when
-  `sections` comes back empty.
-- `agent/live_tools.py` — `_label_rows` and `_plan_rows` emit a search row on those branches, with
-  short copyable cells (`drug`, `label_found: "0"`, `searched: ...`), following the
-  cells-are-values rule in §18c.
+**Three tests, in `tests/test_live_agent.py`:**
 
-Cheap, and leaves the family open for the next tool anyone adds.
+| Test | What it pins |
+|---|---|
+| `test_a_reached_lookup_is_always_citable` | all nine negative shapes produce a row, with an id the model can read off the result |
+| `test_an_outage_stays_uncitable` | the inverse — `unavailable` produces nothing, for every result type |
+| `test_every_live_tool_has_a_row_builder` | walks `LIVE_TOOLS`, reads each return annotation, demands a registered builder |
 
-### Option B — make it structural (preferred)
-
-The recurrence is the actual defect. Every one of these builders has the same shape: guard on
-`unavailable`, then return rows for whatever came back, with an ad-hoc negative branch bolted on
-where someone noticed. Consider instead a single helper in `agent/live_tools.py`:
-
-```python
-def _search_row(*, row_id: str, view: str, source: str, cells: dict[str, str],
-                url: str | None, title: str) -> Row:
-    """The citable record for 'I looked here and found nothing'."""
-```
-
-...and a rule enforced by test rather than by memory: **for every live tool, a result with
-`unavailable is None` must produce at least one row.** That is one parametrised test over the six
-tools, and it is the check that would have caught all seven instances at once:
-
-```python
-# sketch, tests/test_live_agent.py
-@pytest.mark.parametrize("result", [...every negative-branch result shape...])
-def test_a_reached_lookup_always_leaves_something_citable(result) -> None:
-    assert rows_for(result), "a finding with nothing to cite forces a false abstention"
-```
-
-It sits naturally beside
-`test_live_row_cells_use_names_the_model_was_shown`, which is the equivalent structural guard for
-Family 2 and was written for the same reason: *the next instance will be in whichever tool nobody
-thought to re-check.*
+The third is the one that outlives this document: it means a **new** tool inherits the invariant
+instead of having to remember it. The client half is pinned separately in `tests/test_live_clients.py`,
+because the agent-level test builds results by hand and would pass even if no client ever assigned
+the id.
 
 ### What must not change
 
 - **`unavailable` still emits nothing.** An outage is not a finding — nothing was looked up, so
   there is nothing to cite. Every builder's first guard stays exactly as it is. Emitting a row for
   an outage would let the model cite the fact that it failed, which is the inverse mistake and a
-  worse one.
+  worse one. `test_an_outage_stays_uncitable` is the guard.
 - **Ids stay source-namespaced** (`fda#`, `npi#`, `mkt#`) and readable off the result the model was
   handed (§14a-bis, §18c Family 2).
 - **Cells stay short values, not prose** — a cell is something to copy, not something to read
-  (§18c).
+  (§18c). The negative rows carry a count (`labels_found: "0"`) and the query terms the model
+  supplied, and nothing else.
 
-## 6. The same hole in the mirror half
+## 6. The same hole in the mirror half — still open
 
 §14a-bis already records it: [relational-tool.md](relational-tool.md) §6 says "empty is an answer"
 without saying how such an answer gets cited, so a `query_structured` returning zero rows is in the
-same bind. It was left alone deliberately, as Phase 1-c code whose change should be measured against
-the mirror slice. If Option B is taken, that helper is the natural place to close both — but the
-measurement caveat still applies, and it should be a separate change.
+same bind. It was left alone deliberately, and remains so: it is Phase 1-c code whose change should
+be measured against the mirror slice. `_search_row` is now the natural place to close it — but the
+measurement caveat still applies, and it should be a separate change with its own eval run.
 
 ## 7. Related
 

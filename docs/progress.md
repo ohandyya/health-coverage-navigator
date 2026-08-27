@@ -17,12 +17,12 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-25.*
+*Updated 2026-08-27.*
 
 - **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
   Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
   source type — `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` /
-  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (454 Python
+  `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (468 Python
   tests, pyright clean, 20 frontend tests) and `make scan` is clean. Design, contract, the two
   defect families, and what building it changed:
   [structured-api-tools.md](structured-api-tools.md).
@@ -46,14 +46,15 @@ mid-stream.
   see but cannot cite* — `record_id` vs `row_id`, a result-level id that was not the citable one,
   `field` vs cell key `section`, a recorded row whose id appeared nowhere on the result, and a
   reformatted number (`344.50` where the model was shown `344.5`).
-- **Family 2 has a structural test; Family 1 does not, and is still open** — corrected 2026-08-25,
-  having been overstated above. Family 1's four instances were each fixed individually and the rule
-  was never made an invariant, so the same shape survives in **three more paths**: `drug_label` with
-  no matching label, `drug_label` with no such section, and `find_plans` with an empty result. It
-  has been quiet because those usually sit beside reference citations that satisfy the validator —
-  so the answer is *served* with one clause silently unevidenced, rather than failing loudly the way
-  an empty recall search did. Anchors, blast radius and two fix options:
-  [negative-finding-gaps.md](negative-finding-gaps.md).
+- **Both families now have structural tests — Family 1 as of 2026-08-27.** Its four instances had
+  each been fixed individually and the rule was never made an invariant, so the same shape survived
+  in **five more paths** (`drug_label` with no matching label, `drug_label` with no such section,
+  `find_plans` empty, `find_drug` unrecognised, `check_drug_coverage` empty). All five now emit a
+  row; `_search_row` is the one place that happens, `rows_for` dispatches every result type to a
+  builder, and three tests hold the line — including one that walks `LIVE_TOOLS` reading return
+  annotations, so a **new** tool inherits the invariant. The mirror half (`query_structured`
+  returning zero rows) is deliberately still open: Phase 1-c code whose change should be measured
+  against the mirror slice. [negative-finding-gaps.md](negative-finding-gaps.md).
 - **A third lesson, separate from those: a stale instruction must be deleted, not counter-argued.**
   `_WEB_STEPS` still told the model to search the web "for a recent recall" after `drug_recalls`
   existed; the first fix *added* a step saying the web was wrong for recalls, and the model resolved
@@ -335,8 +336,10 @@ Beyond the plan.md list, because implementation made them necessary:
 - [x] `--allow-demo-key` — an explicit, logged override for CMS's shared demo key, and the guard
       scoped so it stops refusing runs that could not reach CMS at all
 - [x] Structural test for defect **Family 2**: cell keys must be names the model was shown, and
-      every recorded row's id must be readable off its result. **Family 1 has no equivalent** — see
-      the unticked row below
+      every recorded row's id must be readable off its result
+- [x] Structural test for defect **Family 1** (2026-08-27): every live result that reached its
+      upstream leaves something citable, an outage still leaves nothing, and every tool's return
+      type has a registered row builder — so a new tool inherits the rule
 - [x] `parseCells` in `CitationCard.tsx` — a multi-line label passage was being parsed one
       `column: value` pair per line; the first fix would have broken every **mirror** citation,
       whose PUF columns are CamelCase
@@ -347,8 +350,9 @@ Not done:
 
 - [ ] **Nobody has opened the app.** The UI defect above was found by *reading* `CitationCard.tsx`.
       Phase 2 broke the "ships unviewed" streak deliberately; Phase 3 did not match it.
-- [ ] **Close defect Family 1 structurally** — three negative-finding paths still emit no citable
-      row. Recommended shape and anchors: [negative-finding-gaps.md](negative-finding-gaps.md)
+- [ ] **The mirror half of Family 1** — `query_structured` returning zero rows is the same bind
+      ([relational-tool.md](relational-tool.md) §6). Left open deliberately: Phase 1-c code whose
+      change should be measured against the mirror slice
 - [ ] `AgentKit._agent` accepts `marketplace` and drops it at all three call sites; `AgentKit.stream`
       does not forward it to `stream_answer`. The `_build_agent` cache-key trap armed a sixth time,
       latent only until a test drives a Marketplace client through the kit
@@ -494,6 +498,48 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-27 — Family 1 closed structurally, five instances at once
+
+**Did:** closed defect Family 1 (*a finding with nothing to cite*) as an invariant rather than as
+three more point fixes, per the recommendation the 2026-08-25 entry left open. `make check-all` is
+green: 468 Python tests (+14), pyright clean, frontend gate unchanged.
+
+**Decided: all five holes, not the three the write-up named.** [negative-finding-gaps.md](negative-finding-gaps.md)
+ranked `find_drug` and `check_drug_coverage` as lower priority — true of their blast radius, and
+irrelevant to the choice, because the invariant that makes the fix stick does not admit exemptions.
+A test asserting *"every live tool leaves something citable"* with two documented carve-outs is a
+test that has already lost the argument it exists to win.
+
+**Decided: `find_drug` gets per-match ids too, which nothing asked for.** Closing only its negative
+branch would have left its *positive* branch needing the exemption — and that exemption would have
+been hiding the same defect. The tool's docstring tells the model to **say which strength it
+checked**; *"I checked the 20 mg tablet"* is a claim about what the lookup returned and needs a row
+behind it. A resolution step is still a step whose output gets quoted.
+
+**The mechanism, in three parts:** `_search_row` is the single place a reached-but-empty lookup
+becomes a row and carries the rule in its docstring; `_ROW_BUILDERS` / `rows_for` replaces six
+direct builder calls with a registry keyed on result type, so a shape with no builder raises instead
+of silently recording nothing; and three tests enforce it —
+`test_a_reached_lookup_is_always_citable` (nine negative shapes),
+`test_an_outage_stays_uncitable` (the inverse), and `test_every_live_tool_has_a_row_builder`, which
+walks `LIVE_TOOLS` reading return annotations. **The third is the one that outlives the fix:** a new
+tool inherits the invariant instead of having to remember it.
+
+**Pinned the client half separately.** The agent-level test builds results by hand, so it would pass
+even if no client ever assigned the id. `tests/test_live_clients.py` now drives each negative branch
+over `MockTransport` and asserts the row comes back citable — and does its `rows_for` imports
+*inside* the tests, because that file deliberately keeps PydanticAI out of its import graph.
+
+**Not done, deliberately: the mirror half.** `query_structured` returning zero rows is the same bind
+([relational-tool.md](relational-tool.md) §6) and `_search_row` is now the natural place to close
+it — but it is Phase 1-c code whose change should be measured against the mirror slice, so it stays
+a separate change with its own eval run.
+
+**Not done: new gold questions.** The failure this fixes is a *silently unevidenced clause* in an
+otherwise-served answer, which the existing abstention and groundedness metrics already score; the
+work is pinned offline, inside `check-all`, at no cost. If the mirror half is taken up, that one
+does need a measured run.
 
 ### 2026-08-25 — a walkthrough of Phase 3, and the discovery that Family 1 was never closed
 

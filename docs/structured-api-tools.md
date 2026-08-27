@@ -912,7 +912,8 @@ because each one recurred after being fixed once.
 ### Family 1 — a finding with nothing to cite
 
 The grounding validator requires a non-abstained answer to cite something. So **any true finding
-with no citable row forces a false abstention, or a worse source.** Four instances:
+with no citable row forces a false abstention, or a worse source.** Four instances were found while
+building the phase:
 
 | Finding | What went wrong before it was citable |
 |---|---|
@@ -924,6 +925,38 @@ with no citable row forces a false abstention, or a worse source.** Four instanc
 **The rule: if a tool can establish something, it must emit a row for it — including when what it
 established is an absence.** The search that found nothing *is* the evidence that nothing is there.
 This is not a loophole in the grounding rule; it is the rule applied to a negative claim.
+
+**Fixing it four times is not the same as closing it, and the difference cost five more instances.**
+Each fix was made where someone noticed, the rule was written down but never enforced, and a
+2026-08-25 walkthrough found the identical shape in five further paths — `drug_label` with no
+matching label, `drug_label` with no such section, `find_plans` with an empty result, `find_drug`
+with an unrecognised name, and `check_drug_coverage` with an empty envelope. Closed structurally on
+2026-08-27:
+
+- **`_search_row` in `agent/live_tools.py`** is the one place a reached-but-empty lookup becomes a
+  row, and its docstring carries the rule and both of its boundaries.
+- **`_ROW_BUILDERS` / `rows_for`** replaces six direct builder calls with a registry keyed on result
+  type, so a result shape with no builder raises rather than silently recording nothing.
+- **Three tests in `tests/test_live_agent.py` enforce it** instead of memory:
+  `test_a_reached_lookup_is_always_citable` over all nine negative shapes,
+  `test_an_outage_stays_uncitable` for the inverse, and `test_every_live_tool_has_a_row_builder`,
+  which walks `LIVE_TOOLS` and reads each tool's return annotation — so **the next tool anyone adds
+  inherits the invariant rather than having to remember it.**
+
+Two boundaries the fix must not cross, and the first is the one a well-meaning version breaks:
+
+- **`unavailable` still emits nothing.** An outage is not a finding — nothing was looked up, so
+  there is nothing to cite. A row there would let the model cite the fact that it *failed*, turning
+  "I could not check" into a sourced claim. That is the same defect pointing the other way, and a
+  worse one.
+- **A negative row is still a row**: source-namespaced id readable off the result (family 2 below),
+  and cells that are short values rather than prose. `find_drug` gained per-match ids in the same
+  change, because *"I checked the 20 mg tablet"* is a claim about a lookup's output like any other.
+
+**Still open: the mirror half.** [relational-tool.md](relational-tool.md) §6 says "empty is an
+answer" without saying how one gets cited, so a `query_structured` returning zero rows is in the
+same bind. Deliberately left — it is Phase 1-c code whose change should be measured against the
+mirror slice, so it is a separate change with its own measurement.
 
 ### Family 2 — a name the model can see but cannot cite
 

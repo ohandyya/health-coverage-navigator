@@ -155,6 +155,13 @@ if not result.recalls:
 Not a loophole in the grounding rule — the rule applied to a negative claim. The assertion is *"I
 looked here and found nothing"*, and that row is precisely the evidence for it.
 
+**The rule had to become a mechanism before it held.** Four instances were fixed one at a time, the
+rule was written down, and five more instances of the identical shape were found afterwards in the
+same file — so the row above now comes from a shared `_search_row` helper, and a parametrised test
+asserts that *every* live result which reached its upstream leaves something citable. The general
+lesson is the one worth taking: a rule enforced by memory is a rule that gets re-broken in whichever
+code path nobody thought to re-check.
+
 ## Retry versus degrade, concretely
 
 The user-visible question is: *when does the agent get told "you called this wrong, try again", and
@@ -268,10 +275,15 @@ because this is where a model's instinct to hedge does damage:
   call. `test_the_recall_query_is_a_valid_disjunction` now inspects the outgoing request rather than
   the canned reply. The honest statement is that offline tests pin the *handling* of every edge case
   and only one test pins the *asking*.
-- **A known residual gap**, recorded rather than papered over: three negative findings still emit no
-  citable row — `drug_label` when no label matches, `drug_label` when the label lacks the requested
-  section, and `find_plans` when the search returns nothing. See
-  [negative-finding-gaps.md](../negative-finding-gaps.md).
+- **The gap that this list used to record is closed** (2026-08-27), and how it closed is the more
+  useful half. Five further paths had the same hole — `drug_label` with no matching label,
+  `drug_label` with no such section, `find_plans` with an empty result, `find_drug` with an
+  unrecognised name, `check_drug_coverage` with an empty envelope — because the family had been
+  fixed four times and never made an invariant. It is one now: `rows_for` dispatches every result
+  type to a builder, and `test_every_live_tool_has_a_row_builder` walks `LIVE_TOOLS` reading return
+  annotations, so **a new tool inherits the rule rather than having to remember it.**
+  `test_an_outage_stays_uncitable` pins the boundary in the other direction: nothing was looked up,
+  so nothing may be cited. See [negative-finding-gaps.md](../negative-finding-gaps.md).
 
 ## Why it presents well
 

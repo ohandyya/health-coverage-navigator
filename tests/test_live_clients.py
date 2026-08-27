@@ -149,12 +149,21 @@ async def test_a_boxed_warning_is_never_dropped_for_a_general_one() -> None:
 @pytest.mark.anyio
 async def test_a_missing_section_is_not_a_missing_label() -> None:
     """`label_found=True` with no sections: the label exists and does not carry this one."""
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
     client = build(responding(label_body(indications_and_usage=["Something."])))
     result = await client.drug_label("Examplor", "interactions")
 
     assert result.label_found is True
     assert result.sections == []
     assert result.unavailable is None
+    # And it is citable: "the label exists and does not carry this section" is a finding, and the
+    # model is told to report it. Without a row the grounding validator forces an abstention on it.
+    rows = rows_for(result)
+    assert [r.row_id for r in rows] == [result.row_id] != [""]
+    assert rows[0].cells["sections_found"] == "0"
 
 
 @pytest.mark.anyio
@@ -178,10 +187,18 @@ async def test_a_brand_miss_retries_against_the_generic_name() -> None:
 
 @pytest.mark.anyio
 async def test_no_label_at_all_is_an_answer_not_an_outage() -> None:
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
     result = await build(responding(None, status=404)).drug_label("nosuchdrug", "indications")
 
     assert result.unavailable is None, "a 404 from openFDA means no match, never an outage"
     assert result.label_found is False
+    # Two searches — brand, then generic — found nothing, and that finding is citable.
+    rows = rows_for(result)
+    assert [r.row_id for r in rows] == [result.row_id] != [""]
+    assert rows[0].cells["query"] == "nosuchdrug"
 
 
 @pytest.mark.anyio
@@ -361,6 +378,10 @@ def json_handler(payload, status: int = 200):
 async def test_drugs_autocomplete_parses_a_bare_array() -> None:
     """§7a: the published spec declares `{drugs: [...]}` and the server sends a bare array. A model
     generated from the spec would fail on the first real call."""
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
     client = marketplace(
         json_handler([{"rxcui": "617318", "name": "LIPITOR", "strength": "20 mg"}])
     )
@@ -368,6 +389,64 @@ async def test_drugs_autocomplete_parses_a_bare_array() -> None:
 
     assert [m.rxcui for m in result.matches] == ["617318"]
     assert result.unavailable is None
+    # A resolved drug is citable too: "I checked the 20 mg tablet" is a claim about this result.
+    assert [r.row_id for r in rows_for(result)] == [m.row_id for m in result.matches] != [""]
+
+
+@pytest.mark.anyio
+async def test_an_unrecognised_drug_name_is_a_citable_finding() -> None:
+    """An empty autocomplete means the Marketplace does not know that name — usually a misspelling,
+    and the tool tells the model to say so. A real answer needs a row behind it."""
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
+    result = await marketplace(json_handler([])).find_drug("lipitorr")
+
+    assert result.matches == []
+    rows = rows_for(result)
+    assert [r.row_id for r in rows] == [result.row_id] != [""]
+    assert rows[0].cells["query"] == "lipitorr"
+
+
+@pytest.mark.anyio
+async def test_a_plan_search_that_matched_nothing_is_a_citable_finding() -> None:
+    """The fourth state `PlanMatches` documents. Its `state_not_served` sibling has been citable
+    since §14a-bis; this branch was the same hole one `if` away."""
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
+    result = await marketplace(json_handler({"plans": [], "total": 0})).find_plans(
+        county=County(fips="37057", name="Davidson County", state="NC"),
+        zipcode="27360",
+        ages=[40],
+        income=50000,
+        year=2026,
+        limit=3,
+    )
+
+    assert result.plans == []
+    assert result.state_not_served is None
+    rows = rows_for(result)
+    assert [r.row_id for r in rows] == [result.row_id] != [""]
+    assert rows[0].cells["zipcode"] == "27360"
+
+
+@pytest.mark.anyio
+async def test_an_empty_coverage_envelope_is_a_citable_finding() -> None:
+    """`DataNotProvided` arrives as a row and is citable already. This is the residue: the
+    Marketplace returned nothing at all for these drugs and plans."""
+    # Imported inside the test: this file keeps PydanticAI out of its import graph, and
+    # `agent.live_tools` pulls it in.
+    from health_coverage_navigator.agent.live_tools import rows_for
+
+    result = await marketplace(json_handler({"coverage": []})).check_drug_coverage(
+        ["617318"], ["77264NC0010049"], 2026
+    )
+
+    assert result.coverage == []
+    assert [r.row_id for r in rows_for(result)] == [result.row_id] != [""]
 
 
 @pytest.mark.anyio

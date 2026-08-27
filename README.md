@@ -87,7 +87,7 @@ a *pre-existing* streaming bug the web lane happened to expose.
 | **The agent** | One PydanticAI agent, **fifteen** tools it composes itself across three lanes and four sources. Reference: `search_corpus` (stdlib BM25) / `vector_search` (LanceDB embeddings) / `grep_corpus` / `get_chunk` / `list_documents`. Relational: `list_tables` / `describe_table` / `query_structured`. Web: `web_search`. Live: `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` / `check_drug_coverage` / `find_plans` (CMS Marketplace). *What it may search* and *whether each later lane exists* are independent per-run flags, so every comparison is one code path measured two ways |
 | **The relational lane** | DuckDB queries the vendored CMS plan mirrors **in place** — no load step, 53 ms to open and verify 10 tables, 3–16 ms a lookup. Model-written SQL is guarded twice: one `SELECT` only (statement-type checked before execution), on a connection sandboxed to `data/processed/` with external access off and configuration locked. Escape attempts are a test, not a claim |
 | **The web lane** | `web_search` over Tavily, and the provenance problem it creates is the interesting part: a model can write a *plausible URL it never retrieved*, and unlike an invented chunk id nobody could tell by looking. So a web citation names a `result_id` only a search can assign. A rate limit or outage returns an `unavailable` result the model must report — never an empty list, so an outage cannot be served as "the web does not cover this" |
-| **The live lane** | Three upstreams behind six typed tools, and the rule that shaped all of them: **an empty result is an answer.** openFDA says "nothing matched" with a 404 and NPPES with `result_count: 0` — so *"no recalls on record"* has to arrive as a confident finding, not an outage. The inverse of Phase 2's rule, and it needed the same care: a negative finding has to emit a **citable row**, because a true finding with nothing to cite forces a false abstention or a worse source — measured once as the agent holding CMS's own answer and citing a web page for it. Four such paths emit one today; [three still do not](docs/negative-finding-gaps.md) |
+| **The live lane** | Three upstreams behind six typed tools, and the rule that shaped all of them: **an empty result is an answer.** openFDA says "nothing matched" with a 404 and NPPES with `result_count: 0` — so *"no recalls on record"* has to arrive as a confident finding, not an outage. The inverse of Phase 2's rule, and it needed the same care: a negative finding has to emit a **citable row**, because a true finding with nothing to cite forces a false abstention or a worse source — measured once as the agent holding CMS's own answer and citing a web page for it. Every such path emits one, and [a test enforces it](docs/negative-finding-gaps.md) rather than the next tool having to remember |
 | **Live-API provenance** | A live record is cited as a **row** — same shape, same validator, same card as a vendored one, because it makes the same kind of claim. What it adds is a `url` the reader can re-fetch, which a mirror row cannot have. The CMS key rides in the query string, so it is **stripped before any citation URL is stored**, with a test whose failure would be a security finding |
 | **Grounding** | Enforced in code, not asked for in the prompt. A passage or web citation must name evidence a tool returned and quote it verbatim; a **row** citation must name a row a query returned and reproduce its cells **byte for byte** — `'$4,500 '` keeps its trailing space, because tidying the evidence is editing it. Citations are rebuilt from the real chunk, row or result, so an invented title cannot reach the browser |
 | **Abstention** | A first-class boolean, never inferred from the prose, rendered as a visually distinct panel |
@@ -224,13 +224,13 @@ current `config.yaml` reproduces.
   premium and a recall list all move underneath a stable question. Correctness for those is asserted
   in offline fixture tests, where the response is pinned. So this repo measures that the agent
   *reaches* the right source and quotes it honestly — **not that its live answers are good.**
-- **Three negative findings are still not citable.** *"The FDA holds no recall for this drug"* emits
-  a row the answer can point at; *"the FDA holds no label under that name"*, *"the label has no such
-  section"*, and an empty plan search do not. The rule was applied four times and never made an
-  invariant. It stays quiet because those findings usually sit beside reference citations that
-  satisfy the validator — so the answer is served with one clause silently unevidenced, which is
-  quieter than the failure that prompted the original fix and arguably worse. Written up rather than
-  patched mid-review: [negative-finding-gaps.md](docs/negative-finding-gaps.md).
+- **A negative finding in the *mirror* half is still not citable.** The live lane's version of this
+  is closed — nine paths, one helper, and a test that walks every tool — but
+  `query_structured` returning zero rows is in the same bind: "empty is an answer" with no way to
+  cite that answer. Left open deliberately rather than swept in, because it is Phase 1-c code whose
+  change should be measured against the mirror slice.
+  The live half, and how a rule that was fixed four times finally became an invariant:
+  [negative-finding-gaps.md](docs/negative-finding-gaps.md).
 - **The web lane can be fooled about authority.** `abs-03` above is the demonstration: finding
   writing *about* an unpublished figure is not the same as the figure existing, and neither the
   grounding guardrail nor the routing metric catches it — the answer is grounded and the lane is
