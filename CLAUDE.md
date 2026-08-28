@@ -10,7 +10,11 @@ Guidance for Claude Code (claude.ai/code) working in this repository. This file 
 next, and why past decisions went the way they did. Read it before doing anything else in a
 session.** Do not record status in this file.
 
-Four docs, four jobs — keep material in the one that owns it:
+**Active development ended 2026-08-28, with Phases 0–3 shipped and measured.** Do not start Phase 4
+or Phase 5 work, or any item from `future_enhancements.md`, unless the user asks for it by name.
+Maintenance, fixes, and doc corrections are still ordinary work.
+
+Five docs, five jobs — keep material in the one that owns it:
 
 | Doc | Says | Never contains |
 |---|---|---|
@@ -18,6 +22,11 @@ Four docs, four jobs — keep material in the one that owns it:
 | [docs/frontend_plan.md](docs/frontend_plan.md) | how the web UI works | phase scheduling |
 | [docs/progress.md](docs/progress.md) | what is actually built | design rationale for unbuilt things |
 | [docs/glossary.md](docs/glossary.md) | what the words mean | schedule, design, or status |
+| [docs/future_enhancements.md](docs/future_enhancements.md) | what was scoped and not built, and why | status; a design it should only link to |
+
+`future_enhancements.md` **collects, it does not relocate.** Each design doc's *Deferred
+deliberately* section stays the source of truth for its own items; the fifth doc indexes them and
+repeats their trigger conditions. Scoped-but-unbuilt work goes there, never into `progress.md`.
 
 Reference docs: [development.md](docs/development.md) (commands, gates, toolchain) ·
 [configuration.md](docs/configuration.md) · [chunking.md](docs/chunking.md) ·
@@ -153,8 +162,9 @@ MCD), vendor only the cleared subset. Run `make scan` before committing anything
 
 ## Architecture phases
 
-Staged so each phase ships something usable before adding complexity. **Do not jump ahead of the
-current phase's scope unless asked.** Full detail — acceptance tests, capability checklists,
+Staged so each phase ships something usable before adding complexity. **Phases 0–3 were built; 4
+and 5 were scoped and never started** ([future_enhancements.md](docs/future_enhancements.md)), so
+"do not jump ahead of the current phase's scope unless asked" now means: do not start Phase 4 or 5. Full detail — acceptance tests, capability checklists,
 rationale — in [docs/plan.md](docs/plan.md); the frontend slice of each is F0–F4 in
 [docs/frontend_plan.md](docs/frontend_plan.md) §6.
 

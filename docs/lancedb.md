@@ -47,7 +47,8 @@ vector **0.733**. Numbers and the per-question breakdown: [agent.md](agent.md) �
   > reconciling itself and hide the thing being measured. It would also put a second BM25
   > implementation beside the stdlib one in `agent/bm25.py`, so the lexical baseline and the
   > lexical half of the hybrid could drift apart. Still available for a later phase; the store's
-  > schema does not preclude it.
+  > schema does not preclude it. That later phase never came — see
+  > [future_enhancements.md](future_enhancements.md) §3.
 
   > **Superseded, 2026-08-14.** This bullet originally argued that the Phase 1-a lexical
   > baseline and the Phase 1-b vector backend could *share one store*, making the

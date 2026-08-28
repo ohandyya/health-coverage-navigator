@@ -132,6 +132,9 @@ the id.
 
 ## 6. The same hole in the mirror half — still open
 
+*Still open, and now permanently so: active development ended after Phase 3. Carried forward in
+[future_enhancements.md](future_enhancements.md) §3, with the measurement caveat below intact.*
+
 §14a-bis already records it: [relational-tool.md](relational-tool.md) §6 says "empty is an answer"
 without saying how such an answer gets cited, so a `query_structured` returning zero rows is in the
 same bind. It was left alone deliberately, and remains so: it is Phase 1-c code whose change should

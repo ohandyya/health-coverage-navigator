@@ -17,9 +17,11 @@ mid-stream.
 
 ## Current state
 
-*Updated 2026-08-27.*
+*Updated 2026-08-28.*
 
-- **Phase:** **Phase 3 is complete and measured; the agent has three lanes and four sources.**
+- **Phase:** **Phase 3 is complete and measured, and active development ends here.** The agent has
+  three lanes and four sources; Phases 4 and 5 were scoped and never started, and are carried
+  forward in [future_enhancements.md](future_enhancements.md).
   Six live tools ship beside the mirror tools in the same lane, under the same `structured_api`
   source type — `drug_label` / `drug_recalls` (openFDA), `lookup_provider` (NPPES), `find_drug` /
   `check_drug_coverage` / `find_plans` (CMS Marketplace). `make check-all` is green (476 Python
@@ -142,21 +144,15 @@ mid-stream.
   was corrected for the two axes Phase 3 added. The alternative (declare the code comments the
   owning source) was rejected: with no doc to update, the next change would be made to the highlight,
   making a presentation page the source of truth for a design.
-- **Next up: Phase 4 — planning, decomposition and per-claim provenance**
-  ([plan.md](plan.md) → Phase 4). The tri-modal core is complete, so what is missing is no longer a
-  lane but a *behaviour*: the agent routes and loops but does not split a compound question into
-  sub-questions and route each. Two things to carry in rather than rediscover.
-
-  **Phase 3 supplied the concrete motivating case.** `live-06` originally asked "is atorvastatin
-  covered under a plan sold in ZIP 27360" — which needs `find_plans` → pick a plan →
-  `check_drug_coverage` → `drug_label`, a four-hop chain. It passed on one run of three and errored
-  on the others. **It was re-scoped to name a plan rather than fixed**, precisely because reliable
-  multi-hop is Phase 4's job; the un-scoped version is the natural first Phase 4 gold question and
-  its original wording is preserved in the question's notes.
-
-  **And `abs-03` is still the standing argument for per-claim provenance.** The agent answers a
-  question about an unpublished 2027 figure from writing *about* it. Grounded, correctly routed,
-  and wrong — nothing here yet checks that a source is *authoritative for a given claim*.
+- **Next up: nothing — active development is complete.** There is no next phase to start. What
+  Phase 4 would have been (planning and decomposition — the agent routes and loops but does not
+  split a compound question into sub-questions and route each), what Phase 5 would have been, and
+  every smaller item that was deferred with a reason now live in one place:
+  [future_enhancements.md](future_enhancements.md). The two carry-forward notes that used to sit in
+  this bullet — `live-06`'s original four-hop wording as the natural first Phase 4 gold question,
+  and `abs-03` as the standing argument for per-claim provenance — moved there rather than being
+  dropped. **This is a wind-down, not an abandonment**: the tri-modal core shipped, was measured,
+  and is the deliverable.
 
 - **Phase 2 decisions worth outliving the code.** **Tavily, decided rather than measured** —
   `plan.md` had called for a Tavily-vs-Exa A/B, and that paragraph is now amended rather than left
@@ -205,7 +201,11 @@ mid-stream.
   exactly this): the headline comes from a **deterministic retrieval-only `vector` runner**, not
   from an agent A/B. It worked — see the result above. No `--repeat` mode was built, so the
   "a single agent run is not evidence" open question below is *unchanged*, not closed.
-- **Open questions:**
+- **Open questions.** These stay here because they are status rather than scope. The four that are
+  really *future work* — the retrieval bottleneck, the thin gold slices, the absent `--repeat` mode,
+  and `web-01`'s two-lane claim — are restated in
+  [future_enhancements.md](future_enhancements.md) §4; the rest are operational and belong nowhere
+  else.
   - **`web-01` is now claimed by two lanes, and the score found it before a decision did.** The
     previous session predicted exactly this — *"openFDA gives Phase 3 a claim on `web-01`… the
     routing metric will have to say which lane is correct when two could be, and that is a gold-set
@@ -514,6 +514,40 @@ Not in the plan, added because the code demanded it:
 ---
 
 ## Log
+
+### 2026-08-28 — wind-down: active development complete, remaining work collected
+
+**Did:** stopped active development after Phase 3 and swept the docs so an outside reader concludes
+*finished through Phase 3* rather than *abandoned mid-phase*. Added a fifth document,
+[future_enhancements.md](future_enhancements.md), collecting Phases 4 and 5 from `plan.md` together
+with every item that had been deferred with a reason — `read_url` over Tavily's `/extract`, the
+mirror half of Family 1, authority-of-source, hybrid ranking, the relational lane's join helpers and
+typed views, the persistent response cache, openFDA's other endpoints, key rotation, multi-turn, the
+corpus browser — plus the four measurement gaps. Updated `plan.md` (status line, a wind-down note,
+pointers on Phases 4 and 5), this file, `README.md` (status heading, callout, roadmap, doc table,
+repo map), `CLAUDE.md` (the doc table is now five rows), and one pointer line in each design doc
+that owns a deferred section. No code changed and no number moved.
+
+**Decided:** **the new doc collects, it does not relocate.** Every entry links to the document that
+owns the full reasoning and stops there — a design doc's *Deferred deliberately* section stays the
+source of truth, and the new file is an index over them with the trigger conditions repeated. The
+alternative (move the reasoning in) would have made six design docs incomplete accounts of their own
+designs and put the fifth doc on the wrong side of CLAUDE.md's "each doc owns its material" rule.
+
+**Also decided: `plan.md`'s `- [ ]` boxes stay unchecked, including for Phases 0–3.** They are spec,
+not a tracker — completion is `progress.md`'s job and every phase uses unchecked boxes, so ticking
+Phase 3's on the way out would have broken the doc contract to make the wind-down look tidier.
+
+**Rejected:** folding the six `Not done` defects from the Phase 3 checklist and the operational open
+questions into the new doc. They are known state, not scoped work, and moving them would have turned
+a decisions document into a bug list — the exact drift the four-doc split exists to prevent.
+
+**Stopped at:** the docs. Nothing built changed, so no eval run, count, or Mermaid diagram was
+touched, and README's *What does not work yet* list survives verbatim — it is the load-bearing half
+of an honest status section and a wind-down is the worst possible moment to soften it.
+[`.claude/skills/wrap-up/SKILL.md`](../.claude/skills/wrap-up/SKILL.md) gained one line so a later
+session routes scoped-but-unbuilt work to the new doc instead of here. **Still nobody has opened the
+app** — that item is now permanent rather than pending.
 
 ### 2026-08-27 (later) — the Marketplace citation that looked checkable and was not
 

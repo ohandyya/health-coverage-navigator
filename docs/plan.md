@@ -2,7 +2,7 @@
 
 Created by: Andy Tseng
 Created time: July 3, 2026 2:55 PM
-Status: In Progress
+Status: Complete through Phase 3 — active development ended 2026-08-28
 Tags: Learn
 
 An open-source AI **agent** — one PydanticAI agent, built once and then grown a toolset at a
@@ -31,6 +31,13 @@ the grounding/abstention rule, and the step limits.
 
 Each phase below is independently shippable and has an **acceptance test** — the phase is done
 when you can do the thing in the milestone line.
+
+> **Active development ended after Phase 3 (2026-08-28).** Phases 0–3 shipped and are measured;
+> the tri-modal core is complete. **This document is unchanged by that** — it says what to build
+> and when, which is as true of a phase that was never started as of one that was. Phases 4 and 5
+> below are the record of what was scoped, and they are carried forward, with the smaller deferrals
+> from every design doc, in [future_enhancements.md](future_enhancements.md).
+> What is actually built stays [progress.md](progress.md)'s job.
 
 ## Resources
 
@@ -544,6 +551,8 @@ provider and get a deterministic answer, not prose from a document.
 
 ### Phase 4 — Multi-step agent + provenance
 
+*Scoped, not built — carried forward in [future_enhancements.md](future_enhancements.md) §1.*
+
 The agent has been calling tools since Phase 1; what it hasn't done is *plan*. Now it decomposes a
 compound question into sub-questions, routes each to its own lane, and synthesizes one answer
 from several tool results. Build in the habit from the start of tagging every claim in the final
@@ -571,6 +580,8 @@ get one synthesized answer where every claim is traceable.
 - [ ] UI: trace panel handles nested multi-hop steps; hovering a claim highlights exactly the sources behind it — see [frontend_plan.md](frontend_plan.md) (Phase F3)
 
 ### Phase 5 — Growth surface: from bot to tool
+
+*Scoped, not built — carried forward in [future_enhancements.md](future_enhancements.md) §2.*
 
 The lookups already exist by this point — Phase 1-c built the query tools over the PUFs and Phase
 3 put the live APIs beside them. **What this phase adds is not access to the data but what you do
@@ -619,6 +630,9 @@ Phase 5    (same agent, more domain tools)      scheduler + state to diff      t
 Read the first column downward: it is one agent gaining tools, never a rewrite. The tri-modal
 core is complete at the end of Phase 3 — everything after that is additive and should not disturb
 the core.
+
+**The build stopped at that line.** Phases 4 and 5 were never started, which is why the recap ends
+where the tri-modal core does; see [future_enhancements.md](future_enhancements.md).
 
 The frontend column is a schedule, not a spec. Stack, API schemas, UI layout, and the
 corresponding F0–F4 checklists live in [frontend_plan.md](frontend_plan.md).

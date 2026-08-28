@@ -55,7 +55,13 @@ that it works:
 
 ---
 
-## Status — Phase 3 of 5 complete
+## Status — complete through Phase 3 of 5
+
+> **Active development on this project is complete (2026-08-28).** Phases 0–3 shipped and are
+> measured; Phases 4 and 5 were scoped and deliberately not built. What they were, and every
+> smaller capability that was deferred with a stated reason — several with a named trigger
+> condition — is collected in
+> [docs/future_enhancements.md](docs/future_enhancements.md). Nothing below is a to-do list.
 
 > **Where this actually is: three lanes, four sources, and the tri-modal core is complete.**
 > Ask a health-coverage question in the browser and a PydanticAI agent searches the indexed
@@ -217,6 +223,11 @@ the time; that setting has since changed, so the number is a historical sample, 
 current `config.yaml` reproduces.
 
 ### What does not work yet
+
+This list is the honest boundary of the shipped system, and it stays as written now that the build
+has stopped — an item that quietly stopped being true would be the worst failure a public README can
+have. Most of these are deliberate boundaries rather than gaps, and each is carried forward with its
+reasoning in [docs/future_enhancements.md](docs/future_enhancements.md).
 
 - **There is no network data, and that is a design boundary rather than a gap to fill.** The NPI
   registry says what a provider *is* — identity, specialty, status — never which plans pay them.
@@ -610,6 +621,12 @@ So the split is enforced:
 | [`docs/frontend_plan.md`](docs/frontend_plan.md) | *How the web UI works* | Phase scheduling |
 | [`docs/progress.md`](docs/progress.md) | *What is actually built* | Design rationale for unbuilt things |
 | [`docs/glossary.md`](docs/glossary.md) | *What the words mean* | Schedule, design, or status |
+| [`docs/future_enhancements.md`](docs/future_enhancements.md) | *What was scoped and not built, and why* | Status, or a design it only links to |
+
+The fifth row arrived with the wind-down, and it earns its place for the same reason as the other
+four: without it, "not built" would have to live either in the plan (where it reads as scheduled) or
+in the progress log (where it reads as a defect list). It collects and links; it never restates a
+design.
 
 **[`CLAUDE.md`](CLAUDE.md) holds only invariants** — the conventions that are true regardless of
 how far along the build is, and *only* the ones worth spending context on in every session.
@@ -717,7 +734,7 @@ health_coverage_navigator/
 ├── scripts/                      # 5 downloaders + scan_sensitive.py
 ├── evals/gold/questions.yaml     # 50 hand-authored questions in five shapes
 ├── data/{raw,processed}/         # committed — see the licensing rules
-└── docs/                         # plan · frontend_plan · progress · glossary
+└── docs/                         # plan · frontend_plan · progress · glossary · future_enhancements
                                   #   + agent · chunking · development · configuration
                                   #   + technical_highlights.md → highlights/*.md  ⭐
                                   #   + per-source data guides
@@ -756,8 +773,13 @@ Details in [docs/plan.md](docs/plan.md), enforcement in
 | **1c** | Relational tools over the vendored PUF mirrors — DuckDB querying Parquet in place | `structured_api` badge, row-shaped citations | ✅ **Done** |
 | **2** | `web_search` over Tavily + three-lane routing eval | `web` badge, routing accuracy | ✅ **Done** |
 | **3** | Typed API tools (Marketplace, openFDA, NPPES) | `structured_api` badge, live-API citation links | ✅ **Done** |
-| **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | ⬜ |
-| **5** | Plan comparison, drug costs, network checks, "what changed" monitor — built on the Phase 1-c tools | Tables + monitor view | ⬜ |
+| **4** | Multi-step loop, per-claim provenance, tracing | Nested trace, claim highlighting | 📋 **Scoped, not built** |
+| **5** | Plan comparison, drug costs, network checks, "what changed" monitor — built on the Phase 1-c tools | Tables + monitor view | 📋 **Scoped, not built** |
+
+**The build stopped at the end of Phase 3, deliberately and with the core complete.** Phases 4 and
+5 have acceptance tests and capability checklists in [docs/plan.md](docs/plan.md) and were never
+started; they are carried forward, alongside every smaller deferral, in
+[docs/future_enhancements.md](docs/future_enhancements.md).
 
 Routing went tri-modal at Phase 2; **the tri-modal core completed at Phase 3**, when the structured
 lane gained its live half. Everything after is additive. Each phase

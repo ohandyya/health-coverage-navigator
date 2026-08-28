@@ -337,7 +337,8 @@ about a figure is not the same as the figure existing* — and neither the promp
 not know" nor the grounding guardrail catches it, because the answer **is** grounded: the quoted
 words really are on the page. The guardrail checks that a source says what the answer says; nothing
 checks whether the source is *authoritative for that claim*. Phase 4's per-claim provenance is where
-that could be addressed; naming it here is the honest interim step.
+that could be addressed; naming it here is the honest interim step. Phase 4 was never built, so this
+stands — [future_enhancements.md](future_enhancements.md) §3 carries it forward.
 
 **Three questions errored** on the web-on run (`UnexpectedModelBehavior: Exceeded maximum output
 retries`), the recurring failure docs/progress.md has tracked since 1a. Their treatment exposed a

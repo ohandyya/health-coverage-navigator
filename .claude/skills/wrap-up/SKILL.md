@@ -76,4 +76,6 @@ Report what you wrote in two or three lines, naming each file you touched. Do no
 
 If the session changed something that `CLAUDE.md`, `docs/plan.md`, or `docs/frontend_plan.md` owns — a new convention, a scope change, a design decision that supersedes what is written there — say so and ask whether to update it. Do not fold that content into `progress.md`; each doc owns its own material.
 
+Same rule for work that was **scoped and deliberately not built**: it belongs in [docs/future_enhancements.md](../../../docs/future_enhancements.md), not in a `progress.md` open question. Active development ended after Phase 3, so a session that defers something with a reason is adding to that doc.
+
 If the session introduced health, medical, insurance, or regulatory terminology that [docs/glossary.md](../../../docs/glossary.md) does not already carry, add it there now — same rule, same reason. This is the sweep that catches what the in-the-moment convention missed.

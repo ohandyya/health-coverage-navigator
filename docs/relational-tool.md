@@ -567,7 +567,8 @@ Each step leaves the repo green and is separately reviewable.
 
 ## 14. Deferred, deliberately
 
-Recorded so none of it gets re-argued mid-build:
+Recorded so none of it gets re-argued mid-build. **None of it was built — active development ended
+after Phase 3, and [future_enhancements.md](future_enhancements.md) §3 indexes this list.**
 
 - **Typed join helper tools** (§3) — until the traces earn them. Written out below, because
   "deferred" is only a decision if the next person can pick it up.
