@@ -931,6 +931,9 @@ Three lines, and it belongs after step 5 because that is when a runner exists to
 
 ### 18b. Deferred deliberately
 
+*None of these was built. [future_enhancements.md](future_enhancements.md) §2–§3 carries them
+forward, with the cache tripwire from §13c.*
+
 - **`/providers/covered` and `/providers/search`** → Phase 5, which owns network checks (§11).
 - **`POST /households/eligibility/estimates`** — APTC/CSR subsidy estimates. A genuinely useful
   answer and squarely a Phase 5 "plan comparison" capability; Phase 3's acceptance tests do not ask

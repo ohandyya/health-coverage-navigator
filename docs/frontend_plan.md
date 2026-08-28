@@ -413,6 +413,9 @@ there is a lane whose absence is not self-explanatory.
 - [ ] Routing-accuracy column in the eval dashboard widens from two lanes to three
 - [ ] Per-lane filtering of citations
 
+*F3 and F4 were never built — their backend phases were not started. See
+[future_enhancements.md](future_enhancements.md) §1–§2.*
+
 **Phase F3 — Multi-step (with Phase 4)**
 - [ ] Trace panel handles nested/multi-hop steps
 - [ ] Per-claim provenance: hovering a claim highlights exactly its citations
@@ -512,4 +515,6 @@ the storage layer; internationalization; PWA/offline; and any deployment target.
    browser opened it.
 3. **Corpus browser.** A "search the 2,056 ingested documents" page was considered and left out of
    v1. Citation drill-down covers most of the need. Revisit if inspecting the corpus by hand
-   turns out to be a frequent debugging move. *Still open.*
+   turns out to be a frequent debugging move. *Still open — and carried forward in
+   [future_enhancements.md](future_enhancements.md) §3, since active development ended after
+   Phase 3.*

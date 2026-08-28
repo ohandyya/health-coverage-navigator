@@ -754,6 +754,9 @@ Steps 1–8 are free and offline. Only 11 spends money.
 ## 15. Deferred deliberately
 
 Each of these is a real capability, left out with a reason rather than forgotten.
+**Active development ended after Phase 3; `read_url` and its trigger condition are carried forward
+in [future_enhancements.md](future_enhancements.md) §3, which indexes this section rather than
+replacing it.**
 
 - **`read_url` over Tavily's `/extract`** — the `get_chunk` of this lane, and the most likely thing
   to be needed next. §3 states what its absence costs: a snippet that stops one sentence short can
